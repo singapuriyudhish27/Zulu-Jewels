@@ -32,7 +32,8 @@ import {
     Plus,
     Pencil,
     Trash2,
-    X
+    X,
+    Download
 } from "lucide-react";
 
 export default function ShippingPaymentPage() {
@@ -72,6 +73,15 @@ export default function ShippingPaymentPage() {
         status: true
     });
     const defaultPartnerForm = { partner_name: '', type: '', tracking_url: '', status: true };
+
+    // ── Payment Method Modal State ──
+    const [showPaymentModal, setShowPaymentModal] = useState(false);
+    const [savingPayment, setSavingPayment] = useState(false);
+    const [paymentForm, setPaymentForm] = useState({
+        category: '',
+        status: true
+    });
+    const defaultPaymentForm = { category: '', status: true };
 
     const fetchShippingData = async () => {
         try {
@@ -251,6 +261,70 @@ export default function ShippingPaymentPage() {
         }
     };
 
+    // ── Payment: Open Add Modal ──
+    const handleOpenAddPaymentModal = () => {
+        setPaymentForm({ ...defaultPaymentForm });
+        setShowPaymentModal(true);
+    };
+
+    // ── Payment: Close Modal ──
+    const handleClosePaymentModal = () => {
+        setShowPaymentModal(false);
+        setPaymentForm({ ...defaultPaymentForm });
+    };
+
+    // ── Payment: Save (Add Only) ──
+    const handleSavePayment = async (e) => {
+        e.preventDefault();
+        setSavingPayment(true);
+        try {
+            const url = '/api/Pages/Admin/Shipping-Management/Payment-Method';
+            const method = 'POST';
+            const body = { ...paymentForm };
+
+            const res = await fetch(url, {
+                method,
+                headers: { 'Content-Type': 'application/json' },
+                credentials: 'include',
+                body: JSON.stringify(body),
+            });
+            const result = await res.json();
+            if (result.success) {
+                handleClosePaymentModal();
+                await fetchShippingData();
+                // 🔹 ALERT AS REQUESTED 🔹
+                alert("Contact Developer For New Payment Method Implementation");
+            } else {
+                alert(result.message || 'Failed to save payment method');
+            }
+        } catch (error) {
+            console.error('Error saving payment method:', error);
+            alert('Something went wrong. Please try again.');
+        } finally {
+            setSavingPayment(false);
+        }
+    };
+
+    // ── Payment: Delete ──
+    const handleDeletePaymentMethod = async (methodId) => {
+        if (!confirm('Are you sure you want to delete this payment method?')) return;
+        try {
+            const res = await fetch(`/api/Pages/Admin/Shipping-Management/Payment-Method?id=${methodId}`, {
+                method: 'DELETE',
+                credentials: 'include',
+            });
+            const result = await res.json();
+            if (result.success) {
+                await fetchShippingData();
+            } else {
+                alert(result.message || 'Failed to delete payment method');
+            }
+        } catch (error) {
+            console.error('Error deleting payment method:', error);
+            alert('Something went wrong. Please try again.');
+        }
+    };
+
     // ── Payment Method: Toggle Active/Inactive ──
     const handleTogglePaymentMethod = async (methodId, currentStatus) => {
         const newStatus = !currentStatus;
@@ -270,6 +344,47 @@ export default function ShippingPaymentPage() {
         } catch (error) {
             console.error('Error toggling payment method:', error);
             alert('Something went wrong. Please try again.');
+        }
+    };
+
+    // ── Transaction Receipt Download ──
+    const handleDownloadReceipt = async (transaction) => {
+        try {
+            // Using the raw ID from the map, but wait, transaction object in map uses formatted ID string.
+            // I need the original ID. I should verify if 'txn' has raw ID.
+            // Looking at map function: id: `TXN...`. I need to pass raw ID.
+            // Let's check the map function.
+            // row 397: recentTransactions map. It doesn't seem to pass raw ID in the object, just formatted id.
+            // I should update the map function to include _raw or originalId.
+            // Checking map function...
+            
+            // Wait, I can't put this logic inside unless I update map function first.
+            // Let's coordinate the changes.
+            
+            // For now, let's assume I'll update the map function in the same MultiReplace call.
+            
+            const txnId = transaction._raw.id; // Accessing raw ID
+            
+            const response = await fetch(`/api/Pages/Admin/Shipping-Management/Transactions?id=${txnId}`, {
+                method: 'GET',
+            });
+
+            if (response.ok) {
+                const blob = await response.blob();
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `receipt_TXN${txnId}.txt`;
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+            } else {
+                alert("Failed to download receipt.");
+            }
+        } catch (error) {
+            console.error("Error downloading receipt:", error);
+            alert("Error downloading receipt.");
         }
     };
 
@@ -328,7 +443,8 @@ export default function ShippingPaymentPage() {
         amount: `₹${parseFloat(txn.amount).toLocaleString('en-IN')}`,
         method: txn.payment_method,
         status: txn.status,
-        date: new Date(txn.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
+        date: new Date(txn.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        _raw: txn // Store raw transaction data for actions
     }));
 
     // Map Shipping Partners
@@ -668,6 +784,9 @@ export default function ShippingPaymentPage() {
                                     <h3 className="content-card-title">
                                         <CreditCard size={20} /> Configured Payment Methods
                                     </h3>
+                                    <button className="add-zone-btn" onClick={handleOpenAddPaymentModal}>
+                                        <Plus size={16} /> Add New Method
+                                    </button>
                                 </div>
                                 <div className="content-card-body">
                                     {loading ? (
@@ -701,7 +820,7 @@ export default function ShippingPaymentPage() {
                                                         <span className="payment-info-item"><strong>Commission:</strong> {method.commission}</span>
                                                     </div>
                                                 </div>
-                                                <div className="payment-status">
+                                                <div className="payment-status" style={{ display: "flex", alignItems: "center", gap: "15px" }}>
                                                     <div className="toggle-wrapper">
                                                         <label className="toggle-switch">
                                                             <input
@@ -711,10 +830,17 @@ export default function ShippingPaymentPage() {
                                                             />
                                                             <span className="toggle-slider"></span>
                                                         </label>
-                                                        <span className={`toggle-label ${method.isActive ? 'active' : 'inactive'}`}>
+                                                        {/* <span className={`toggle-label ${method.isActive ? 'active' : 'inactive'}`}>
                                                             {method.status}
-                                                        </span>
+                                                        </span> */}
                                                     </div>
+                                                    <button 
+                                                        className="action-btn delete" 
+                                                        title="Delete Method"
+                                                        onClick={() => handleDeletePaymentMethod(method.id)}
+                                                    >
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
                                             </div>
                                         ))
@@ -838,6 +964,7 @@ export default function ShippingPaymentPage() {
                                                     <th>Payment Method</th>
                                                     <th>Status</th>
                                                     <th>Date</th>
+                                                    <th>Receipt</th>
                                                 </tr>
                                             </thead>
                                             <tbody>
@@ -855,6 +982,18 @@ export default function ShippingPaymentPage() {
                                                             </span>
                                                         </td>
                                                         <td>{txn.date}</td>
+                                                        <td>
+                                                            {(txn.status === "Completed" || txn.status === "Success") && (
+                                                                <button 
+                                                                    className="action-btn" 
+                                                                    title="Download Receipt" 
+                                                                    style={{ background: "rgba(52, 152, 219, 0.1)", color: "#3498db" }}
+                                                                    onClick={() => handleDownloadReceipt(txn)}
+                                                                >
+                                                                    <Download size={15} />
+                                                                </button>
+                                                            )}
+                                                        </td>
                                                     </tr>
                                                 ))}
                                             </tbody>
@@ -1082,6 +1221,59 @@ export default function ShippingPaymentPage() {
                                 <button type="button" className="btn-cancel" onClick={handleClosePartnerModal}>Cancel</button>
                                 <button type="submit" className="btn-save" disabled={savingPartner}>
                                     {savingPartner ? 'Saving...' : (editingPartner ? 'Update Partner' : 'Add Partner')}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+            {/* ── Payment Method Add Modal ── */}
+            {showPaymentModal && (
+                <div className="modal-overlay" onClick={handleClosePaymentModal}>
+                    <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+                        <div className="modal-header">
+                            <h2 className="modal-title">Add New Payment Method</h2>
+                            <button className="modal-close" onClick={handleClosePaymentModal}>
+                                <X size={20} />
+                            </button>
+                        </div>
+                        <form onSubmit={handleSavePayment}>
+                            <div className="modal-body">
+                                <div className="form-grid">
+                                    <div className="form-group">
+                                        <label className="form-label">Method Name <span className="required">*</span></label>
+                                        <input
+                                            className="form-input"
+                                            type="text"
+                                            placeholder="e.g. Stripe, PayPal"
+                                            value={paymentForm.category}
+                                            onChange={(e) => setPaymentForm({ ...paymentForm, category: e.target.value })}
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Status</label>
+                                        <select
+                                            className="form-input"
+                                            value={paymentForm.status ? 'true' : 'false'}
+                                            onChange={(e) => setPaymentForm({ ...paymentForm, status: e.target.value === 'true' })}
+                                        >
+                                            <option value="true">Active</option>
+                                            <option value="false">Inactive</option>
+                                        </select>
+                                    </div>
+                                    <div className="form-group">
+                                        <p style={{ fontSize: "13px", color: "#666", marginTop: "10px" }}>
+                                            <AlertCircle size={14} style={{ verticalAlign: "middle", marginRight: "6px" }} />
+                                            Adding a new method requires developer integration for payment processing.
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn-cancel" onClick={handleClosePaymentModal}>Cancel</button>
+                                <button type="submit" className="btn-save" disabled={savingPayment}>
+                                    {savingPayment ? 'Saving...' : 'Add Method'}
                                 </button>
                             </div>
                         </form>
