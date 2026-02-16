@@ -47,6 +47,7 @@ export default function CustomerManagementPage() {
   const [emailMessage, setEmailMessage] = useState("");
   const [adminEmail, setAdminEmail] = useState("");
   const [sendingEmail, setSendingEmail] = useState(false);
+  const [showOrdersDropdown, setShowOrdersDropdown] = useState(false);
 
   useEffect(() => {
     const fetchCustomers = async () => {
@@ -320,7 +321,10 @@ export default function CustomerManagementPage() {
                       filteredCustomers.map((customer) => {
                         const tierStyle = getTierBadge(customer.tier);
                         return (
-                          <tr key={customer.id} className={selectedCustomer?.id === customer.id ? 'selected' : ''} onClick={() => setSelectedCustomer(customer)}>
+                          <tr key={customer.id} className={selectedCustomer?.id === customer.id ? 'selected' : ''} onClick={() => {
+                            setSelectedCustomer(customer);
+                            setShowOrdersDropdown(false);
+                          }}>
                             <td>
                               <div className="customer-cell">
                                 <div className="customer-avatar">{customer.name.charAt(0)}</div>
@@ -382,23 +386,10 @@ export default function CustomerManagementPage() {
                       <div className="detail-row"><span><ShoppingBag size={14} /> Last Order</span><span>{selectedCustomer.lastOrder}</span></div>
                     </div>
                     <div className="detail-section">
-                      <div className="detail-section-title">Recent Orders</div>
-                      {selectedCustomer.rawOrders.length > 0 ? (
-                        selectedCustomer.rawOrders.slice(0, 5).map((order) => {
-                          const orderTotal = order.items.reduce((acc, itm) => acc + (Number(itm.price) * itm.quantity), 0);
-                          return (
-                            <div className="order-item" key={order.id}>
-                              <div className="order-id">ORD-{order.id}</div>
-                              <div className="order-details">{formatDate(order.order_date)} • {order.items.length} items</div>
-                              <div className="order-amount">{formatCurrency(orderTotal)}</div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div style={{ textAlign: "center", padding: "20px", opacity: 0.5, fontSize: "13px" }}>
-                          No orders recorded for this customer
-                        </div>
-                      )}
+                      <div className="detail-section-title">Order History Overview</div>
+                      <div style={{ fontSize: "13px", color: "var(--charcoal-light)", marginBottom: "12px" }}>
+                        This customer has {selectedCustomer.orders} total orders. Click "View Orders" below to see the full list.
+                      </div>
                     </div>
                   </div>
                   <div className="action-btns">
@@ -414,8 +405,49 @@ export default function CustomerManagementPage() {
                     >
                       <Mail size={14} /> Send Email
                     </button>
-                    <button className="action-btn secondary"><Eye size={14} /> View Orders</button>
+                    <button 
+                      className="action-btn secondary"
+                      onClick={() => setShowOrdersDropdown(!showOrdersDropdown)}
+                    >
+                      {showOrdersDropdown ? <XCircle size={14} /> : <Eye size={14} />} {showOrdersDropdown ? "Close Orders" : "View Orders"}
+                    </button>
                   </div>
+
+                  {/* Orders Dropdown */}
+                  {showOrdersDropdown && selectedCustomer.rawOrders.length > 0 && (
+                    <div className="orders-dropdown">
+                      <div className="dropdown-header">Customer Orders</div>
+                      <div className="dropdown-list">
+                        {selectedCustomer.rawOrders.map((order) => {
+                          const orderTotal = order.items.reduce((acc, itm) => acc + (Number(itm.price) * itm.quantity), 0);
+                          return (
+                            <div key={order.id} className="dropdown-item">
+                              <div className="dropdown-item-info">
+                                <div className="dropdown-item-id">ORD-{order.id}</div>
+                                <div className="dropdown-item-meta">
+                                  {formatDate(order.order_date)} • {order.items.length} items • {formatCurrency(orderTotal)}
+                                </div>
+                              </div>
+                              <button 
+                                className="dropdown-view-btn"
+                                title="Go to Order Details"
+                                onClick={() => router.push(`/Pages/Admin/Order-Management`)}
+                              >
+                                <ShoppingCart size={14} />
+                              </button>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                  {showOrdersDropdown && selectedCustomer.rawOrders.length === 0 && (
+                    <div className="orders-dropdown">
+                      <div style={{ padding: "20px", textAlign: "center", fontStyle: "italic", color: "#888", fontSize: "14px" }}>
+                        No orders found for this customer.
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="empty-state">

@@ -66,6 +66,7 @@ export default function ContactManagementPage() {
           credentials: 'include',
         });
         const result = await response.json();
+        console.log(result);
         if (result.success) {
           setInquiriesData(result.data || []);
           setAdminEmail(result.adminEmail || "");
@@ -444,15 +445,9 @@ export default function ContactManagementPage() {
               {selectedInquiry ? (
                 <>
                   <div className="detail-header">
-                    <div className="detail-subject">{selectedInquiry.subject}</div>
-                    <div className="detail-meta">
+                    <div className="detail-subject" style={{ textAlign: 'center' }}>{selectedInquiry.subject}</div>
+                    <div className="detail-meta" style={{ justifyContent: 'center' }}>
                       <span className="detail-meta-item"><Calendar size={14} /> {selectedInquiry.date} at {selectedInquiry.time}</span>
-                      <span className="detail-meta-item" style={{ color: getPriorityBadge(selectedInquiry.priority) }}>● {selectedInquiry.priority} Priority</span>
-                      {selectedInquiry.isVerified && (
-                        <span className="detail-meta-item" style={{ color: '#27ae60', fontWeight: '500' }}>
-                          <CheckCircle2 size={14} /> Verified User
-                        </span>
-                      )}
                     </div>
                   </div>
                   <div className="detail-body">

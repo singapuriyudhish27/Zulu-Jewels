@@ -30,7 +30,9 @@ import {
   Watch,
   Gem,
   User,
-  Heart
+  Heart,
+  X,
+  ExternalLink
 } from "lucide-react";
 
 export default function OrderManagementPage() {
@@ -43,6 +45,9 @@ export default function OrderManagementPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusToUpdate, setStatusToUpdate] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+
+  // Dropdown state for multiple items
+  const [showItemDropdown, setShowItemDropdown] = useState(false);
 
   useEffect(() => {
     const fetchOrders = async () => {
@@ -94,6 +99,7 @@ export default function OrderManagementPage() {
     const displayId = `ORD-${year}-${item.order_id}`;
 
     const mappedItems = item.items.map(orderItem => ({
+      productId: orderItem.product_id, // Added productId
       name: orderItem.product_name,
       category: orderItem.category?.name || "Other",
       qty: orderItem.quantity,
@@ -273,6 +279,21 @@ export default function OrderManagementPage() {
     }
   };
 
+  // 🔹 View Order Details Handler
+  const handleViewOrderDetails = () => {
+    if (!selectedOrder) return;
+
+    if (selectedOrder.items.length === 1) {
+      // Direct redirect if only 1 product
+      router.push(`/Pages/Products/${selectedOrder.items[0].productId}`);
+    } else if (selectedOrder.items.length > 1) {
+      // Toggle dropdown if multiple products
+      setShowItemDropdown(!showItemDropdown);
+    } else {
+      alert("No items details found for this order.");
+    }
+  };
+
   return (
     <>
       {/* Sidebar */}
@@ -404,7 +425,10 @@ export default function OrderManagementPage() {
                     filteredOrders.map((order) => {
                       const statusStyle = getStatusStyle(order.status);
                       return (
-                        <tr key={order.id} className={selectedOrder?.id === order.id ? 'selected' : ''} onClick={() => setSelectedOrder(order)}>
+                        <tr key={order.id} className={selectedOrder?.id === order.id ? 'selected' : ''} onClick={() => {
+                          setSelectedOrder(order);
+                          setShowItemDropdown(false);
+                        }}>
                           <td><span className="order-id">{order.id}</span>{order.isCustom && <span className="custom-badge">CUSTOM</span>}</td>
                           <td>{order.customer}</td>
                           <td>{order.items.map(i => i.category).join(", ")}</td>
@@ -477,9 +501,43 @@ export default function OrderManagementPage() {
                       >
                         <Truck size={14} /> {updatingStatus ? "Updating..." : "Update Status"}
                       </button>
-                      <button className="action-btn secondary" style={{ flex: 1 }}><Eye size={14} /> View Details</button>
+                      <button 
+                        className="action-btn secondary" 
+                        style={{ flex: 1 }}
+                        onClick={handleViewOrderDetails}
+                      >
+                        {showItemDropdown ? <X size={14} /> : <Eye size={14} />} {showItemDropdown ? "Close Items" : "View Details"}
+                      </button>
                     </div>
                   </div>
+
+                  {/* Multiple Items Dropdown */}
+                  {showItemDropdown && selectedOrder.items.length > 1 && (
+                    <div className="item-dropdown">
+                      <div className="dropdown-header">
+                        Select a product to view
+                      </div>
+                      <div className="dropdown-list">
+                        {selectedOrder.items.map((item, idx) => (
+                          <div key={idx} className="dropdown-item">
+                            <div className="dropdown-item-info">
+                              <div className="dropdown-item-name">{item.name}</div>
+                              <div className="dropdown-item-meta">
+                                {item.category} • Qty: {item.qty} • {item.price}
+                              </div>
+                            </div>
+                            <button 
+                              className="dropdown-view-btn"
+                              title="View Product"
+                              onClick={() => router.push(`/Pages/Products/${item.productId}`)}
+                            >
+                              <Eye size={16} />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="empty-state">
@@ -492,6 +550,7 @@ export default function OrderManagementPage() {
           </div>
         </div>
       </div>
+
     </>
   );
 }
