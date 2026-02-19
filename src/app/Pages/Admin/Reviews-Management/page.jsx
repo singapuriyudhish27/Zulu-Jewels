@@ -4,6 +4,7 @@ import "./reviews.css";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard,
   Package,
@@ -159,18 +160,18 @@ export default function ReviewsManagementPage() {
       if (res.ok) {
         router.replace('/auth/login');
       } else {
-        alert('Logout failed. Please try again.');
+        toast.error('Logout failed. Please try again.');
       }
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Something went wrong while logging out.');
+      toast.error('Something went wrong while logging out.');
     }
   };
 
   const handleSendEmail = async (e) => {
     e.preventDefault();
     if (!selectedReviewForReply || !emailSubject || !emailMessage) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
@@ -189,17 +190,17 @@ export default function ReviewsManagementPage() {
 
       const result = await response.json();
       if (result.success) {
-        alert("Email sent successfully!");
+        toast.success("Email sent successfully!");
         setIsEmailModalOpen(false);
         setEmailSubject("");
         setEmailMessage("");
         setSelectedReviewForReply(null);
       } else {
-        alert(result.message || "Failed to send email.");
+        toast.error(result.message || "Failed to send email.");
       }
     } catch (error) {
       console.error("Error sending email:", error);
-      alert("An error occurred while sending the email.");
+      toast.error("An error occurred while sending the email.");
     } finally {
       setSendingEmail(false);
     }

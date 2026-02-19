@@ -3,12 +3,27 @@
 import { useEffect, useState } from 'react';
 import { Search, Heart, User, ShoppingCart, X } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 
 export default function HomePage() {
     const [showSearch, setShowSearch] = useState(false);
     const [loading, setLoading] = useState(false);
     const router = useRouter();
+    const pathname = usePathname();
+
+    const requireAuth = (action) => {
+        const token = document.cookie
+            .split("; ")
+            .find(row => row.startsWith("zulu_jewels="))
+            ?.split("=")[1];
+
+        if (!token) {
+            router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+            return;
+        }
+
+        if (action) action();
+    };
 
     const handleProfileCheck = async () => {
         try {
@@ -863,15 +878,15 @@ export default function HomePage() {
                 <button className="icon-btn" aria-label='Search Products' onClick={() => setShowSearch(prev => !prev)}>
                     <Search size={18} strokeWidth={1.5} />
                 </button>
-                <Link href="/Pages/wishlist" className="icon-btn" aria-label="User Wishlist">
+                <div className="icon-btn" aria-label="User Wishlist" onClick={() => requireAuth(() => router.push('/Pages/wishlist'))}>
                     <Heart size={18} strokeWidth={1.5} />
-                </Link>
+                </div>
                 <button className="icon-btn" aria-label="User Profile" onClick={handleProfileCheck}>
                     <User size={18} strokeWidth={1.5} />
                 </button>
-                <Link href="/Pages/cart" className="icon-btn" aria-label="Shopping Cart">
+                <div className="icon-btn" aria-label="Shopping Cart" onClick={() => requireAuth(() => router.push('/Pages/cart'))}>
                     <ShoppingCart size={18} strokeWidth={1.5} />
-                </Link>
+                </div>
             </div>
         </nav>
         {loading && (

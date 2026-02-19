@@ -4,6 +4,7 @@ import "./marketing.css";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
+import toast from "react-hot-toast";
 import {
     LayoutDashboard,
     Package,
@@ -124,11 +125,11 @@ export default function MarketingPage() {
 
             const result = await response.json();
             if (result.success) {
-                alert(editingCoupon ? "Coupon updated successfully!" : "Coupon added successfully!");
+                toast.success(editingCoupon ? "Coupon updated successfully!" : "Coupon added successfully!");
                 setIsModalOpen(false);
                 fetchData();
             } else {
-                alert(result.message || "Failed to save coupon.");
+                toast.error(result.message || "Failed to save coupon.");
             }
         } catch (error) {
             console.error("Error saving coupon:", error);
@@ -146,7 +147,7 @@ export default function MarketingPage() {
             if (result.success) {
                 fetchData();
             } else {
-                alert(result.message || "Failed to delete coupon.");
+                toast.error(result.message || "Failed to delete coupon.");
             }
         } catch (error) {
             console.error("Error deleting coupon:", error);
@@ -197,11 +198,11 @@ export default function MarketingPage() {
 
             const result = await response.json();
             if (result.success) {
-                alert(editingBanner ? "Banner updated successfully!" : "Banner added successfully!");
+                toast.success(editingBanner ? "Banner updated successfully!" : "Banner added successfully!");
                 setIsBannerModalOpen(false);
                 fetchData();
             } else {
-                alert(result.message || "Failed to save banner.");
+                toast.error(result.message || "Failed to save banner.");
             }
         } catch (error) {
             console.error("Error saving banner:", error);
@@ -219,7 +220,7 @@ export default function MarketingPage() {
             if (result.success) {
                 fetchData();
             } else {
-                alert(result.message || "Failed to delete banner.");
+                toast.error(result.message || "Failed to delete banner.");
             }
         } catch (error) {
             console.error("Error deleting banner:", error);
@@ -262,11 +263,11 @@ export default function MarketingPage() {
 
             const result = await response.json();
             if (result.success) {
-                alert(editingContent ? "Page updated successfully!" : "Page added successfully!");
+                toast.success(editingContent ? "Page updated successfully!" : "Page added successfully!");
                 setIsContentModalOpen(false);
                 fetchData();
             } else {
-                alert(result.message || "Failed to save page.");
+                toast.error(result.message || "Failed to save page.");
             }
         } catch (error) {
             console.error("Error saving content page:", error);
@@ -284,7 +285,7 @@ export default function MarketingPage() {
             if (result.success) {
                 fetchData();
             } else {
-                alert(result.message || "Failed to delete page.");
+                toast.error(result.message || "Failed to delete page.");
             }
         } catch (error) {
             console.error("Error deleting content page:", error);
@@ -341,11 +342,11 @@ export default function MarketingPage() {
             if (res.ok) {
                 router.replace('/auth/login');
             } else {
-                alert('Logout failed. Please try again.');
+                toast.error('Logout failed. Please try again.');
             }
         } catch (error) {
             console.error('Logout error:', error);
-            alert('Something went wrong while logging out.');
+            toast.error('Something went wrong while logging out.');
         }
     };
 

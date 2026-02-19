@@ -5,6 +5,8 @@ import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-
 import { useEffect, useState } from 'react';
 import { Search, User, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -12,6 +14,7 @@ export default function CartPage() {
     const [showStripeModal, setShowStripeModal] = useState(false);
     const [stripeClientSecret, setStripeClientSecret] = useState(null);
     const [showPaymentOptions, setShowPaymentOptions] = useState(false);
+    const router = useRouter();
 
 
     const [cartItems, setCartItems] = useState([
@@ -76,7 +79,7 @@ export default function CartPage() {
 
         const isLoaded = await loadRazorpay();
         if (!isLoaded) {
-            alert("Razorpay SDK failed to load");
+            toast.error("Razorpay SDK failed to load");
             setLoading(false);
             return;
         }
@@ -94,7 +97,7 @@ export default function CartPage() {
                     headers: { "Content-Type": "application/json" },
                     body: JSON.stringify(response),
                 });
-                alert("Payment Successful");
+                toast.success("Payment Successful! Thank you for your order.");
             },
             prefill: {
             name: "Customer Name",
@@ -121,7 +124,7 @@ export default function CartPage() {
         const { clientSecret } = await res.json();
 
         if (!clientSecret) {
-            alert("Failed to create Stripe payment");
+            toast.error("Failed to create Stripe payment");
             setLoading(false);
             return;
         }
@@ -152,7 +155,7 @@ export default function CartPage() {
             });
 
             if (error) {
-                alert(error.message);
+                toast.error(error.message);
             } else if (paymentIntent && paymentIntent.status === "succeeded") {
                 onSuccess();
             }
@@ -681,74 +684,6 @@ export default function CartPage() {
 
     {/* Main Content */}
     <div className="main-content">
-        {/* Cart Items */}
-        {/* <div className="cart-items">
-            <div className="cart-item">
-                <div className="item-image"></div>
-                <div className="item-details">
-                    <div className="item-header">
-                        <div className="item-info">
-                            <h3>The Serenity</h3>
-                            <div className="item-specs">14K White Gold | Round | Size 6</div>
-                            <div className="item-specs">SKU: LMR-SER-001</div>
-                        </div>
-                        <button className="remove-btn" onClick={(e) => removeItem(e.target)}>×</button>
-                    </div>
-                    <div className="item-footer">
-                        <div className="quantity-control">
-                            <button className="qty-btn" onClick={(e) => updateQty(e.target, -1)}>−</button>
-                            <input type="text" className="qty-input" value="1" readOnly />
-                            <button className="qty-btn" onClick={(e) => updateQty(e.target, 1)}>+</button>
-                        </div>
-                        <div className="item-price">$1,332</div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="cart-item">
-                <div className="item-image"></div>
-                <div className="item-details">
-                    <div className="item-header">
-                        <div className="item-info">
-                            <h3>Classic Pavé Band</h3>
-                            <div className="item-specs">14K White Gold | Diamond | Size 5.5</div>
-                            <div className="item-specs">SKU: LMR-CPB-045</div>
-                        </div>
-                        <button className="remove-btn" onClick={(e) => removeItem(e.target)}>×</button>
-                    </div>
-                    <div className="item-footer">
-                        <div className="quantity-control">
-                            <button className="qty-btn" onClick={(e) => updateQty(e.target, -1)}>−</button>
-                            <input type="text" className="qty-input" value="1" readOnly />
-                            <button className="qty-btn" onClick={(e) => updateQty(e.target, 1)}>+</button>
-                        </div>
-                        <div className="item-price">$945</div>
-                    </div>
-                </div>
-            </div>
-
-            <div className="cart-item">
-                <div className="item-image"></div>
-                <div className="item-details">
-                    <div className="item-header">
-                        <div className="item-info">
-                            <h3>Diamond Stud Earrings</h3>
-                            <div className="item-specs">14K White Gold | 1.0 Carat Total Weight</div>
-                            <div className="item-specs">SKU: LMR-DSE-128</div>
-                        </div>
-                        <button className="remove-btn" onClick={(e) => removeItem(e.target)}>×</button>
-                    </div>
-                    <div className="item-footer">
-                        <div className="quantity-control">
-                            <button className="qty-btn" onClick={(e) => updateQty(e.target, -1)}>−</button>
-                            <input type="text" className="qty-input" value="1" readOnly />
-                            <button className="qty-btn" onClick={(e) => updateQty(e.target, 1)}>+</button>
-                        </div>
-                        <div className="item-price">$1,550</div>
-                    </div>
-                </div>
-            </div>
-        </div> */}
         <div className="cart-items">
             {cartItems.map((item) => (
                 <div className="cart-item" key={item.id}>
@@ -807,7 +742,29 @@ export default function CartPage() {
                     <span className="total-amount" id="total">${total.toLocaleString()}</span>
                 </div>
 
-                <button className="checkout-btn" onClick={() => setShowPaymentOptions(true)} disabled={loading}>{loading ? "Processing..." : "Proceed to Payment"}</button>
+                <button 
+                    className="checkout-btn" 
+                    onClick={async () => {
+                        setLoading(true);
+                        try {
+                            const response = await fetch('/api/Pages/Profile', { credentials: 'include' });
+                            if (response.ok) {
+                                setShowPaymentOptions(true);
+                            } else {
+                                toast.error("Please login first to proceed with payment.");
+                                router.push('/auth/login?callbackUrl=/Pages/cart');
+                            }
+                        } catch (error) {
+                            console.error("Auth check error:", error);
+                            toast.error("An error occurred. Please try again.");
+                        } finally {
+                            setLoading(false);
+                        }
+                    }} 
+                    disabled={loading}
+                >
+                    {loading ? "Processing..." : "Proceed to Payment"}
+                </button>
                 {showPaymentOptions && (
                     <div style={{ marginTop: "15px", display: "flex", gap: "10px", flexDirection: "column" }}>
                         <button className="checkout-btn" onClick={handlePayment}>
@@ -851,7 +808,7 @@ export default function CartPage() {
                 <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
                     <StripeCheckoutForm
                     onSuccess={() => {
-                        alert("Payment Successful");
+                        toast.success("Payment Successful! Thank you for your order.");
                         setShowStripeModal(false);
                     }}
                     onClose={() => setShowStripeModal(false)}

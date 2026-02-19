@@ -4,6 +4,7 @@ import "./shipping.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import {
     LayoutDashboard,
     Package,
@@ -154,11 +155,11 @@ export default function ShippingPaymentPage() {
                 handleCloseModal();
                 await fetchShippingData();
             } else {
-                alert(result.message || 'Failed to save shipping zone');
+                toast.error(result.message || 'Failed to save shipping zone');
             }
         } catch (error) {
             console.error('Error saving zone:', error);
-            alert('Something went wrong. Please try again.');
+            toast.error('Something went wrong. Please try again.');
         } finally {
             setSaving(false);
         }
@@ -176,11 +177,11 @@ export default function ShippingPaymentPage() {
             if (result.success) {
                 await fetchShippingData();
             } else {
-                alert(result.message || 'Failed to delete shipping zone');
+                toast.error(result.message || 'Failed to delete shipping zone');
             }
         } catch (error) {
             console.error('Error deleting zone:', error);
-            alert('Something went wrong. Please try again.');
+            toast.error('Something went wrong. Please try again.');
         }
     };
 
@@ -231,11 +232,11 @@ export default function ShippingPaymentPage() {
                 handleClosePartnerModal();
                 await fetchShippingData();
             } else {
-                alert(result.message || 'Failed to save shipping partner');
+                toast.error(result.message || 'Failed to save shipping partner');
             }
         } catch (error) {
             console.error('Error saving partner:', error);
-            alert('Something went wrong. Please try again.');
+            toast.error('Something went wrong. Please try again.');
         } finally {
             setSavingPartner(false);
         }
@@ -253,11 +254,11 @@ export default function ShippingPaymentPage() {
             if (result.success) {
                 await fetchShippingData();
             } else {
-                alert(result.message || 'Failed to delete shipping partner');
+                toast.error(result.message || 'Failed to delete shipping partner');
             }
         } catch (error) {
             console.error('Error deleting partner:', error);
-            alert('Something went wrong. Please try again.');
+            toast.error('Something went wrong. Please try again.');
         }
     };
 
@@ -292,14 +293,14 @@ export default function ShippingPaymentPage() {
             if (result.success) {
                 handleClosePaymentModal();
                 await fetchShippingData();
-                // 🔹 ALERT AS REQUESTED 🔹
-                alert("Contact Developer For New Payment Method Implementation");
+                // 🔹 INFO AS REQUESTED 🔹
+                toast("Contact Developer For New Payment Method Implementation", { icon: 'ℹ️' });
             } else {
-                alert(result.message || 'Failed to save payment method');
+                toast.error(result.message || 'Failed to save payment method');
             }
         } catch (error) {
             console.error('Error saving payment method:', error);
-            alert('Something went wrong. Please try again.');
+            toast.error('Something went wrong. Please try again.');
         } finally {
             setSavingPayment(false);
         }
@@ -317,11 +318,11 @@ export default function ShippingPaymentPage() {
             if (result.success) {
                 await fetchShippingData();
             } else {
-                alert(result.message || 'Failed to delete payment method');
+                toast.error(result.message || 'Failed to delete payment method');
             }
         } catch (error) {
             console.error('Error deleting payment method:', error);
-            alert('Something went wrong. Please try again.');
+            toast.error('Something went wrong. Please try again.');
         }
     };
 
@@ -339,11 +340,11 @@ export default function ShippingPaymentPage() {
             if (result.success) {
                 await fetchShippingData();
             } else {
-                alert(result.message || 'Failed to update payment method');
+                toast.error(result.message || 'Failed to update payment method');
             }
         } catch (error) {
             console.error('Error toggling payment method:', error);
-            alert('Something went wrong. Please try again.');
+            toast.error('Something went wrong. Please try again.');
         }
     };
 
@@ -380,11 +381,11 @@ export default function ShippingPaymentPage() {
                 window.URL.revokeObjectURL(url);
                 document.body.removeChild(a);
             } else {
-                alert("Failed to download receipt.");
+                toast.error("Failed to download receipt.");
             }
         } catch (error) {
             console.error("Error downloading receipt:", error);
-            alert("Error downloading receipt.");
+            toast.error("Error downloading receipt.");
         }
     };
 
@@ -481,11 +482,11 @@ export default function ShippingPaymentPage() {
             if (res.ok) {
                 router.replace('/auth/login');
             } else {
-                alert('Logout failed. Please try again.');
+                toast.error('Logout failed. Please try again.');
             }
         } catch (error) {
             console.error('Logout error:', error);
-            alert('Something went wrong while logging out.');
+            toast.error('Something went wrong while logging out.');
         }
     };
 

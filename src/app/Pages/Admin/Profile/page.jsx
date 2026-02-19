@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { User, Users, MapPin, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
@@ -52,7 +53,7 @@ export default function ProfilePage() {
     if (profileForm) {
       profileForm.addEventListener('submit', function(e) {
         e.preventDefault();
-        alert('Profile updated successfully!');
+        toast.success('Profile updated successfully!');
       });
     }
 
@@ -65,11 +66,11 @@ export default function ProfilePage() {
         const confirmPassword = document.getElementById('confirmPassword').value;
         
         if (newPassword !== confirmPassword) {
-          alert('Passwords do not match!');
+          toast.error('Passwords do not match!');
           return;
         }
         
-        alert('Password changed successfully!');
+        toast.success('Password changed successfully!');
         passwordForm.reset();
       });
     }
@@ -104,10 +105,10 @@ export default function ProfilePage() {
         throw new Error(data?.message || "Profile Update Failed");
       }
 
-      alert("Profile Udated Successfully.");
+      toast.success("Profile Updated Successfully.");
     } catch (error) {
       console.error("Admin Profile Updation Error:", error);
-      alert(error.message);
+      toast.error(error.message);
     }
   }
 

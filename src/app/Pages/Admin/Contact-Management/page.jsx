@@ -4,6 +4,7 @@ import "./contact.css";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard,
   Package,
@@ -202,11 +203,11 @@ export default function ContactManagementPage() {
       if (res.ok) {
         router.replace('/auth/login');
       } else {
-        alert('Logout failed. Please try again.');
+        toast.error('Logout failed. Please try again.');
       }
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Something went wrong while logging out.');
+      toast.error('Something went wrong while logging out.');
     }
   };
 
@@ -228,7 +229,7 @@ export default function ContactManagementPage() {
           setSelectedInquiry(prev => ({ ...prev, status }));
         }
       } else {
-        alert(result.message || "Failed to update status");
+        toast.error(result.message || "Failed to update status");
       }
     } catch (error) {
       console.error("Error updating status:", error);
@@ -252,7 +253,7 @@ export default function ContactManagementPage() {
           setSelectedInquiry(null);
         }
       } else {
-        alert(result.message || "Failed to delete inquiry");
+        toast.error(result.message || "Failed to delete inquiry");
       }
     } catch (error) {
       console.error("Error deleting inquiry:", error);
@@ -264,7 +265,7 @@ export default function ContactManagementPage() {
   const handleSendEmail = async (e) => {
     e.preventDefault();
     if (!selectedInquiry || !emailSubject || !emailMessage) {
-      alert("Please fill in all fields.");
+      toast.error("Please fill in all fields.");
       return;
     }
 
@@ -283,17 +284,17 @@ export default function ContactManagementPage() {
 
       const result = await response.json();
       if (result.success) {
-        alert("Email sent successfully!");
+        toast.success("Email sent successfully!");
         handleUpdateStatus(selectedInquiry.id, "Replied");
         setIsEmailModalOpen(false);
         setEmailSubject("");
         setEmailMessage("");
       } else {
-        alert(result.message || "Failed to send email.");
+        toast.error(result.message || "Failed to send email.");
       }
     } catch (error) {
       console.error("Error sending email:", error);
-      alert("An error occurred while sending the email.");
+      toast.error("An error occurred while sending the email.");
     } finally {
       setSendingEmail(false);
     }

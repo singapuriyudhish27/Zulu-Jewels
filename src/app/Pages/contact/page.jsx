@@ -1,9 +1,27 @@
 'use client';
 import { useEffect } from 'react';
+import { useRouter, usePathname } from 'next/navigation';
 import { Search, User, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
+import toast from 'react-hot-toast';
 
 export default function ContactPage() {
+  const router = useRouter();
+  const pathname = usePathname();
+
+  const requireAuth = (action) => {
+    const token = document.cookie
+      .split("; ")
+      .find(row => row.startsWith("zulu_jewels="))
+      ?.split("=")[1];
+
+    if (!token) {
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+      return;
+    }
+
+    if (action) action();
+  };
   useEffect(() => {
     function handleContactForm(e) {
       e.preventDefault();
@@ -17,7 +35,7 @@ export default function ContactPage() {
       };
       
       console.log('Contact form submitted:', data);
-      alert('Thank you for contacting us! We will get back to you within 24 hours.');
+      toast.success('Thank you for contacting us! We will get back to you within 24 hours.');
       e.target.reset();
     }
 
@@ -570,12 +588,12 @@ export default function ContactPage() {
           <li><a href="/Pages/contact">Contact</a></li>
         </ul>
         <div className="nav-icons">
-            <Link href="/Pages/Profile" className="icon-btn" aria-label="User Profile">
+            <div className="icon-btn" aria-label="User Profile" onClick={() => requireAuth(() => router.push('/Pages/Profile'))}>
                 <User size={18} strokeWidth={1.5} />
-            </Link>
-            <Link href="/Pages/cart" className="icon-btn" aria-label="Shopping Cart">
+            </div>
+            <div className="icon-btn" aria-label="Shopping Cart" onClick={() => requireAuth(() => router.push('/Pages/cart'))}>
                 <ShoppingCart size={18} strokeWidth={1.5} />
-            </Link>
+            </div>
         </div>
       </nav>
 

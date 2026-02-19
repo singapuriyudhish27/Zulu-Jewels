@@ -1,9 +1,10 @@
 "use client";
 
 import "./admin.css";
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard,
   Package,
@@ -182,11 +183,11 @@ export default function AdminPage() {
       if (res.ok) {
         router.replace('/auth/login');
       } else {
-        alert('Logout failed. Please try again.');
+        toast.error('Logout failed. Please try again.');
       }
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Something went wrong while logging out.');
+      toast.error('Something went wrong while logging out.');
     }
   };
 

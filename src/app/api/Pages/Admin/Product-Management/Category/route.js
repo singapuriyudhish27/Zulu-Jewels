@@ -18,10 +18,23 @@ export async function POST(request) {
 
         // Validate material value
         const allowedMaterials = ["Gold", "Silver", "Diamond"];
-        if (!allowedMaterials.includes(available_materials)) {
+
+        if (!Array.isArray(available_materials) || available_materials.length === 0) {
             return NextResponse.json({
                 success: false,
                 message: "Invalid material. Allowed: Gold, Silver, Diamond."
+            }, { status: 400 });
+        }
+
+        // validate each material
+        const invalidMaterials = available_materials.filter(
+            m => !allowedMaterials.includes(m)
+        );
+
+        if (invalidMaterials.length > 0) {
+            return NextResponse.json({
+                success: false,
+                message: `Invalid materials: ${invalidMaterials.join(", ")}`
             }, { status: 400 });
         }
 
@@ -39,8 +52,8 @@ export async function POST(request) {
 
         //Insert Category
         const [result] = await connection.execute(`
-            INSERT INTO categories (name, available_materials) VALUES (?, ?)
-        `, [name, available_materials]);
+            INSERT INTO categories (name, available_materials) VALUES (?, CAST(? AS JSON))
+        `, [name, JSON.stringify(available_materials)]);
 
         return NextResponse.json({
             success: true,

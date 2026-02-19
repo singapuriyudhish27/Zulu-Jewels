@@ -4,6 +4,7 @@ import "./orders.css";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard,
   Package,
@@ -230,18 +231,18 @@ export default function OrderManagementPage() {
       if (res.ok) {
         router.replace('/auth/login');
       } else {
-        alert('Logout failed. Please try again.');
+        toast.error('Logout failed. Please try again.');
       }
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Something went wrong while logging out.');
+      toast.error('Something went wrong while logging out.');
     }
   };
 
   const handleUpdateStatus = async () => {
     if (!selectedOrder || !statusToUpdate) return;
     if (statusToUpdate === selectedOrder.status) {
-      alert("Please select a different status to update.");
+      toast.error("Please select a different status to update.");
       return;
     }
 
@@ -267,13 +268,13 @@ export default function OrderManagementPage() {
         // Update selected order view
         setSelectedOrder(prev => ({ ...prev, status: statusToUpdate }));
 
-        alert("Order status updated successfully!");
+        toast.success("Order status updated successfully!");
       } else {
-        alert(result.message || "Failed to update order status");
+        toast.error(result.message || "Failed to update order status");
       }
     } catch (error) {
       console.error("Order status update error:", error);
-      alert("Something went wrong while updating status.");
+      toast.error("Something went wrong while updating status.");
     } finally {
       setUpdatingStatus(false);
     }
@@ -290,7 +291,7 @@ export default function OrderManagementPage() {
       // Toggle dropdown if multiple products
       setShowItemDropdown(!showItemDropdown);
     } else {
-      alert("No items details found for this order.");
+      toast.error("No items details found for this order.");
     }
   };
 

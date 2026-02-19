@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { EyeOff, Eye } from 'lucide-react';
+import toast from 'react-hot-toast';
 
 export default function RegisterPage() {
     const [firstName, setFirstName] = useState('');
@@ -16,7 +17,7 @@ export default function RegisterPage() {
         e.preventDefault();
             
         if (password !== confirmPassword) {
-            alert('Passwords do not match!');
+            toast.error('Passwords do not match!');
             return;
         }
 
@@ -32,15 +33,15 @@ export default function RegisterPage() {
             const data = await response.json();
 
             if (response.ok) {
-                alert('Account created successfully! Welcome to Zulu Jewellers.');
+                toast.success('Account created successfully! Welcome to Zulu Jewellers.');
                 window.location.href = '/auth/login';
             } else {
-                alert(data.message || 'Registration failed');
+                toast.error(data.message || 'Registration failed');
                 return;
             }
         } catch (error) {
             console.error("Registeration Error:", error);
-            alert('Internal Server Error');
+            toast.error('Internal Server Error');
         }
     }
 
@@ -48,7 +49,7 @@ export default function RegisterPage() {
         document.querySelectorAll('.social-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const provider = this.textContent.trim().split(' ')[1];
-                alert(`${provider} authentication would be integrated here`);
+                toast(`${provider} authentication would be integrated here`);
             });
         });
     

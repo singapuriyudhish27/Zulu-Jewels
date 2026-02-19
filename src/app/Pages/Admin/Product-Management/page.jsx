@@ -4,6 +4,7 @@ import "./products.css";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
+import toast from "react-hot-toast";
 import {
   LayoutDashboard,
   Package,
@@ -63,7 +64,7 @@ export default function ProductManagementPage() {
   // Form states for Category
   const [categoryForm, setCategoryForm] = useState({
     name: "",
-    available_materials: "Gold",
+    available_materials: ["Gold"],
     description: ""
   });
 
@@ -178,7 +179,7 @@ export default function ProductManagementPage() {
   // 🔹 Interaction Handlers
   const handleDeleteProduct = async (id, isActive) => {
     if (isActive) {
-      alert("Active products cannot be deleted. Please turn it off first.");
+      toast.error("Active products cannot be deleted. Please turn it off first.");
       return;
     }
     if (!confirm("Are you sure you want to delete this product?")) return;
@@ -193,7 +194,7 @@ export default function ProductManagementPage() {
       if (data.success) {
         setProductsData(prev => prev.filter(p => p.id !== id));
       } else {
-        alert(data.message || "Failed to delete product");
+        toast.error(data.message || "Failed to delete product");
       }
     } catch (error) {
       console.error("Delete error:", error);
@@ -212,7 +213,7 @@ export default function ProductManagementPage() {
       if (data.success) {
         setProductsData(prev => prev.map(p => p.id === id ? { ...p, is_active: !currentStatus } : p));
       } else {
-        alert(data.message || "Failed to update product status");
+        toast.error(data.message || "Failed to update product status");
       }
     } catch (error) {
       console.error("Toggle error:", error);
@@ -232,9 +233,9 @@ export default function ProductManagementPage() {
       if (data.success) {
         setCategoriesData(prev => [...prev, data.data]);
         setShowAddCategory(false);
-        setCategoryForm({ name: "", available_materials: "Gold", description: "" });
+        setCategoryForm({ name: "", available_materials: ["Gold"], description: "" });
       } else {
-        alert(data.message || "Failed to add category");
+        toast.error(data.message || "Failed to add category");
       }
     } catch (error) {
       console.error("Category save error:", error);
@@ -273,7 +274,7 @@ export default function ProductManagementPage() {
         setEditingProductId(null);
         setProductForm({ name: "", category_name: "", gender: "Unisex", material: "Gold", price: "", stock: "", description: "", is_active: true });
       } else {
-        alert(data.message || "Failed to save product");
+        toast.error(data.message || "Failed to save product");
       }
     } catch (error) {
       console.error("Product save error:", error);
@@ -290,11 +291,11 @@ export default function ProductManagementPage() {
       if (res.ok) {
         router.replace('/auth/login');
       } else {
-        alert('Logout failed. Please try again.');
+        toast.error('Logout failed. Please try again.');
       }
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Something went wrong while logging out.');
+      toast.error('Something went wrong while logging out.');
     }
   };
 
@@ -610,7 +611,22 @@ export default function ProductManagementPage() {
                   <div className="checkbox-group">
                     {["Gold", "Silver", "Diamond"].map(m => (
                       <label className="checkbox-item" key={m}>
-                        <input type="radio" name="available_materials" value={m} checked={categoryForm.available_materials === m} onChange={(e) => setCategoryForm({ ...categoryForm, available_materials: e.target.value })} /> {m}
+                        <input
+                          type="checkbox"
+                          name="available_materials"
+                          value={m}
+                          checked={categoryForm.available_materials.includes(m)}
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const isChecked = e.target.checked;
+                            setCategoryForm(prev => {
+                              const materials = isChecked
+                                ? [...prev.available_materials, val]
+                                : prev.available_materials.filter(item => item !== val);
+                              return { ...prev, available_materials: materials };
+                            });
+                          }}
+                        /> {m}
                       </label>
                     ))}
                   </div>

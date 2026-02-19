@@ -3,6 +3,7 @@ import { useEffect } from 'react';
 import { Search, RefreshCw, User, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 export default function ProductDetailsPage() {
     const router = useRouter();
@@ -19,7 +20,7 @@ export default function ProductDetailsPage() {
             return;
         }
 
-        action();
+        if (action) action();
     };
     
     useEffect(() => {
@@ -70,7 +71,7 @@ export default function ProductDetailsPage() {
   }, []);
 
     const addToCart = () => {
-        alert('Product added to cart!');
+        toast.success('Product added to cart!');
     };
 
     // Tab Switching
@@ -908,12 +909,12 @@ export default function ProductDetailsPage() {
             {/* <Link href="/Pages/search" className="icon-btn" aria-label="Search">
                 <Search size={18} strokeWidth={1.5} />
             </Link> */}
-            <Link href="/Pages/Profile" className="icon-btn" aria-label="User Profile">
+            <div className="icon-btn" aria-label="User Profile" onClick={() => requireAuth(() => router.push('/Pages/Profile'))}>
                 <User size={18} strokeWidth={1.5} />
-            </Link>
-            <Link href="/Pages/cart" className="icon-btn" aria-label="Shopping Cart">
+            </div>
+            <div className="icon-btn" aria-label="Shopping Cart" onClick={() => requireAuth(() => router.push('/Pages/cart'))}>
                 <ShoppingCart size={18} strokeWidth={1.5} />
-            </Link>
+            </div>
         </div>
     </nav>
 
@@ -988,7 +989,7 @@ export default function ProductDetailsPage() {
             {/* Action Buttons */}
             <div className="action-buttons">
                 <button className="btn btn-primary" onClick={() => requireAuth(addToCart)}>Add to Cart</button>
-                <button className="btn btn-secondary" onClick={() => requireAuth()}>Buy Now</button>
+                <button className="btn btn-secondary" onClick={() => requireAuth(() => router.push('/Pages/cart'))}>Buy Now</button>
                 <button className="btn btn-wishlist" onClick={() => requireAuth()}>♡</button>
             </div>
 

@@ -1,4 +1,5 @@
 import './globals.css'
+import ToastProvider from '@/components/ToastProvider'
 
 export const metadata = {
   title: 'Zulu Jewellers - Lab-Grown Diamond Jewelry',
@@ -14,7 +15,10 @@ export default function RootLayout({ children }) {
           rel="stylesheet" 
         />
       </head>
-      <body>{children}</body>
+      <body>
+        <ToastProvider />
+        {children}
+      </body>
     </html>
   )
 }

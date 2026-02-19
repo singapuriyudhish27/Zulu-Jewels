@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
+import toast from 'react-hot-toast';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState(0);
@@ -57,10 +58,10 @@ export default function ProfilePage() {
         throw new Error(result?.message || 'Profile update failed');
       }
 
-      alert('Profile updated successfully!');
+      toast.success('Profile updated successfully!');
     } catch (error) {
       console.error('Profile update error:', error);
-      alert('Failed to update profile. Please try again.');
+      toast.error('Failed to update profile. Please try again.');
     }
   };
 
@@ -73,7 +74,7 @@ export default function ProfilePage() {
     const confirmPassword = e.target.confirmPassword.value;
 
     if (newPassword !== confirmPassword) {
-      alert('Passwords do not match!');
+      toast.error('Passwords do not match!');
       return;
     }
 
@@ -93,11 +94,11 @@ export default function ProfilePage() {
         throw new Error(result?.message || 'Password update failed');
       }
 
-      alert('Password changed successfully!');
+      toast.success('Password changed successfully!');
       e.target.reset();
     } catch (error) {
       console.error('Password update error:', error);
-      alert('Failed to update password. Please try again.');
+      toast.error('Failed to update password. Please try again.');
     }
   };
 
@@ -114,11 +115,11 @@ export default function ProfilePage() {
       if (res.ok) {
         router.replace('/auth/login');
       } else {
-        alert('Logout failed. Please try again.');
+        toast.error('Logout failed. Please try again.');
       }
     } catch (error) {
       console.error('Logout error:', error);
-      alert('Something went wrong while logging out.');
+      toast.error('Something went wrong while logging out.');
     }
   };
 

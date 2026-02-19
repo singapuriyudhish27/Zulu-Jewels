@@ -2,6 +2,7 @@
 import { useEffect, useState } from 'react';
 import { EyeOff, Eye } from 'lucide-react';
 import { useSearchParams, useRouter } from "next/navigation";
+import toast from 'react-hot-toast';
 
 export default function LoginPage() {
     const searchParams = useSearchParams();
@@ -27,7 +28,7 @@ export default function LoginPage() {
             const data = await response.json();
 
             if (response.ok) {
-                alert("Login successful! Welcome to Zulu Jewellers");
+                toast.success("Welcome back to Zulu Jewellers!");
 
                 if (data.user.role === "admin") {
                     router.push("/Pages/Admin");
@@ -40,7 +41,7 @@ export default function LoginPage() {
             }
         } catch (error) {
             console.error("Login error:", error);
-            alert('An error occurred during login. Please try again.');
+            toast.error('An error occurred during login. Please try again.');
         }
     }
 
@@ -48,7 +49,7 @@ export default function LoginPage() {
         document.querySelectorAll('.social-btn').forEach(btn => {
             btn.addEventListener('click', function() {
                 const provider = this.textContent.trim().split(' ')[1];
-                alert(`${provider} authentication would be integrated here`);
+                toast(`${provider} authentication would be integrated here`);
             });
         });
     

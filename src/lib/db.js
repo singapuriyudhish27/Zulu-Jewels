@@ -40,7 +40,7 @@ export async function getConnection() {
       CREATE TABLE IF NOT EXISTS categories (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(150) NOT NULL UNIQUE,
-        available_materials ENUM('Gold', 'Silver', 'Diamond') NOT NULL,
+        available_materials JSON NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
