@@ -1,6 +1,6 @@
 "use client";
 
-import "./marketing.css";
+// import "./marketing.css";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
@@ -368,7 +368,7 @@ export default function MarketingPage() {
                             <div className="content-card">
                                 <div className="content-card-header">
                                     <h3 className="content-card-title"><Percent size={20} /> Coupon Codes & Promotions</h3>
-                                    <button className="action-btn primary" onClick={handleAddClick}>
+                                    <button className="action-btn primary" onClick={handleAddClick} style={{ width: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
                                         <Plus size={18} /> Add Coupon
                                     </button>
                                 </div>
@@ -440,7 +440,7 @@ export default function MarketingPage() {
                             <div className="content-card">
                                 <div className="content-card-header">
                                     <h3 className="content-card-title"><ImageIcon size={20} /> Website Banners</h3>
-                                    <button className="action-btn primary" onClick={handleAddBannerClick}>
+                                    <button className="action-btn primary" onClick={handleAddBannerClick} style={{ width: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
                                         <Plus size={18} /> Add Banner
                                     </button>
                                 </div>
@@ -570,7 +570,7 @@ export default function MarketingPage() {
                                 <div className="content-card">
                                     <div className="content-card-header">
                                         <h3 className="content-card-title"><FileText size={20} /> Website Pages</h3>
-                                        <button className="action-btn primary" onClick={handleAddContentClick}>
+                                        <button className="action-btn primary" onClick={handleAddContentClick} style={{ width: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
                                             <Plus size={18} /> Add Page
                                         </button>
                                     </div>

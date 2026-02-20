@@ -294,8 +294,15 @@
 .action-btns {
   display: flex;
   gap: 8px;
+  width: 100%;
   padding: 16px 24px;
   border-top: 1px solid var(--border);
+}
+
+.action-btns .action-btn {
+  flex: 0 0 calc(50% - 4px);
+  max-width: calc(50% - 4px);
+  justify-content: center;
 }
 
 .action-btn {

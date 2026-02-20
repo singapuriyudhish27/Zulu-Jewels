@@ -1,6 +1,6 @@
 "use client";
 
-import "./shipping.css";
+// import "./shipping.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -546,7 +546,7 @@ export default function ShippingPaymentPage() {
                                     <h3 className="content-card-title">
                                         <MapPin size={20} /> Shipping Zones & Rates
                                     </h3>
-                                    <button className="action-btn primary" onClick={handleOpenAddModal}>
+                                    <button className="action-btn primary" onClick={handleOpenAddModal} style={{ width: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
                                         <Plus size={16} /> Add Shipping Zone & Rates
                                     </button>
                                 </div>
@@ -609,7 +609,7 @@ export default function ShippingPaymentPage() {
                                     <h3 className="content-card-title">
                                         <Truck size={20} /> Shipping Partners
                                     </h3>
-                                    <button className="action-btn primary" onClick={handleOpenAddPartnerModal}>
+                                    <button className="action-btn primary" onClick={handleOpenAddPartnerModal} style={{ width: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
                                         <Plus size={16} /> Add Shipping Partner
                                     </button>
                                 </div>
@@ -723,7 +723,7 @@ export default function ShippingPaymentPage() {
                                     <h3 className="content-card-title">
                                         <CreditCard size={20} /> Configured Payment Methods
                                     </h3>
-                                    <button className="action-btn primary" onClick={handleOpenAddPaymentModal}>
+                                    <button className="action-btn primary" onClick={handleOpenAddPaymentModal} style={{ width: "auto", flexShrink: 0, whiteSpace: "nowrap" }}>
                                         <Plus size={16} /> Add New Method
                                     </button>
                                 </div>

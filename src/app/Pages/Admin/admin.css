@@ -514,6 +514,8 @@
           justify-content: center;
           gap: 6px;
           border: 1px solid transparent;
+          flex: none;
+          width: auto;
         }
         .action-btn:disabled { opacity: 0.6; cursor: not-allowed; }
         .action-btn.primary { background: var(--gold); color: var(--white); border-color: var(--gold); }
@@ -527,7 +529,21 @@
         .action-btn.delete:hover { background: rgba(231, 76, 60, 0.2); transform: translateY(-1px); }
         .action-btn.download { background: rgba(39, 174, 96, 0.1); color: var(--success); border-color: transparent; }
         .action-btn.download:hover { background: rgba(39, 174, 96, 0.2); transform: translateY(-1px); }
-
+        .content-card-header .action-btn {
+          width: auto;
+          flex: none;
+        }
+        .action-btns .action-btn {
+          flex: none;
+          width: auto;
+        }
+        .action-btns {
+          display: flex;
+          flex-direction: nowrap;
+          align-items: center;
+          gap: 8px;
+        }
+        
         /* Data Table Styles */
         .data-table { width: 100%; border-collapse: collapse; margin-top: 10px; }
         .data-table th { 

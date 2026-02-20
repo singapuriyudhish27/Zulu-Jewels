@@ -29,8 +29,8 @@ export async function POST(req) {
 
         //User Insertion
         const [result] = await conn.execute(
-            "INSERT INTO users (role, firstName, lastName, phone, email, password_hash) VALUES (?, ?, ?, ?, ?, ?)",
-            ["user", firstName, lastName, contact_number, email, hashedPassword]
+            "INSERT INTO users (firstName, lastName, phone, email, password_hash) VALUES (?, ?, ?, ?, ?)",
+            [firstName, lastName, contact_number, email, hashedPassword]
         );
 
         return NextResponse.json({ message: "User registered successfully", userId: result.insertId }, { status: 201 });

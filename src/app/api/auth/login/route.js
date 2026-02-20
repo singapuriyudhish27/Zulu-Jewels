@@ -33,7 +33,7 @@ export async function POST(req) {
         const conn = await getConnection();
         //User Existence Check
         const [userRows] = await conn.execute(
-            "SELECT id, firstName, lastName, email, phone, password_hash, role FROM users WHERE email = ?",
+            "SELECT id, firstName, lastName, email, phone, password_hash FROM users WHERE email = ?",
             [email]
         );
 
