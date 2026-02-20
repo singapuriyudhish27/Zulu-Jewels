@@ -1,6 +1,8 @@
 import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import "./admin.css";
+import AdminLayoutContent from "./AdminLayoutContent";
 
 export default async function PagesLayout({ children }) {
   const cookieStore = await cookies();
@@ -22,5 +24,9 @@ export default async function PagesLayout({ children }) {
     redirect("/Pages");
   }
 
-  return children;
+  return (
+    <AdminLayoutContent>
+      {children}
+    </AdminLayoutContent>
+  );
 }

@@ -53,9 +53,6 @@ export default function ContactManagementPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [processingAction, setProcessingAction] = useState(false);
 
-  const handleProfile = () => {
-    router.push("/Pages/Admin/Profile");
-  };
 
   const [inquiriesData, setInquiriesData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -191,25 +188,6 @@ export default function ContactManagementPage() {
   });
 
   // 🔹 Logout handler
-  const handleLogout = async () => {
-    if (!confirm('Are you sure you want to logout?')) return;
-
-    try {
-      const res = await fetch('/api/Pages/Profile', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (res.ok) {
-        router.replace('/auth/login');
-      } else {
-        toast.error('Logout failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Something went wrong while logging out.');
-    }
-  };
 
   const handleUpdateStatus = async (id, status) => {
     setProcessingAction(true);
@@ -302,41 +280,6 @@ export default function ContactManagementPage() {
 
   return (
     <>
-      {/* Sidebar */}
-      <div className="admin-sidebar">
-        <div className="admin-logo">
-          <Image
-            src="/logo_admin.png"
-            alt="Website Logo"
-            className="admin-logo-image"
-            width={80}
-            height={80}
-            priority
-          /><span>ZULU JEWELS</span><br />Admin Panel</div>
-        <div className="admin-menu">
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin")}><LayoutDashboard size={18} /> Dashboard</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Product-Management")}><Package size={18} /> Product Management</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Order-Management")}><ShoppingCart size={18} /> Orders</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Customer-Management")}><Users size={18} /> Customers</div>
-          <div className="admin-menu-item active" onClick={() => router.push("/Pages/Admin/Contact-Management")}><PhoneCall size={18} /> Contact & Inquiry</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Reviews-Management")}><Star size={18} /> Reviews & Ratings</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Marketing")}><Megaphone size={18} /> Marketing</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Shipping-Management")}><Truck size={18} /> Shipping & Payment</div>
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
-        </div>
-      </div>
-
-      {/* Main */}
-      <div className="admin-main">
-        <div className="admin-header">
-          <input className="admin-search" placeholder="Search inquiries by name, email, subject..." />
-          <div className="admin-user">
-            <div className="admin-avatar" onClick={handleProfile}>ZJ</div>
-          </div>
-        </div>
-
-        {/* Content Area */}
-        <div className="admin-content">
           <h1 className="page-title">Contact & Inquiry Management</h1>
           <p className="page-subtitle">Manage customer inquiries, support requests, and communication</p>
 
@@ -498,8 +441,6 @@ export default function ContactManagementPage() {
               )}
             </div>
           </div>
-        </div>
-      </div>
 
       {/* Email Modal */}
       {isEmailModalOpen && (

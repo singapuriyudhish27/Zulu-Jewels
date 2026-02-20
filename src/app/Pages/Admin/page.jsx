@@ -1,6 +1,6 @@
 "use client";
 
-import "./admin.css";
+
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
@@ -44,9 +44,6 @@ export default function AdminPage() {
     reviews: []
   });
 
-  const handleProfile = () => {
-    router.push("/Pages/Admin/Profile");
-  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -171,62 +168,9 @@ export default function AdminPage() {
   };
 
   // 🔹 Logout handler
-  const handleLogout = async () => {
-    if (!confirm('Are you sure you want to logout?')) return;
-
-    try {
-      const res = await fetch('/api/Pages/Profile', {
-        method: 'POST',
-        credentials: 'include',
-      });
-
-      if (res.ok) {
-        router.replace('/auth/login');
-      } else {
-        toast.error('Logout failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Something went wrong while logging out.');
-    }
-  };
 
   return (
     <>
-      {/* Sidebar */}
-      <div className="admin-sidebar">
-        <div className="admin-logo">
-          <Image
-            src="/logo_admin.png"
-            alt="Website Logo"
-            className="admin-logo-image"
-            width={80}
-            height={80}
-            priority
-          /><span>ZULU JEWELS</span><br />Admin Panel</div>
-        <div className="admin-menu">
-          <div className="admin-menu-item active" onClick={() => router.push("/Pages/Admin")}><LayoutDashboard size={18} /> Dashboard</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Product-Management")}><Package size={18} /> Product Management</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Order-Management")}><ShoppingCart size={18} /> Orders</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Customer-Management")}><Users size={18} /> Customers</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Contact-Management")}><PhoneCall size={18} /> Contact & Inquiry</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Reviews-Management")}><Star size={18} /> Reviews & Ratings</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Marketing")}><Megaphone size={18} /> Marketing</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Shipping-Management")}><Truck size={18} /> Shipping & Payment</div>
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
-        </div>
-      </div>
-
-      {/* Main */}
-      <div className="admin-main">
-        <div className="admin-header">
-          <input className="admin-search" placeholder="Search products, orders, customers..." />
-          <div className="admin-user">
-            <div className="admin-avatar" onClick={handleProfile}>ZJ</div>
-          </div>
-        </div>
-
-        <div className="admin-content">
           {/* Welcome Section */}
           <div className="welcome-section">
             <h1 className="welcome-title">Welcome back, Admin! 👋</h1>
@@ -373,9 +317,7 @@ export default function AdminPage() {
             ) : (
               <div style={{ padding: 40, textAlign: 'center', opacity: 0.3 }}>No top products found</div>
             )}
-          </div>
         </div>
-      </div>
     </>
   );
 }

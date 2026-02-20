@@ -146,9 +146,6 @@ export default function ProductManagementPage() {
     };
   });
 
-  const handleProfile = () => {
-    router.push("/Pages/Admin/Profile");
-  };
 
   // Categories data
   // No longer needed, calculated from productsData
@@ -281,60 +278,9 @@ export default function ProductManagementPage() {
     }
   };
 
-  const handleLogout = async () => {
-    if (!confirm('Are you sure you want to logout?')) return;
-    try {
-      const res = await fetch('/api/Pages/Profile', {
-        method: 'POST',
-        credentials: 'include',
-      });
-      if (res.ok) {
-        router.replace('/auth/login');
-      } else {
-        toast.error('Logout failed. Please try again.');
-      }
-    } catch (error) {
-      console.error('Logout error:', error);
-      toast.error('Something went wrong while logging out.');
-    }
-  };
 
   return (
     <>
-      {/* Sidebar */}
-      <div className="admin-sidebar">
-        <div className="admin-logo">
-          <Image
-            src="/logo_admin.png"
-            alt="Website Logo"
-            className="admin-logo-image"
-            width={80}
-            height={80}
-            priority
-          /><span>ZULU JEWELS</span><br />Admin Panel</div>
-        <div className="admin-menu">
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin")}><LayoutDashboard size={18} /> Dashboard</div>
-          <div className="admin-menu-item active" onClick={() => router.push("/Pages/Admin/Product-Management")}><Package size={18} /> Product Management</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Order-Management")}><ShoppingCart size={18} /> Orders</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Customer-Management")}><Users size={18} /> Customers</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Contact-Management")}><PhoneCall size={18} /> Contact & Inquiry</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Reviews-Management")}><Star size={18} /> Reviews & Ratings</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Marketing")}><Megaphone size={18} /> Marketing</div>
-          <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Shipping-Management")}><Truck size={18} /> Shipping & Payment</div>
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
-        </div>
-      </div>
-
-      {/* Main */}
-      <div className="admin-main">
-        <div className="admin-header">
-          <input className="admin-search" placeholder="Search products..." />
-          <div className="admin-user">
-            <div className="admin-avatar" onClick={handleProfile}>ZJ</div>
-          </div>
-        </div>
-
-        <div className="admin-content">
           {/* Page Header */}
           <div className="page-header">
             <div>
@@ -518,8 +464,6 @@ export default function ProductManagementPage() {
               </tbody>
             </table>
           </div>
-        </div>
-      </div>
 
       {/* Add Product Modal */}
       {showAddProduct && (
@@ -637,7 +581,6 @@ export default function ProductManagementPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="button" className="add-btn secondary" onClick={() => setShowAddCategory(false)}>Cancel</button>
                 <button type="submit" className="add-btn"><Save size={16} /> Create Category</button>
               </div>
             </form>

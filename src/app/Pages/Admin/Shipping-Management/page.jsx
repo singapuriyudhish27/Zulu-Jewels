@@ -469,71 +469,9 @@ export default function ShippingPaymentPage() {
         : "0.0";
     const processingFees = (totalRevenue * 0.02).toFixed(0); // Estimated 2%
 
-    // 🔹 Logout handler
-    const handleLogout = async () => {
-        if (!confirm('Are you sure you want to logout?')) return;
-
-        try {
-            const res = await fetch('/api/Pages/Profile', {
-                method: 'POST',
-                credentials: 'include',
-            });
-
-            if (res.ok) {
-                router.replace('/auth/login');
-            } else {
-                toast.error('Logout failed. Please try again.');
-            }
-        } catch (error) {
-            console.error('Logout error:', error);
-            toast.error('Something went wrong while logging out.');
-        }
-    };
 
     return (
         <>
-            {/* Sidebar */}
-            <div className="admin-sidebar">
-                <div className="admin-logo">
-                    <Image
-                        src="/logo_admin.png"
-                        alt="Website Logo"
-                        className="admin-logo-image"
-                        width={80}
-                        height={80}
-                        priority
-                    />
-                    <span>ZULU JEWELS</span>
-                    <br />
-                    Admin Panel
-                </div>
-
-                <div className="admin-menu">
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin")}><LayoutDashboard size={18} /> Dashboard</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Product-Management")}><Package size={18} /> Product Management</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Order-Management")}><ShoppingCart size={18} /> Orders</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Customer-Management")}><Users size={18} /> Customers</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Contact-Management")}><PhoneCall size={18} /> Contact & Inquiry</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Reviews-Management")}><Star size={18} /> Reviews & Ratings</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Marketing")}><Megaphone size={18} /> Marketing</div>
-                    <div className="admin-menu-item active" onClick={() => router.push("/Pages/Admin/Shipping-Management")}><Truck size={18} /> Shipping & Payment</div>
-                    <button className="logout-btn" onClick={handleLogout}>Logout</button>
-                </div>
-            </div>
-
-            {/* Main */}
-            <div className="admin-main">
-                <div className="admin-header">
-                    <input className="admin-search" placeholder="Search products, orders, customers..." />
-                    <div className="admin-user">
-                        <div className="admin-avatar" onClick={handleProfile} style={{ cursor: "pointer" }}>
-                            ZJ
-                        </div>
-                    </div>
-                </div>
-
-                {/* Content Area */}
-                <div className="admin-content">
                     <h1 className="page-title">Shipping & Payment Management</h1>
                     <p className="page-subtitle">Configure shipping zones, rates, and payment methods for your store</p>
 
@@ -608,7 +546,7 @@ export default function ShippingPaymentPage() {
                                     <h3 className="content-card-title">
                                         <MapPin size={20} /> Shipping Zones & Rates
                                     </h3>
-                                    <button className="add-zone-btn" onClick={handleOpenAddModal}>
+                                    <button className="action-btn primary" onClick={handleOpenAddModal}>
                                         <Plus size={16} /> Add Shipping Zone & Rates
                                     </button>
                                 </div>
@@ -644,10 +582,10 @@ export default function ShippingPaymentPage() {
                                                         </td>
                                                         <td>
                                                             <div className="action-btns">
-                                                                <button className="action-btn edit" title="Edit" onClick={() => handleOpenEditModal(zone._raw)}>
+                                                                <button className="action-btn icon-only edit" title="Edit" onClick={() => handleOpenEditModal(zone._raw)}>
                                                                     <Pencil size={15} />
                                                                 </button>
-                                                                <button className="action-btn delete" title="Delete" onClick={() => handleDeleteZone(zone.id)}>
+                                                                <button className="action-btn icon-only delete" title="Delete" onClick={() => handleDeleteZone(zone.id)}>
                                                                     <Trash2 size={15} />
                                                                 </button>
                                                             </div>
@@ -671,7 +609,7 @@ export default function ShippingPaymentPage() {
                                     <h3 className="content-card-title">
                                         <Truck size={20} /> Shipping Partners
                                     </h3>
-                                    <button className="add-zone-btn" onClick={handleOpenAddPartnerModal}>
+                                    <button className="action-btn primary" onClick={handleOpenAddPartnerModal}>
                                         <Plus size={16} /> Add Shipping Partner
                                     </button>
                                 </div>
@@ -706,10 +644,10 @@ export default function ShippingPaymentPage() {
                                                         </td>
                                                         <td>
                                                             <div className="action-btns">
-                                                                <button className="action-btn edit" title="Edit" onClick={() => handleOpenEditPartnerModal(partner._raw)}>
+                                                                <button className="action-btn icon-only edit" title="Edit" onClick={() => handleOpenEditPartnerModal(partner._raw)}>
                                                                     <Pencil size={15} />
                                                                 </button>
-                                                                <button className="action-btn delete" title="Delete" onClick={() => handleDeletePartner(partner.id)}>
+                                                                <button className="action-btn icon-only delete" title="Delete" onClick={() => handleDeletePartner(partner.id)}>
                                                                     <Trash2 size={15} />
                                                                 </button>
                                                             </div>
@@ -785,7 +723,7 @@ export default function ShippingPaymentPage() {
                                     <h3 className="content-card-title">
                                         <CreditCard size={20} /> Configured Payment Methods
                                     </h3>
-                                    <button className="add-zone-btn" onClick={handleOpenAddPaymentModal}>
+                                    <button className="action-btn primary" onClick={handleOpenAddPaymentModal}>
                                         <Plus size={16} /> Add New Method
                                     </button>
                                 </div>
@@ -836,7 +774,7 @@ export default function ShippingPaymentPage() {
                                                         </span> */}
                                                     </div>
                                                     <button 
-                                                        className="action-btn delete" 
+                                                        className="action-btn icon-only delete" 
                                                         title="Delete Method"
                                                         onClick={() => handleDeletePaymentMethod(method.id)}
                                                     >
@@ -986,9 +924,8 @@ export default function ShippingPaymentPage() {
                                                         <td>
                                                             {(txn.status === "Completed" || txn.status === "Success") && (
                                                                 <button 
-                                                                    className="action-btn" 
+                                                                    className="action-btn icon-only download" 
                                                                     title="Download Receipt" 
-                                                                    style={{ background: "rgba(52, 152, 219, 0.1)", color: "#3498db" }}
                                                                     onClick={() => handleDownloadReceipt(txn)}
                                                                 >
                                                                     <Download size={15} />
@@ -1064,8 +1001,6 @@ export default function ShippingPaymentPage() {
                             </div>
                         </>
                     )}
-                </div>
-            </div>
 
             {/* ── Shipping Zone Add/Edit Modal ── */}
             {showZoneModal && (
@@ -1149,8 +1084,8 @@ export default function ShippingPaymentPage() {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn-cancel" onClick={handleCloseModal}>Cancel</button>
-                                <button type="submit" className="btn-save" disabled={saving}>
+                                <button type="button" className="action-btn secondary" onClick={handleCloseModal}>Cancel</button>
+                                <button type="submit" className="action-btn primary" disabled={saving}>
                                     {saving ? 'Saving...' : (editingZone ? 'Update Zone' : 'Add Zone')}
                                 </button>
                             </div>
@@ -1219,8 +1154,8 @@ export default function ShippingPaymentPage() {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn-cancel" onClick={handleClosePartnerModal}>Cancel</button>
-                                <button type="submit" className="btn-save" disabled={savingPartner}>
+                                <button type="button" className="action-btn secondary" onClick={handleClosePartnerModal}>Cancel</button>
+                                <button type="submit" className="action-btn primary" disabled={savingPartner}>
                                     {savingPartner ? 'Saving...' : (editingPartner ? 'Update Partner' : 'Add Partner')}
                                 </button>
                             </div>
@@ -1272,8 +1207,8 @@ export default function ShippingPaymentPage() {
                                 </div>
                             </div>
                             <div className="modal-footer">
-                                <button type="button" className="btn-cancel" onClick={handleClosePaymentModal}>Cancel</button>
-                                <button type="submit" className="btn-save" disabled={savingPayment}>
+                                <button type="button" className="action-btn secondary" onClick={handleClosePaymentModal}>Cancel</button>
+                                <button type="submit" className="action-btn primary" disabled={savingPayment}>
                                     {savingPayment ? 'Saving...' : 'Add Method'}
                                 </button>
                             </div>

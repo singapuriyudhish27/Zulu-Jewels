@@ -47,9 +47,6 @@ export default function MarketingPage() {
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("promotions");
 
-    const handleProfile = () => {
-        router.push("/Pages/Admin/Profile");
-    };
 
     // Live marketing data state
     const [marketingData, setMarketingData] = useState({
@@ -329,65 +326,10 @@ export default function MarketingPage() {
     ];
 
 
-    // 🔹 Logout handler
-    const handleLogout = async () => {
-        if (!confirm('Are you sure you want to logout?')) return;
-
-        try {
-            const res = await fetch('/api/Pages/Profile', {
-                method: 'POST',
-                credentials: 'include',
-            });
-
-            if (res.ok) {
-                router.replace('/auth/login');
-            } else {
-                toast.error('Logout failed. Please try again.');
-            }
-        } catch (error) {
-            console.error('Logout error:', error);
-            toast.error('Something went wrong while logging out.');
-        }
-    };
 
     return (
         <>
-            {/* Sidebar */}
-            <div className="admin-sidebar">
-                <div className="admin-logo">
-                    <NextImage
-                        src="/logo_admin.png"
-                        alt="Website Logo"
-                        className="admin-logo-image"
-                        width={80}
-                        height={80}
-                        priority
-                    /><span>ZULU JEWELS</span><br />Admin Panel</div>
-                <div className="admin-menu">
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin")}><LayoutDashboard size={18} /> Dashboard</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Product-Management")}><Package size={18} /> Product Management</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Order-Management")}><ShoppingCart size={18} /> Orders</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Customer-Management")}><Users size={18} /> Customers</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Contact-Management")}><PhoneCall size={18} /> Contact & Inquiry</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Reviews-Management")}><Star size={18} /> Reviews & Ratings</div>
-                    <div className="admin-menu-item active" onClick={() => router.push("/Pages/Admin/Marketing")}><Megaphone size={18} /> Marketing</div>
-                    <div className="admin-menu-item" onClick={() => router.push("/Pages/Admin/Shipping-Management")}><Truck size={18} /> Shipping & Payment</div>
-                    <button className="logout-btn" onClick={handleLogout}>Logout</button>
-                </div>
-            </div>
-
-            {/* Main */}
-            <div className="admin-main">
-                <div className="admin-header">
-                    <input className="admin-search" placeholder="Search products, orders, customers..." />
-                    <div className="admin-user">
-                        <div className="admin-avatar" onClick={handleProfile} style={{ cursor: "pointer" }}>ZJ</div>
-                    </div>
-                </div>
-
-                {/* Content Area */}
-                <div className="admin-content">
-                    <h1 className="page-title">Marketing & Content Management</h1>
+            <h1 className="page-title">Marketing & Content Management</h1>
                     <p className="page-subtitle">Manage promotions, banners, email campaigns, and website content</p>
 
                     {/* Tabs */}
@@ -426,18 +368,7 @@ export default function MarketingPage() {
                             <div className="content-card">
                                 <div className="content-card-header">
                                     <h3 className="content-card-title"><Percent size={20} /> Coupon Codes & Promotions</h3>
-                                    <button className="action-btn primary" style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        background: 'var(--gold)',
-                                        color: 'white',
-                                        padding: '8px 16px',
-                                        borderRadius: '6px',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        fontWeight: '500'
-                                    }} onClick={handleAddClick}>
+                                    <button className="action-btn primary" onClick={handleAddClick}>
                                         <Plus size={18} /> Add Coupon
                                     </button>
                                 </div>
@@ -463,9 +394,9 @@ export default function MarketingPage() {
                                                             </span>
                                                         </td>
                                                         <td>
-                                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                                <button onClick={() => handleEditClick(promo)} style={{ background: 'none', border: 'none', color: 'var(--info)', cursor: 'pointer' }}><Edit size={16} /></button>
-                                                                <button onClick={() => handleDeleteCoupon(promo.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                                                            <div className="action-btns">
+                                                                <button onClick={() => handleEditClick(promo)} className="action-btn edit" title="Edit"><Edit size={16} /></button>
+                                                                <button onClick={() => handleDeleteCoupon(promo.id)} className="action-btn delete" title="Delete"><Trash2 size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -509,18 +440,7 @@ export default function MarketingPage() {
                             <div className="content-card">
                                 <div className="content-card-header">
                                     <h3 className="content-card-title"><ImageIcon size={20} /> Website Banners</h3>
-                                    <button className="action-btn primary" style={{
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        gap: '8px',
-                                        background: 'var(--gold)',
-                                        color: 'white',
-                                        padding: '8px 16px',
-                                        borderRadius: '6px',
-                                        border: 'none',
-                                        cursor: 'pointer',
-                                        fontWeight: '500'
-                                    }} onClick={handleAddBannerClick}>
+                                    <button className="action-btn primary" onClick={handleAddBannerClick}>
                                         <Plus size={18} /> Add Banner
                                     </button>
                                 </div>
@@ -545,9 +465,9 @@ export default function MarketingPage() {
                                                             </span>
                                                         </td>
                                                         <td>
-                                                            <div style={{ display: 'flex', gap: '8px' }}>
-                                                                <button onClick={() => handleEditBannerClick(banner)} style={{ background: 'none', border: 'none', color: 'var(--info)', cursor: 'pointer' }}><Edit size={16} /></button>
-                                                                <button onClick={() => handleDeleteBanner(banner.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                                                            <div className="action-btns">
+                                                                <button onClick={() => handleEditBannerClick(banner)} className="action-btn edit" title="Edit"><Edit size={16} /></button>
+                                                                <button onClick={() => handleDeleteBanner(banner.id)} className="action-btn delete" title="Delete"><Trash2 size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -650,18 +570,7 @@ export default function MarketingPage() {
                                 <div className="content-card">
                                     <div className="content-card-header">
                                         <h3 className="content-card-title"><FileText size={20} /> Website Pages</h3>
-                                        <button className="action-btn primary" style={{
-                                            display: 'flex',
-                                            alignItems: 'center',
-                                            gap: '8px',
-                                            background: 'var(--gold)',
-                                            color: 'white',
-                                            padding: '8px 16px',
-                                            borderRadius: '6px',
-                                            border: 'none',
-                                            cursor: 'pointer',
-                                            fontWeight: '500'
-                                        }} onClick={handleAddContentClick}>
+                                        <button className="action-btn primary" onClick={handleAddContentClick}>
                                             <Plus size={18} /> Add Page
                                         </button>
                                     </div>
@@ -684,9 +593,9 @@ export default function MarketingPage() {
                                                                 </span>
                                                             </td>
                                                             <td>
-                                                                <div style={{ display: 'flex', gap: '8px' }}>
-                                                                    <button onClick={() => handleEditContentClick(page)} style={{ background: 'none', border: 'none', color: 'var(--info)', cursor: 'pointer' }}><Edit size={16} /></button>
-                                                                    <button onClick={() => handleDeleteContent(page.id)} style={{ background: 'none', border: 'none', color: 'var(--danger)', cursor: 'pointer' }}><Trash2 size={16} /></button>
+                                                                <div className="action-btns">
+                                                                    <button onClick={() => handleEditContentClick(page)} className="action-btn edit" title="Edit"><Edit size={16} /></button>
+                                                                    <button onClick={() => handleDeleteContent(page.id)} className="action-btn delete" title="Delete"><Trash2 size={16} /></button>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -736,8 +645,6 @@ export default function MarketingPage() {
                             </div>
                         </>
                     )}
-                </div>
-            </div>
 
             {/* Coupon Modal */}
             {isModalOpen && (
