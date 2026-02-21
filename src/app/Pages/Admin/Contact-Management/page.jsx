@@ -39,8 +39,10 @@ import {
   Gem,
   Wrench,
   Building,
-  Info
+  Info,
+  LogOut
 } from "lucide-react";
+import ConfirmModal from "@/components/common/ConfirmModal";
 
 export default function ContactManagementPage() {
   const router = useRouter();
@@ -56,6 +58,14 @@ export default function ContactManagementPage() {
 
   const [inquiriesData, setInquiriesData] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    type: "danger"
+  });
 
   useEffect(() => {
     const fetchInquiries = async () => {
@@ -217,27 +227,36 @@ export default function ContactManagementPage() {
   };
 
   const handleDeleteInquiry = async (id) => {
-    if (!confirm("Are you sure you want to archive (delete) this inquiry?")) return;
-    setProcessingAction(true);
-    try {
-      const response = await fetch(`/api/Pages/Admin/Contact-Management?id=${id}`, {
-        method: 'DELETE',
-        credentials: 'include',
-      });
-      const result = await response.json();
-      if (result.success) {
-        setInquiriesData(prev => prev.filter(item => item.inquiry.id !== id));
-        if (selectedInquiry?.id === id) {
-          setSelectedInquiry(null);
+    setConfirmConfig({
+      isOpen: true,
+      title: "Archive Inquiry",
+      message: "Are you sure you want to archive (delete) this inquiry? This will remove it from the list of active inquiries.",
+      type: "danger",
+      onConfirm: async () => {
+        setProcessingAction(true);
+        try {
+          const response = await fetch(`/api/Pages/Admin/Contact-Management?id=${id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+          });
+          const result = await response.json();
+          if (result.success) {
+            setInquiriesData(prev => prev.filter(item => item.inquiry.id !== id));
+            if (selectedInquiry?.id === id) {
+              setSelectedInquiry(null);
+            }
+            toast.success("Inquiry archived successfully");
+          } else {
+            toast.error(result.message || "Failed to delete inquiry");
+          }
+        } catch (error) {
+          console.error("Error deleting inquiry:", error);
+          toast.error("Something went wrong");
+        } finally {
+          setProcessingAction(false);
         }
-      } else {
-        toast.error(result.message || "Failed to delete inquiry");
       }
-    } catch (error) {
-      console.error("Error deleting inquiry:", error);
-    } finally {
-      setProcessingAction(false);
-    }
+    });
   };
 
   const handleSendEmail = async (e) => {
@@ -489,6 +508,15 @@ export default function ContactManagementPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+      />
     </>
   );
 }

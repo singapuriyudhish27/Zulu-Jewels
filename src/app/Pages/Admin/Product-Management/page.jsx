@@ -31,10 +31,12 @@ import {
   X,
   Save,
   ImageIcon as ImageIcon,
+  ToggleRight,
+  LogOut,
   Clock,
   ToggleLeft,
-  ToggleRight
 } from "lucide-react";
+import ConfirmModal from "@/components/common/ConfirmModal";
 
 export default function ProductManagementPage() {
   const router = useRouter();
@@ -66,6 +68,14 @@ export default function ProductManagementPage() {
     name: "",
     available_materials: ["Gold"],
     description: ""
+  });
+
+  const [confirmConfig, setConfirmConfig] = useState({
+    isOpen: false,
+    title: "",
+    message: "",
+    onConfirm: () => {},
+    type: "danger"
   });
 
   useEffect(() => {
@@ -179,23 +189,32 @@ export default function ProductManagementPage() {
       toast.error("Active products cannot be deleted. Please turn it off first.");
       return;
     }
-    if (!confirm("Are you sure you want to delete this product?")) return;
-    try {
-      const res = await fetch("/api/Pages/Admin/Product-Management", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ product_id: id }),
-        credentials: "include",
-      });
-      const data = await res.json();
-      if (data.success) {
-        setProductsData(prev => prev.filter(p => p.id !== id));
-      } else {
-        toast.error(data.message || "Failed to delete product");
+    setConfirmConfig({
+      isOpen: true,
+      title: "Delete Product",
+      message: "Are you sure you want to delete this product? This action cannot be undone.",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch("/api/Pages/Admin/Product-Management", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ product_id: id }),
+            credentials: "include",
+          });
+          const data = await res.json();
+          if (data.success) {
+            setProductsData(prev => prev.filter(p => p.id !== id));
+            toast.success("Product deleted successfully");
+          } else {
+            toast.error(data.message || "Failed to delete product");
+          }
+        } catch (error) {
+          console.error("Delete error:", error);
+          toast.error("Something went wrong");
+        }
       }
-    } catch (error) {
-      console.error("Delete error:", error);
-    }
+    });
   };
 
   const handleToggleActive = async (id, currentStatus) => {
@@ -587,6 +606,15 @@ export default function ProductManagementPage() {
           </div>
         </div>
       )}
+
+      <ConfirmModal 
+        isOpen={confirmConfig.isOpen}
+        onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+        onConfirm={confirmConfig.onConfirm}
+        title={confirmConfig.title}
+        message={confirmConfig.message}
+        type={confirmConfig.type}
+      />
     </>
   );
 }

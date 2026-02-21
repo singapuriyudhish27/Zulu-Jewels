@@ -1,6 +1,6 @@
 "use client";
 
-// import "./marketing.css";
+import "./marketing.css";
 import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
@@ -42,6 +42,7 @@ import {
     Info,
     ImageIcon,
 } from "lucide-react";
+import ConfirmModal from "@/components/common/ConfirmModal";
 
 export default function MarketingPage() {
     const router = useRouter();
@@ -82,6 +83,14 @@ export default function MarketingPage() {
         url: "",
         content: "",
         status: true
+    });
+
+    const [confirmConfig, setConfirmConfig] = useState({
+        isOpen: false,
+        title: "",
+        message: "",
+        onConfirm: () => {},
+        type: "danger"
     });
 
     const fetchData = async () => {
@@ -134,21 +143,30 @@ export default function MarketingPage() {
     };
 
     const handleDeleteCoupon = async (id) => {
-        if (!confirm("Are you sure you want to delete this coupon?")) return;
-        try {
-            const response = await fetch(`/api/Pages/Admin/Marketing?id=${id}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const result = await response.json();
-            if (result.success) {
-                fetchData();
-            } else {
-                toast.error(result.message || "Failed to delete coupon.");
+        setConfirmConfig({
+            isOpen: true,
+            title: "Delete Coupon",
+            message: "Are you sure you want to delete this coupon? This action cannot be undone.",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`/api/Pages/Admin/Marketing?id=${id}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        fetchData();
+                        toast.success("Coupon deleted successfully");
+                    } else {
+                        toast.error(result.message || "Failed to delete coupon.");
+                    }
+                } catch (error) {
+                    console.error("Error deleting coupon:", error);
+                    toast.error("Something went wrong");
+                }
             }
-        } catch (error) {
-            console.error("Error deleting coupon:", error);
-        }
+        });
     };
 
     const handleEditClick = (coupon) => {
@@ -207,21 +225,30 @@ export default function MarketingPage() {
     };
 
     const handleDeleteBanner = async (id) => {
-        if (!confirm("Are you sure you want to delete this banner?")) return;
-        try {
-            const response = await fetch(`/api/Pages/Admin/Marketing/Banners?id=${id}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const result = await response.json();
-            if (result.success) {
-                fetchData();
-            } else {
-                toast.error(result.message || "Failed to delete banner.");
+        setConfirmConfig({
+            isOpen: true,
+            title: "Delete Banner",
+            message: "Are you sure you want to delete this banner? It will be removed from the website immediately.",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`/api/Pages/Admin/Marketing/Banners?id=${id}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        fetchData();
+                        toast.success("Banner deleted successfully");
+                    } else {
+                        toast.error(result.message || "Failed to delete banner.");
+                    }
+                } catch (error) {
+                    console.error("Error deleting banner:", error);
+                    toast.error("Something went wrong");
+                }
             }
-        } catch (error) {
-            console.error("Error deleting banner:", error);
-        }
+        });
     };
 
     const handleEditBannerClick = (banner) => {
@@ -272,21 +299,30 @@ export default function MarketingPage() {
     };
 
     const handleDeleteContent = async (id) => {
-        if (!confirm("Are you sure you want to delete this page?")) return;
-        try {
-            const response = await fetch(`/api/Pages/Admin/Marketing/Content-Page?id=${id}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const result = await response.json();
-            if (result.success) {
-                fetchData();
-            } else {
-                toast.error(result.message || "Failed to delete page.");
+        setConfirmConfig({
+            isOpen: true,
+            title: "Delete Content Page",
+            message: "Are you sure you want to delete this page? This will remove it from the website permanently.",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    const response = await fetch(`/api/Pages/Admin/Marketing/Content-Page?id=${id}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                    const result = await response.json();
+                    if (result.success) {
+                        fetchData();
+                        toast.success("Content page deleted successfully");
+                    } else {
+                        toast.error(result.message || "Failed to delete page.");
+                    }
+                } catch (error) {
+                    console.error("Error deleting content page:", error);
+                    toast.error("Something went wrong");
+                }
             }
-        } catch (error) {
-            console.error("Error deleting content page:", error);
-        }
+        });
     };
 
     const handleEditContentClick = (page) => {
@@ -395,8 +431,8 @@ export default function MarketingPage() {
                                                         </td>
                                                         <td>
                                                             <div className="action-btns">
-                                                                <button onClick={() => handleEditClick(promo)} className="action-btn edit" title="Edit"><Edit size={16} /></button>
-                                                                <button onClick={() => handleDeleteCoupon(promo.id)} className="action-btn delete" title="Delete"><Trash2 size={16} /></button>
+                                                                <button onClick={() => handleEditClick(promo)} className="action-btn icon-only edit" title="Edit"><Edit size={16} /></button>
+                                                                <button onClick={() => handleDeleteCoupon(promo.id)} className="action-btn icon-only delete" title="Delete"><Trash2 size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -466,8 +502,8 @@ export default function MarketingPage() {
                                                         </td>
                                                         <td>
                                                             <div className="action-btns">
-                                                                <button onClick={() => handleEditBannerClick(banner)} className="action-btn edit" title="Edit"><Edit size={16} /></button>
-                                                                <button onClick={() => handleDeleteBanner(banner.id)} className="action-btn delete" title="Delete"><Trash2 size={16} /></button>
+                                                                <button onClick={() => handleEditBannerClick(banner)} className="action-btn icon-only edit" title="Edit"><Edit size={16} /></button>
+                                                                <button onClick={() => handleDeleteBanner(banner.id)} className="action-btn icon-only delete" title="Delete"><Trash2 size={16} /></button>
                                                             </div>
                                                         </td>
                                                     </tr>
@@ -594,8 +630,8 @@ export default function MarketingPage() {
                                                             </td>
                                                             <td>
                                                                 <div className="action-btns">
-                                                                    <button onClick={() => handleEditContentClick(page)} className="action-btn edit" title="Edit"><Edit size={16} /></button>
-                                                                    <button onClick={() => handleDeleteContent(page.id)} className="action-btn delete" title="Delete"><Trash2 size={16} /></button>
+                                                                    <button onClick={() => handleEditContentClick(page)} className="action-btn icon-only edit" title="Edit"><Edit size={16} /></button>
+                                                                    <button onClick={() => handleDeleteContent(page.id)} className="action-btn icon-only delete" title="Delete"><Trash2 size={16} /></button>
                                                                 </div>
                                                             </td>
                                                         </tr>
@@ -871,6 +907,15 @@ export default function MarketingPage() {
                     </div>
                 </div>
             )}
+            <ConfirmModal 
+                isOpen={confirmConfig.isOpen}
+                onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+                onConfirm={confirmConfig.onConfirm}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                type={confirmConfig.type}
+            />
+
             {/* Content Page Modal */}
             {isContentModalOpen && (
                 <div className="modal-overlay">

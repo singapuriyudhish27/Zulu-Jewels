@@ -2,8 +2,8 @@ import { redirect } from "next/navigation";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import "./admin.css";
-import "./Marketing/marketing.css";
-import "./Shipping-Management/shipping.css";
+// import "./Marketing/marketing.css";
+// import "./Shipping-Management/shipping.css";
 import AdminLayoutContent from "./AdminLayoutContent";
 
 export default async function PagesLayout({ children }) {

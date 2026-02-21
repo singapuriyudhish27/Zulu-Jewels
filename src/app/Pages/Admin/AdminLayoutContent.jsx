@@ -12,15 +12,21 @@ import {
     Star,
     Megaphone,
     Truck,
+    LogOut,
 } from "lucide-react";
+import ConfirmModal from "@/components/common/ConfirmModal";
+import { useState } from "react";
 
 export default function AdminLayoutContent({ children }) {
     const router = useRouter();
     const pathname = usePathname();
+    const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
 
     const handleLogout = async () => {
-        if (!confirm('Are you sure you want to logout?')) return;
+        setIsLogoutModalOpen(true);
+    };
 
+    const confirmLogout = async () => {
         try {
             const res = await fetch('/api/Pages/Profile', {
                 method: 'POST',
@@ -98,6 +104,17 @@ export default function AdminLayoutContent({ children }) {
                     {children}
                 </div>
             </div>
+
+            <ConfirmModal 
+                isOpen={isLogoutModalOpen}
+                onClose={() => setIsLogoutModalOpen(false)}
+                onConfirm={confirmLogout}
+                title="Logout Confirmation"
+                message="Are you sure you want to log out of the admin panel?"
+                confirmText="Logout"
+                type="warning"
+                icon={<LogOut size={32} />}
+            />
         </div>
     );
 }

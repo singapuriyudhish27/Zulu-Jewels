@@ -3,11 +3,14 @@ import { useEffect, useState } from 'react';
 import { User, Users, MapPin, Settings } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import { LogOut } from 'lucide-react';
+import ConfirmModal from '@/components/common/ConfirmModal';
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
   const [loggedInUserdata, setLoggedInUserData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -57,34 +60,16 @@ export default function ProfilePage() {
       });
     }
 
-    // Password form submission
-    const passwordForm = document.getElementById('passwordForm');
-    if (passwordForm) {
-      passwordForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        const newPassword = document.getElementById('newPassword').value;
-        const confirmPassword = document.getElementById('confirmPassword').value;
-        
-        if (newPassword !== confirmPassword) {
-          toast.error('Passwords do not match!');
-          return;
-        }
-        
-        toast.success('Password changed successfully!');
-        passwordForm.reset();
-      });
-    }
-
-    // Logout functionality
-    const logoutBtn = document.querySelector('.logout-btn');
-    if (logoutBtn) {
-      logoutBtn.addEventListener('click', function() {
-        if (confirm('Are you sure you want to logout?')) {
-          router.push('/auth/login');
-        }
-      });
-    }
+    // Logout functionality handled by handleLogout function
   }, [router]);
+
+  const handleLogout = () => {
+    setIsLogoutModalOpen(true);
+  };
+
+  const confirmLogout = () => {
+    router.push('/auth/login');
+  };
 
   const handleCurrentAdmin = async (e) => {
     e.preventDefault();
@@ -928,7 +913,7 @@ export default function ProfilePage() {
             <li><Settings size={20} strokeWidth={2} />&nbsp; Settings</li>
           </ul>
 
-          <button className="logout-btn">Logout</button>
+          <button className="logout-btn" onClick={handleLogout}>Logout</button>
         </aside>
 
         {/* Main Content */}
@@ -1165,6 +1150,17 @@ export default function ProfilePage() {
               </div>
             </div>
           </div>
+        <ConfirmModal 
+          isOpen={isLogoutModalOpen}
+          onClose={() => setIsLogoutModalOpen(false)}
+          onConfirm={confirmLogout}
+          title="Confirm Logout"
+          message="Are you sure you want to log out of your admin account?"
+          confirmText="Logout"
+          cancelText="Stay Logged In"
+          type="warning"
+          icon={<LogOut size={24} />}
+        />
         </main>
       </div>
     </>

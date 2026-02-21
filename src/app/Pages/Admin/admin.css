@@ -522,7 +522,20 @@
         .action-btn.primary:hover { background: #c9a230; transform: translateY(-1px); box-shadow: 0 4px 12px rgba(212, 175, 55, 0.2); }
         .action-btn.secondary { background: var(--white); border: 1px solid var(--border); color: var(--charcoal); }
         .action-btn.secondary:hover { background: var(--gray-light); border-color: var(--charcoal-light); }
-        .action-btn.icon-only { width: 34px; height: 34px; padding: 0; }
+        .action-btn.icon-only { 
+          width: 34px !important; 
+          height: 34px !important; 
+          padding: 0 !important; 
+        }
+        .action-btns .action-btn.icon-only { 
+          width: 34px !important;
+          height: 34px !important;
+          min-width: 34px !important;
+          min-height: 34px !important;
+          max-width: 34px !important;
+          max-height: 34px !important;
+          padding: 0 !important;
+        }
         .action-btn.edit { background: rgba(52, 152, 219, 0.1); color: var(--info); border-color: transparent; }
         .action-btn.edit:hover { background: rgba(52, 152, 219, 0.2); transform: translateY(-1px); }
         .action-btn.delete { background: rgba(231, 76, 60, 0.1); color: var(--danger); border-color: transparent; }
@@ -535,8 +548,9 @@
         }
         .action-btns .action-btn {
           flex: none;
-          width: auto;
+          /* width: auto; */
         }
+        
         .action-btns {
           display: flex;
           flex-direction: nowrap;

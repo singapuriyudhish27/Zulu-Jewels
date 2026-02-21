@@ -1,6 +1,6 @@
 "use client";
 
-// import "./shipping.css";
+import "./shipping.css";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Image from "next/image";
@@ -34,8 +34,10 @@ import {
     Pencil,
     Trash2,
     X,
-    Download
+    Download,
+    LogOut
 } from "lucide-react";
+import ConfirmModal from "@/components/common/ConfirmModal";
 
 export default function ShippingPaymentPage() {
     const router = useRouter();
@@ -83,6 +85,14 @@ export default function ShippingPaymentPage() {
         status: true
     });
     const defaultPaymentForm = { category: '', status: true };
+
+    const [confirmConfig, setConfirmConfig] = useState({
+        isOpen: false,
+        title: "",
+        message: "",
+        onConfirm: () => {},
+        type: "danger"
+    });
 
     const fetchShippingData = async () => {
         try {
@@ -167,22 +177,30 @@ export default function ShippingPaymentPage() {
 
     // ── Delete Zone ──
     const handleDeleteZone = async (zoneId) => {
-        if (!confirm('Are you sure you want to delete this shipping zone?')) return;
-        try {
-            const res = await fetch(`/api/Pages/Admin/Shipping-Management/Shipping-Zones?id=${zoneId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const result = await res.json();
-            if (result.success) {
-                await fetchShippingData();
-            } else {
-                toast.error(result.message || 'Failed to delete shipping zone');
+        setConfirmConfig({
+            isOpen: true,
+            title: "Delete Shipping Zone",
+            message: "Are you sure you want to delete this shipping zone? This will affect shipping calculations for its areas.",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    const res = await fetch(`/api/Pages/Admin/Shipping-Management/Shipping-Zones?id=${zoneId}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        await fetchShippingData();
+                        toast.success("Shipping zone deleted");
+                    } else {
+                        toast.error(result.message || 'Failed to delete shipping zone');
+                    }
+                } catch (error) {
+                    console.error('Error deleting zone:', error);
+                    toast.error('Something went wrong. Please try again.');
+                }
             }
-        } catch (error) {
-            console.error('Error deleting zone:', error);
-            toast.error('Something went wrong. Please try again.');
-        }
+        });
     };
 
     // ── Partner: Open Add Modal ──
@@ -244,22 +262,30 @@ export default function ShippingPaymentPage() {
 
     // ── Partner: Delete ──
     const handleDeletePartner = async (partnerId) => {
-        if (!confirm('Are you sure you want to delete this shipping partner?')) return;
-        try {
-            const res = await fetch(`/api/Pages/Admin/Shipping-Management/Shipping-Partner?id=${partnerId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const result = await res.json();
-            if (result.success) {
-                await fetchShippingData();
-            } else {
-                toast.error(result.message || 'Failed to delete shipping partner');
+        setConfirmConfig({
+            isOpen: true,
+            title: "Delete Shipping Partner",
+            message: "Are you sure you want to delete this shipping partner? You won't be able to use them for new shipments.",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    const res = await fetch(`/api/Pages/Admin/Shipping-Management/Shipping-Partner?id=${partnerId}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        await fetchShippingData();
+                        toast.success("Shipping partner deleted");
+                    } else {
+                        toast.error(result.message || 'Failed to delete shipping partner');
+                    }
+                } catch (error) {
+                    console.error('Error deleting partner:', error);
+                    toast.error('Something went wrong. Please try again.');
+                }
             }
-        } catch (error) {
-            console.error('Error deleting partner:', error);
-            toast.error('Something went wrong. Please try again.');
-        }
+        });
     };
 
     // ── Payment: Open Add Modal ──
@@ -308,22 +334,30 @@ export default function ShippingPaymentPage() {
 
     // ── Payment: Delete ──
     const handleDeletePaymentMethod = async (methodId) => {
-        if (!confirm('Are you sure you want to delete this payment method?')) return;
-        try {
-            const res = await fetch(`/api/Pages/Admin/Shipping-Management/Payment-Method?id=${methodId}`, {
-                method: 'DELETE',
-                credentials: 'include',
-            });
-            const result = await res.json();
-            if (result.success) {
-                await fetchShippingData();
-            } else {
-                toast.error(result.message || 'Failed to delete payment method');
+        setConfirmConfig({
+            isOpen: true,
+            title: "Delete Payment Method",
+            message: "Are you sure you want to delete this payment method? Customers will no longer be able to use it at checkout.",
+            type: "danger",
+            onConfirm: async () => {
+                try {
+                    const res = await fetch(`/api/Pages/Admin/Shipping-Management/Payment-Method?id=${methodId}`, {
+                        method: 'DELETE',
+                        credentials: 'include',
+                    });
+                    const result = await res.json();
+                    if (result.success) {
+                        await fetchShippingData();
+                        toast.success("Payment method deleted");
+                    } else {
+                        toast.error(result.message || 'Failed to delete payment method');
+                    }
+                } catch (error) {
+                    console.error('Error deleting payment method:', error);
+                    toast.error('Something went wrong. Please try again.');
+                }
             }
-        } catch (error) {
-            console.error('Error deleting payment method:', error);
-            toast.error('Something went wrong. Please try again.');
-        }
+        });
     };
 
     // ── Payment Method: Toggle Active/Inactive ──
@@ -1163,6 +1197,15 @@ export default function ShippingPaymentPage() {
                     </div>
                 </div>
             )}
+            <ConfirmModal 
+                isOpen={confirmConfig.isOpen}
+                onClose={() => setConfirmConfig({ ...confirmConfig, isOpen: false })}
+                onConfirm={confirmConfig.onConfirm}
+                title={confirmConfig.title}
+                message={confirmConfig.message}
+                type={confirmConfig.type}
+            />
+
             {/* ── Payment Method Add Modal ── */}
             {showPaymentModal && (
                 <div className="modal-overlay" onClick={handleClosePaymentModal}>
