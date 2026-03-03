@@ -885,10 +885,10 @@ export default function ProfilePage() {
       `}} />
 
     {/* Navigation */}
-    <nav className="auth-nav">
+    {/* <nav className="auth-nav">
         <div className="logo" onClick={() => window.location.href = '/Pages/Admin'}>Zulu Jewellers</div>
         <a href="/Pages/Admin" className="nav-link">← Back to Home</a>
-    </nav>
+    </nav> */}
 
       {/* Profile Container */}
       <div className="profile-container">
