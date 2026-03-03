@@ -75,15 +75,15 @@ export async function POST(req) {
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6;">
                     <h2>Login Credentials</h2>
-                    <p>Hello <strong>${user.firstName + user.lastName}</strong>,</p>
+                    <p>Hello <strong>${user.firstName + " " + user.lastName}</strong>,</p>
                     <p>Your password has been reset successfully. Here are your new login details:</p>
                     <table style="border-collapse: collapse;">
                         <tr>
                             <td style="padding: 8px;"><strong>Name:</strong></td>
-                            <td style="padding: 8px;">${user.firstName + user.lastName}</td>
+                            <td style="padding: 8px;">${user.firstName + " " + user.lastName}</td>
                         </tr>
                         <tr>
-                            <td style="padding: 8px;"><strong>Email:</strong></td>
+                            <td style="padding: 8px;"><strong>Phone:</strong></td>
                             <td style="padding: 8px;">${user.phone}</td>
                         </tr>
                         <tr>
