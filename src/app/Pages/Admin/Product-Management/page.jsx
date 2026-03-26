@@ -19,6 +19,7 @@ import {
   Plus,
   Edit,
   Trash2,
+  Trash,
   Eye,
   CheckCircle2,
   XCircle,
@@ -55,11 +56,14 @@ export default function ProductManagementPage() {
     name: "",
     category_name: "",
     gender: "Unisex",
-    material: "Gold",
+    material: [], // Legacy field (merged from variants for display)
+    gender: "Unisex",
     price: "",
     stock: "",
     description: "",
-    is_active: true
+    is_active: true,
+    variants: [], // New collection of material-specific data
+    media: [] // Generic product media
   });
   const [editingProductId, setEditingProductId] = useState(null);
 
@@ -113,20 +117,27 @@ export default function ProductManagementPage() {
   const products = productsData.map(item => {
     const itemNameLower = item.name.toLowerCase();
 
-    // Infer Material
-    let material = "Gold"; // Fallback
-    if (item.category?.available_materials) {
-      material = item.category.available_materials.split(',')[0].trim();
-    }
-    if (itemNameLower.includes("silver")) material = "Silver";
-    else if (itemNameLower.includes("diamond")) material = "Diamond";
+    // Use variant data if available
+    const hasVariants = item.variants && item.variants.length > 0;
+    
+    // Total stock across all variants
+    const totalStock = hasVariants 
+        ? item.variants.reduce((sum, v) => sum + (v.stock || 0), 0)
+        : (item.is_active ? 10 : 0); // Fallback
 
-    // Infer Gender
-    let gender = "Unisex";
-    if (itemNameLower.includes("women") || itemNameLower.includes("lady") || itemNameLower.includes("bride")) gender = "Women";
-    else if (itemNameLower.includes("men") || itemNameLower.includes("gent")) gender = "Men";
+    const variantMaterials = hasVariants 
+        ? [...new Set(item.variants.map(v => v.material))].join(", ")
+        : (item.material || "Gold");
+
+    const material = variantMaterials;
+    const gender = item.gender || "Unisex";
 
     const isCustom = itemNameLower.includes("custom");
+
+    // Primary image is either a variant-specific primary or a generic primary
+    const primaryImg = item.images.find(img => img.is_primary)?.media_url 
+                    || item.images[0]?.media_url 
+                    || null;
 
     return {
       id: `PRD-${item.id.toString().padStart(3, '0')}`,
@@ -136,10 +147,12 @@ export default function ProductManagementPage() {
       material: material,
       gender: gender,
       price: formatCurrency(item.price),
-      stock: item.is_active ? Math.floor(Math.random() * 20) + 5 : 0, // Simulated stock for UI matching
+      stock: totalStock,
       status: item.is_active ? "Active" : "Out of Stock",
       isCustom: isCustom,
-      image: item.images.find(img => img.is_primary)?.image_url || null
+      image: primaryImg,
+      allMedia: item.images || [],
+      variants: item.variants || []
     };
   });
 
@@ -260,41 +273,159 @@ export default function ProductManagementPage() {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const isEdit = !!editingProductId;
       const url = "/api/Pages/Admin/Product-Management";
       const method = isEdit ? "PUT" : "POST";
 
-      const payload = {
-        ...productForm,
-        id: isEdit ? editingProductId : undefined,
-        price: parseFloat(productForm.price),
-        stock: parseInt(productForm.stock)
-      };
+      const formData = new FormData();
+      formData.append("name", productForm.name);
+      formData.append("category_name", productForm.category_name);
+      formData.append("gender", productForm.gender);
+      formData.append("material", productForm.material.join(", "));
+      formData.append("price", productForm.price);
+      formData.append("stock", productForm.stock);
+      formData.append("description", productForm.description);
+      formData.append("is_active", productForm.is_active);
+      if (isEdit) formData.append("id", editingProductId);
+
+      // Package Variants
+      const variantsData = productForm.variants.map((v, idx) => {
+          // Add new files to formData with specific keys
+          const newFiles = v.media.filter(m => m.file).map(m => m.file);
+          newFiles.forEach(file => formData.append(`media_variant_${idx}`, file));
+          
+          // Primary index within this variant's media
+          const primaryIdx = v.media.findIndex(m => m.is_primary);
+          formData.append(`primary_index_variant_${idx}`, primaryIdx >= 0 ? primaryIdx : 0);
+
+          return {
+              id: v.id,
+              material: v.material,
+              price: v.price,
+              stock: v.stock,
+              description: v.description,
+              existing_media: v.media.filter(m => !m.file) 
+          };
+      });
+      formData.append("variants", JSON.stringify(variantsData));
+
+      // Package Generic Media
+      const genericFiles = productForm.media.filter(m => m.file).map(m => m.file);
+      genericFiles.forEach(file => formData.append("media", file));
+      formData.append("existing_media", JSON.stringify(productForm.media.filter(m => !m.file)));
 
       const res = await fetch(url, {
         method: method,
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        body: formData,
         credentials: "include",
       });
       const data = await res.json();
 
       if (data.success) {
-        if (isEdit) {
-          setProductsData(prev => prev.map(p => p.id === editingProductId ? data.data : p));
-        } else {
-          setProductsData(prev => [data.data, ...prev]);
-        }
+        window.location.reload(); 
         setShowAddProduct(false);
-        setEditingProductId(null);
-        setProductForm({ name: "", category_name: "", gender: "Unisex", material: "Gold", price: "", stock: "", description: "", is_active: true });
       } else {
         toast.error(data.message || "Failed to save product");
       }
     } catch (error) {
       console.error("Product save error:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const addVariant = () => {
+    setProductForm(prev => ({
+      ...prev,
+      variants: [...prev.variants, { material: "", price: prev.price, stock: "0", description: "", media: [] }]
+    }));
+  };
+
+  const removeVariant = (index) => {
+    setProductForm(prev => ({
+      ...prev,
+      variants: prev.variants.filter((_, i) => i !== index)
+    }));
+  };
+
+  const handleVariantChange = (index, field, value) => {
+    setProductForm(prev => {
+      const updated = [...prev.variants];
+      updated[index] = { ...updated[index], [field]: value };
+      return { ...prev, variants: updated };
+    });
+  };
+
+  const handleVariantMediaChange = (vIdx, e) => {
+    const files = Array.from(e.target.files);
+    const newMedia = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      media_type: file.type.startsWith("video/") ? "video" : "image",
+      is_primary: productForm.variants[vIdx].media.length === 0
+    }));
+    setProductForm(prev => {
+      const updated = [...prev.variants];
+      updated[vIdx] = { ...updated[vIdx], media: [...updated[vIdx].media, ...newMedia] };
+      return { ...prev, variants: updated };
+    });
+  };
+
+  const removeVariantMedia = (vIdx, mIdx) => {
+    setProductForm(prev => {
+      const updatedVariants = [...prev.variants];
+      const updatedMedia = [...updatedVariants[vIdx].media];
+      updatedMedia.splice(mIdx, 1);
+      if (updatedMedia.length > 0 && !updatedMedia.some(m => m.is_primary)) {
+        updatedMedia[0].is_primary = true;
+      }
+      updatedVariants[vIdx] = { ...updatedVariants[vIdx], media: updatedMedia };
+      return { ...prev, variants: updatedVariants };
+    });
+  };
+
+  const setVariantPrimaryMedia = (vIdx, mIdx) => {
+    setProductForm(prev => {
+      const updatedVariants = [...prev.variants];
+      updatedVariants[vIdx] = {
+        ...updatedVariants[vIdx],
+        media: updatedVariants[vIdx].media.map((m, i) => ({ ...m, is_primary: i === mIdx }))
+      };
+      return { ...prev, variants: updatedVariants };
+    });
+  };
+
+  const handleMediaChange = (e) => {
+    const files = Array.from(e.target.files);
+    const newMedia = files.map(file => ({
+      file,
+      preview: URL.createObjectURL(file),
+      media_type: file.type.startsWith("video/") ? "video" : "image",
+      is_primary: productForm.media.length === 0 // First one primary by default
+    }));
+    setProductForm(prev => ({ ...prev, media: [...prev.media, ...newMedia] }));
+  };
+
+  const removeMedia = (index) => {
+    setProductForm(prev => {
+      const updatedMedia = [...prev.media];
+      updatedMedia.splice(index, 1);
+      // If removed was primary, set first one as primary
+      if (updatedMedia.length > 0 && !updatedMedia.some(m => m.is_primary)) {
+        updatedMedia[0].is_primary = true;
+      }
+      return { ...prev, media: updatedMedia };
+    });
+  };
+
+  const setPrimaryMedia = (index) => {
+    setProductForm(prev => ({
+      ...prev,
+      media: prev.media.map((m, i) => ({ ...m, is_primary: i === index }))
+    }));
   };
 
 
@@ -310,7 +441,7 @@ export default function ProductManagementPage() {
               <button className="add-btn secondary" onClick={() => setShowAddCategory(true)}><Layers size={18} /> Add Category</button>
               <button className="add-btn" onClick={() => {
                 setEditingProductId(null);
-                setProductForm({ name: "", category_name: "", gender: "Unisex", material: "Gold", price: "", stock: "", description: "", is_active: true });
+                setProductForm({ name: "", category_name: "", gender: "Unisex", material: [], price: "", stock: "", description: "", is_active: true, variants: [], media: [] });
                 setShowAddProduct(true);
               }}><Plus size={18} /> Add Product</button>
             </div>
@@ -451,11 +582,19 @@ export default function ProductManagementPage() {
                                 name: product.name,
                                 category_name: product.category,
                                 gender: product.gender,
-                                material: product.material,
+                                material: typeof product.material === 'string' ? product.material.split(", ").filter(m => m) : [],
                                 price: product.price.replace(/[^\d]/g, ""),
                                 stock: product.stock,
-                                description: "", // API doesn't return full desc in list usually
-                                is_active: product.status === "Active"
+                                description: productsData.find(p => p.id === product.rawId)?.description || "", 
+                                is_active: product.status === "Active",
+                                variants: product.variants.map(v => ({
+                                  ...v,
+                                  media: product.allMedia.filter(m => m.variant_id === v.id).map(m => ({
+                                    ...m,
+                                    preview: m.media_url
+                                  }))
+                                })),
+                                media: product.allMedia.filter(m => !m.variant_id).map(m => ({ ...m, preview: m.media_url }))
                               });
                               setShowAddProduct(true);
                             }}><Edit size={16} /></div>
@@ -487,27 +626,135 @@ export default function ProductManagementPage() {
       {/* Add Product Modal */}
       {showAddProduct && (
         <div className="modal-overlay" onClick={() => setShowAddProduct(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "800px", width: "90%" }}>
             <div className="modal-header">
-              <h2 className="modal-title">Add New Product</h2>
+              <h2 className="modal-title">{editingProductId ? "Edit Product" : "Add New Product"}</h2>
               <button className="modal-close" onClick={() => setShowAddProduct(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handleSaveProduct}>
-              <div className="modal-body">
+              <div className="modal-body" style={{ maxHeight: "70vh", overflowY: "auto" }}>
                 <div className="form-group">
                   <label className="form-label">Product Name *</label>
                   <input type="text" className="form-input" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required placeholder="Enter product name" />
                 </div>
+                
+                {/* Base/Generic Media Upload Section */}
+                <div className="form-group">
+                  <label className="form-label">Base/Generic Media (Applies to all metals)</label>
+                  <div className="media-upload-area" style={{ border: "2px dashed #ddd", padding: "15px", borderRadius: "8px", textAlign: "center", marginBottom: "12px" }}>
+                    <input type="file" id="generic-media-input" multiple accept="image/*,video/*" onChange={handleMediaChange} style={{ display: "none" }} />
+                    <label htmlFor="generic-media-input" style={{ cursor: "pointer", color: "#666", fontSize: '13px' }}>
+                      <Plus size={20} style={{ marginBottom: "4px" }} />
+                      <p>Add common images/videos</p>
+                    </label>
+                  </div>
+                  
+                  {productForm.media.length > 0 && (
+                    <div className="media-preview-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "8px", marginBottom: '16px' }}>
+                      {productForm.media.map((item, idx) => (
+                        <div key={idx} style={{ position: "relative", borderRadius: "6px", overflow: "hidden", border: "1px solid #ddd" }}>
+                          {item.media_type === "video" ? (
+                            <div style={{ width: "100%", height: "60px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={16} color="#666" /></div>
+                          ) : (
+                            <img src={item.preview} alt="preview" style={{ width: "100%", height: "60px", objectFit: "cover" }} />
+                          )}
+                          <div style={{ position: "absolute", top: "2px", right: "2px" }}>
+                            <button type="button" onClick={() => removeMedia(idx)} style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: "18px", height: "18px", cursor: "pointer" }}><X size={10} color="#e74c3c" /></button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                {/* --- Product Variants (Metals) Section --- */}
+                <div style={{ margin: '24px 0', padding: '20px', background: '#f9f9f9', borderRadius: '12px', border: '1px solid #eee' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#2c2c2c' }}>Product Variants (Metals)</h3>
+                    <button type="button" className="add-btn secondary" onClick={addVariant} style={{ padding: '6px 12px', fontSize: '12px' }}>
+                      <Plus size={14} /> Add Metal Variant
+                    </button>
+                  </div>
+
+                  {productForm.variants.length === 0 ? (
+                    <p style={{ textAlign: 'center', color: '#888', padding: '20px', fontSize: '13px' }}>No variants added yet. Add a variant to manage material-specific images.</p>
+                  ) : (
+                    <div className="variants-list" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                      {productForm.variants.map((v, vIdx) => (
+                        <div key={vIdx} className="variant-card" style={{ background: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #ddd', position: 'relative' }}>
+                          <button type="button" onClick={() => removeVariant(vIdx)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c' }}><Trash2 size={16} /></button>
+                          
+                          <div className="form-row">
+                            <div className="form-group">
+                              <label className="form-label">Metal *</label>
+                              <input 
+                                type="text" 
+                                className="form-input" 
+                                value={v.material} 
+                                onChange={(e) => handleVariantChange(vIdx, 'material', e.target.value)} 
+                                required 
+                                placeholder="e.g. Gold, Silver, 18K Rose Gold" 
+                              />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Price (₹) *</label>
+                              <input type="number" className="form-input" value={v.price} onChange={(e) => handleVariantChange(vIdx, 'price', e.target.value)} required placeholder="Price for this metal" />
+                            </div>
+                            <div className="form-group">
+                              <label className="form-label">Stock *</label>
+                              <input type="number" className="form-input" value={v.stock} onChange={(e) => handleVariantChange(vIdx, 'stock', e.target.value)} required placeholder="Stock" />
+                            </div>
+                          </div>
+
+                          <div className="form-group">
+                            <label className="form-label">{v.material} Specific Media *</label>
+                            <div className="media-upload-area" style={{ border: "2px dashed #eee", padding: "12px", borderRadius: "8px", textAlign: "center", marginBottom: "12px" }}>
+                              <input type="file" id={`variant-media-${vIdx}`} multiple accept="image/*,video/*" onChange={(e) => handleVariantMediaChange(vIdx, e)} style={{ display: "none" }} />
+                              <label htmlFor={`variant-media-${vIdx}`} style={{ cursor: "pointer", color: "#666", fontSize: '12px' }}>
+                                <ImageIcon size={20} style={{ marginBottom: "4px" }} />
+                                <p>Upload images for {v.material}</p>
+                              </label>
+                            </div>
+
+                            {v.media.length > 0 && (
+                              <div className="media-preview-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "8px" }}>
+                                {v.media.map((item, mIdx) => (
+                                  <div key={mIdx} className={`media-preview-card ${item.is_primary ? "primary" : ""}`} style={{ position: "relative", borderRadius: "6px", overflow: "hidden", border: item.is_primary ? "2px solid #d4af37" : "1px solid #ddd" }}>
+                                    {item.media_type === "video" ? (
+                                      <div style={{ width: "100%", height: "60px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={16} color="#666" /></div>
+                                    ) : (
+                                      <img src={item.preview} alt="preview" style={{ width: "100%", height: "60px", objectFit: "cover" }} />
+                                    )}
+                                    <div className="media-actions" style={{ position: "absolute", top: "2px", right: "2px", display: "flex", gap: "2px" }}>
+                                      <button type="button" onClick={() => setVariantPrimaryMedia(vIdx, mIdx)} title="Set Primary" style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer" }}><Star size={10} color={item.is_primary ? "#d4af37" : "#666"} /></button>
+                                      <button type="button" onClick={() => removeVariantMedia(vIdx, mIdx)} style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer" }}><X size={10} color="#e74c3c" /></button>
+                                    </div>
+                                    {item.is_primary && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "#d4af37", color: "white", fontSize: "8px", textAlign: "center", padding: "1px" }}>PRIMARY</div>}
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">{v.material} Description (Optional)</label>
+                            <textarea className="form-input" rows="2" value={v.description} onChange={(e) => handleVariantChange(vIdx, 'description', e.target.value)} placeholder={`Unique details for the ${v.material} version`}></textarea>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Category *</label>
+                    <label className="form-label">Base Category *</label>
                     <select className="form-select" value={productForm.category_name} onChange={(e) => setProductForm({ ...productForm, category_name: e.target.value })} required>
                       <option value="">Select Category</option>
                       {categoriesData.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Gender *</label>
+                    <label className="form-label">Base Gender *</label>
                     <select className="form-select" value={productForm.gender} onChange={(e) => setProductForm({ ...productForm, gender: e.target.value })} required>
                       <option value="Men">Men</option>
                       <option value="Women">Women</option>
@@ -515,24 +762,42 @@ export default function ProductManagementPage() {
                     </select>
                   </div>
                 </div>
+                
+                {/* Legacy Material Multi-Selection (Optional, can keep for categories) */}
                 <div className="form-group">
-                  <label className="form-label">Material *</label>
+                  <label className="form-label">Available Metal Options (for filtering)</label>
                   <div className="checkbox-group">
-                    {["Gold", "Silver", "Diamond"].map(m => (
+                    {["Gold", "Silver", "Diamond", "Platinum", "Copper"].map(m => (
                       <label className="checkbox-item" key={m}>
-                        <input type="radio" name="material" value={m} checked={productForm.material === m} onChange={(e) => setProductForm({ ...productForm, material: e.target.value })} /> {m}
+                        <input 
+                          type="checkbox" 
+                          name="material" 
+                          value={m} 
+                          checked={productForm.material.includes(m)} 
+                          onChange={(e) => {
+                            const val = e.target.value;
+                            const isChecked = e.target.checked;
+                            setProductForm(prev => {
+                              const materials = isChecked
+                                ? [...prev.material, val]
+                                : prev.material.filter(item => item !== val);
+                              return { ...prev, material: materials };
+                            });
+                          }} 
+                        /> {m}
                       </label>
                     ))}
                   </div>
                 </div>
+
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">Price (₹) *</label>
-                    <input type="number" className="form-input" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required placeholder="Enter price" />
+                    <label className="form-label">Base Price (₹) *</label>
+                    <input type="number" className="form-input" value={productForm.price} onChange={(e) => setProductForm({ ...productForm, price: e.target.value })} required placeholder="Default price" />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">Stock Quantity *</label>
-                    <input type="number" className="form-input" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} required placeholder="Enter stock" />
+                    <label className="form-label">Base Stock Quantity *</label>
+                    <input type="number" className="form-input" value={productForm.stock} onChange={(e) => setProductForm({ ...productForm, stock: e.target.value })} required placeholder="Default stock" />
                   </div>
                 </div>
                 <div className="form-group">
@@ -548,7 +813,7 @@ export default function ProductManagementPage() {
               </div>
               <div className="modal-footer">
                 <button type="button" className="add-btn secondary" onClick={() => setShowAddProduct(false)}>Cancel</button>
-                <button type="submit" className="add-btn"><Save size={16} /> {editingProductId ? "Update Product" : "Save Product"}</button>
+                <button type="submit" className="add-btn" disabled={loading}><Save size={16} /> {loading ? "Saving..." : (editingProductId ? "Update Product" : "Save Product")}</button>
               </div>
             </form>
           </div>

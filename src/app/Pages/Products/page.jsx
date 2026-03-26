@@ -1,952 +1,380 @@
 'use client';
-import { useEffect } from 'react';
-import { useRouter, usePathname } from 'next/navigation';
-import { Search, User, ShoppingCart } from 'lucide-react';
+import { useEffect, useState, Suspense } from 'react';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
+import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react';
 
-export default function EngagementPage() {
+
+function ProductsContent() {
   const router = useRouter();
   const pathname = usePathname();
+  const searchParams = useSearchParams();
+
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [sortBy, setSortBy] = useState('default');
+  const [genderFilter, setGenderFilter] = useState('all');
+  const [wishlist, setWishlist] = useState({});
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 12;
+
+  const categoryId = searchParams.get('category');
+
+  useEffect(() => {
+    // Fetch products from the API with category filter
+    setLoading(true);
+    const apiUrl = categoryId 
+      ? `/api/Pages/Products?category=${categoryId}`
+      : '/api/Pages/Products';
+
+    fetch(apiUrl)
+      .then(res => res.json())
+      .then(res => {
+        if (res.success && res.categories) {
+          // Flatten the category-nested products for display
+          const allProducts = res.categories.flatMap(cat => cat.products || []);
+          setProducts(allProducts);
+        }
+        setLoading(false);
+      })
+      .catch(err => {
+        console.error("Error fetching products:", err);
+        setLoading(false);
+      });
+  }, [categoryId]);
 
   const requireAuth = (action) => {
     const token = document.cookie
-      .split("; ")
-      .find(row => row.startsWith("zulu_jewels="))
-      ?.split("=")[1];
-
+      .split('; ')
+      .find(row => row.startsWith('zulu_jewels='))
+      ?.split('=')[1];
     if (!token) {
       router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
       return;
     }
-
     if (action) action();
   };
-  useEffect(() => {
 
-        // Shape filter toggle
-        document.querySelectorAll('.shape-filter-btn').forEach(btn => {
-            btn.addEventListener('click', function() {
-                this.classList.toggle('active');
-            });
-        });
+  const toggleWishlist = (id, e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setWishlist(prev => ({ ...prev, [id]: !prev[id] }));
+  };
 
-        // Wishlist toggle
-        document.querySelectorAll('.wishlist-btn').forEach(btn => {
-            btn.addEventListener('click', function(e) {
-                e.stopPropagation();
-                this.textContent = this.textContent === '♡' ? '♥' : '♡';
-                this.style.color = this.textContent === '♥' ? '#D4AF37' : '';
-            });
-        });
-    
-  }, []);
+  // Filtering implementation
+  let filtered = [...products];
+  
+  // 1. Filter by Gender from dropdown (Still handled on frontend for now)
+  if (genderFilter !== 'all') {
+    filtered = filtered.filter(p => p.gender === genderFilter || p.gender === 'unisex');
+  }
+
+  // 3. Sorting
+  if (sortBy === 'price-low') filtered.sort((a, b) => a.price - b.price);
+  if (sortBy === 'price-high') filtered.sort((a, b) => b.price - a.price);
+  if (sortBy === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+
+  if (loading) return <div style={{ padding: '80px', textAlign: 'center', color: '#888' }}>Loading products...</div>;
+
+  const totalPages = Math.ceil(filtered.length / itemsPerPage);
+  const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
 
   return (
     <>
-      <style dangerouslySetInnerHTML={{__html: `
+      <style>{`
+        .pr-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 72px; }
 
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
+        /* General Variables */
         :root {
-            --primary-gold: #D4AF37;
-            --dark-bg: #1a1a1a;
-            --light-bg: #ffffff;
-            --text-dark: #2c2c2c;
-            --text-light: #f5f5f5;
-            --accent-rose: #C8A882;
-            --border-light: #e8e8e8;
-        }
-
-        body {
-            font-family: 'Montserrat', sans-serif;
-            background: #f9f9f9;
-            color: var(--text-dark);
-        }
-
-        /* Navigation */
-        nav {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            z-index: 1000;
-            padding: 25px 80px;
-            background: white;
-            box-shadow: 0 2px 20px rgba(0,0,0,0.05);
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-        }
-
-        .logo {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 28px;
-            font-weight: 600;
-            color: var(--primary-gold);
-            letter-spacing: 2px;
-            text-transform: uppercase;
-            cursor: pointer;
-        }
-
-        .nav-menu {
-            display: flex;
-            gap: 45px;
-            list-style: none;
-        }
-
-        .nav-menu a {
-            color: var(--text-dark);
-            text-decoration: none;
-            font-size: 13px;
-            font-weight: 500;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            transition: all 0.3s ease;
-            position: relative;
-        }
-
-        .nav-menu a.active,
-        .nav-menu a:hover {
-            color: var(--primary-gold);
-        }
-
-        .nav-menu a::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--primary-gold);
-            transition: width 0.3s ease;
-        }
-
-        .nav-menu a.active::after,
-        .nav-menu a:hover::after {
-            width: 100%;
-        }
-
-        .nav-icons {
-            display: flex;
-            gap: 20px;
-        }
-
-        .icon-btn {
-            width: 40px;
-            height: 40px;
-            border: 1px solid var(--border-light);
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: var(--text-dark);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-size: 18px;
-        }
-
-        .icon-btn:hover {
-            background: var(--primary-gold);
-            border-color: var(--primary-gold);
-            color: white;
-            transform: scale(1.05);
-        }
-
-        /* Page Header */
-        .page-header {
-            margin-top: 90px;
-            padding: 80px 80px 60px;
-            background: linear-gradient(135deg, var(--dark-bg) 0%, #2c2c2c 100%);
-            text-align: center;
-            color: white;
-        }
-
-        .breadcrumb {
-            font-size: 13px;
-            letter-spacing: 1px;
-            color: rgba(255,255,255,0.6);
-            margin-bottom: 20px;
-        }
-
-        .breadcrumb a {
-            color: rgba(255,255,255,0.6);
-            text-decoration: none;
-            transition: color 0.3s ease;
-        }
-
-        .breadcrumb a:hover {
-            color: var(--primary-gold);
-        }
-
-        .page-title {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 64px;
-            font-weight: 400;
-            margin-bottom: 20px;
-        }
-
-        .page-subtitle {
-            font-size: 16px;
-            color: rgba(255,255,255,0.8);
-            letter-spacing: 0.5px;
-        }
-
-        /* Ring Builder CTA */
-        .ring-builder-banner {
-            background: linear-gradient(135deg, var(--primary-gold), var(--accent-rose));
-            padding: 50px 80px;
-            margin: 0;
-        }
-
-        .builder-content {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            max-width: 1400px;
-            margin: 0 auto;
-        }
-
-        .builder-text h3 {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 36px;
-            color: white;
-            margin-bottom: 10px;
-        }
-
-        .builder-text p {
-            color: rgba(255,255,255,0.9);
-            font-size: 15px;
-        }
-
-        .builder-buttons {
-            display: flex;
-            gap: 15px;
-        }
-
-        .builder-btn {
-            padding: 15px 35px;
-            background: white;
-            color: var(--dark-bg);
-            border: none;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 1.5px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 2px;
-        }
-
-        .builder-btn:hover {
-            background: var(--dark-bg);
-            color: white;
-            transform: translateY(-2px);
-        }
-
-        .builder-btn.secondary {
-            background: transparent;
-            border: 2px solid white;
-            color: white;
-        }
-
-        .builder-btn.secondary:hover {
-            background: white;
-            color: var(--dark-bg);
-        }
-
-        /* Main Content */
-        .content-wrapper {
-            display: flex;
-            gap: 40px;
-            padding: 60px 80px;
-            max-width: 1920px;
-            margin: 0 auto;
-        }
-
-        /* Filters Sidebar */
-        .filters-sidebar {
-            width: 280px;
-            flex-shrink: 0;
-        }
-
-        .filter-section {
-            background: white;
-            padding: 30px;
-            border-radius: 8px;
-            margin-bottom: 25px;
-            box-shadow: 0 2px 15px rgba(0,0,0,0.04);
-        }
-
-        .filter-title {
-            font-size: 16px;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 20px;
-            letter-spacing: 0.5px;
-            text-transform: uppercase;
-        }
-
-        .filter-options {
-            display: flex;
-            flex-direction: column;
-            gap: 12px;
-        }
-
-        .filter-option {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            cursor: pointer;
-        }
-
-        .filter-option input[type="checkbox"] {
-            width: 18px;
-            height: 18px;
-            cursor: pointer;
-            accent-color: var(--primary-gold);
-        }
-
-        .filter-option label {
-            font-size: 14px;
-            color: var(--text-dark);
-            cursor: pointer;
-        }
-
-        .shape-filters {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 12px;
-        }
-
-        .shape-filter-btn {
-            padding: 5px;
-            background: white;
-            border: 1px solid var(--border-light);
-            border-radius: 6px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            text-align: center;
-        }
-
-        .shape-filter-btn:hover,
-        .shape-filter-btn.active {
-            border-color: var(--primary-gold);
-            background: rgba(212,175,55,0.05);
-        }
-
-        .shape-filter-btn svg {
-            width: 30px;
-            height: 30px;
-            fill: var(--text-dark);
-            margin-bottom: 5px;
-        }
-
-        .shape-filter-btn.active svg {
-            fill: var(--primary-gold);
-        }
-
-        .shape-filter-name {
-            font-size: 11px;
-            font-weight: 600;
-            color: var(--text-dark);
-            text-transform: uppercase;
-        }
-
-        .price-range {
-            margin-top: 15px;
-        }
-
-        .price-inputs {
-            display: flex;
-            gap: 10px;
-            margin-top: 15px;
-        }
-
-        .price-input {
-            flex: 1;
-            padding: 10px;
-            border: 1px solid var(--border-light);
-            border-radius: 4px;
-            font-size: 14px;
-        }
-
-        .apply-filter-btn {
-            width: 100%;
-            padding: 12px;
-            background: var(--primary-gold);
-            color: var(--dark-bg);
-            border: none;
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 4px;
-            margin-top: 15px;
-        }
-
-        .apply-filter-btn:hover {
-            background: var(--accent-rose);
-        }
-
-        /* Products Area */
-        .products-area {
-            flex: 1;
-        }
-
-        .products-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 40px;
-        }
-
-        .results-count {
-            font-size: 14px;
-            color: #666;
-        }
-
-        .sort-dropdown {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .sort-dropdown select {
-            padding: 10px 35px 10px 15px;
-            border: 1px solid var(--border-light);
-            border-radius: 4px;
-            font-size: 14px;
-            cursor: pointer;
-            background: white;
-        }
-
-        .products-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 40px;
-        }
-
-        .product-card {
-            background: white;
-            border-radius: 10px;
-            overflow: hidden;
-            box-shadow: 0 5px 25px rgba(0,0,0,0.06);
-            transition: all 0.4s ease;
-            cursor: pointer;
-        }
-
-        .product-card:hover {
-            transform: translateY(-10px);
-            box-shadow: 0 15px 45px rgba(0,0,0,0.12);
-        }
-
-        .product-image {
-            position: relative;
-            width: 100%;
-            height: 320px;
-            background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
-            overflow: hidden;
-        }
-
-        .product-image::before {
-            content: '';
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 150px;
-            height: 150px;
-            background: radial-gradient(circle, rgba(212,175,55,0.2), transparent);
-            animation: pulse 2s ease-in-out infinite;
-        }
-
-        @keyframes pulse {
-            0%, 100% { transform: translate(-50%, -50%) scale(1); opacity: 0.5; }
-            50% { transform: translate(-50%, -50%) scale(1.3); opacity: 0.8; }
-        }
-
-        .product-badge {
-            position: absolute;
-            top: 15px;
-            left: 15px;
-            padding: 6px 15px;
-            background: var(--primary-gold);
-            color: var(--dark-bg);
-            font-size: 11px;
-            font-weight: 700;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-            border-radius: 15px;
-        }
-
-        .wishlist-btn {
-            position: absolute;
-            top: 15px;
-            right: 15px;
-            width: 35px;
-            height: 35px;
-            background: white;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        }
-
-        .wishlist-btn:hover {
-            background: var(--primary-gold);
-            color: white;
-            transform: scale(1.1);
-        }
-
-        .product-info {
-            padding: 25px;
-        }
-
-        .product-name {
-            font-family: 'Cormorant Garamond', serif;
-            font-size: 22px;
-            font-weight: 600;
-            color: var(--text-dark);
-            margin-bottom: 10px;
-        }
-
-        .product-specs {
-            font-size: 12px;
-            color: #888;
-            letter-spacing: 0.5px;
-            margin-bottom: 15px;
-        }
-
-        .product-price {
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            margin-bottom: 15px;
-        }
-
-        .price-current {
-            font-size: 24px;
-            font-weight: 700;
-            color: var(--primary-gold);
-        }
-
-        .price-original {
-            font-size: 16px;
-            color: #999;
-            text-decoration: line-through;
-        }
-
-        .product-cta {
-            width: 100%;
-            padding: 12px;
-            background: var(--dark-bg);
-            color: white;
-            border: none;
-            font-size: 12px;
-            font-weight: 600;
-            letter-spacing: 1.2px;
-            text-transform: uppercase;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 4px;
-        }
-
-        .product-cta:hover {
-            background: var(--primary-gold);
-            color: var(--dark-bg);
-        }
+          --zj-black: #000000;
+          --zj-white: #ffffff;
+          --zj-gold: #EAB308;
+          --zj-bg: #F9F9F9;
+        }
+
+        /* Hero */
+        .pr-hero {
+          position: relative;
+          min-height: 320px;
+          background: #000000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-align: center;
+          overflow: hidden;
+        }
+        .pr-hero::before {
+          content: '';
+          position: absolute;
+          inset: 0;
+          background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(20,20,20,0.6) 100%);
+        }
+        .pr-hero-content { position: relative; z-index: 1; padding: 0 24px; }
+        .pr-hero-eyebrow {
+          font-size: 11px;
+          letter-spacing: 0.24em;
+          color: #EAB308;
+          text-transform: uppercase;
+          font-weight: 600;
+          margin-bottom: 16px;
+        }
+        .pr-hero-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(36px, 6vw, 56px);
+          color: #ffffff;
+          font-weight: 500;
+          line-height: 1.1;
+          margin-bottom: 16px;
+        }
+        .pr-hero-sub { font-size: 14px; color: rgba(255,255,255,0.7); max-width: 500px; margin: 0 auto; line-height: 1.6; }
+
+        /* Toolbar */
+        .pr-toolbar {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 32px 24px 0;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          flex-wrap: wrap;
+          gap: 16px;
+        }
+        .pr-count { font-size: 13px; color: #666666; }
+        .pr-count span { color: #000000; font-weight: 600; }
+        .pr-controls { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
+        .pr-select-wrap { position: relative; }
+        .pr-select {
+          appearance: none;
+          padding: 12px 40px 12px 16px;
+          border: 1px solid #EFEFEF;
+          background: #ffffff;
+          font-size: 12px;
+          font-weight: 500;
+          font-family: 'Montserrat', sans-serif;
+          color: #000000;
+          cursor: pointer;
+          outline: none;
+          transition: border-color 0.2s ease, box-shadow 0.2s ease;
+          border-radius: 2px;
+        }
+        .pr-select:focus { border-color: #000000; }
+        .pr-select-arrow {
+          position: absolute;
+          right: 14px;
+          top: 50%;
+          transform: translateY(-50%);
+          pointer-events: none;
+          color: #888888;
+        }
+
+        /* Product Grid */
+        .pr-grid-section { max-width: 1280px; margin: 0 auto; padding: 40px 24px 64px; }
+        .pr-product-grid {
+          display: grid;
+          grid-template-columns: repeat(4, 1fr);
+          gap: 32px;
+        }
+        .pr-product-card { cursor: pointer; }
+        .pr-product-img-wrap {
+          position: relative;
+          background: #F9F9F9;
+          aspect-ratio: 1;
+          overflow: hidden;
+          margin-bottom: 16px;
+          transition: box-shadow 0.3s ease;
+        }
+        .pr-product-card:hover .pr-product-img-wrap { box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+        .pr-product-img {
+          width: 100%;
+          height: 100%;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          font-size: 80px;
+          transition: transform 0.4s ease;
+        }
+        .pr-product-card:hover .pr-product-img { transform: scale(1.05); }
+        .pr-wishlist-btn {
+          position: absolute;
+          top: 12px;
+          right: 12px;
+          background: #ffffff;
+          border: none;
+          border-radius: 50%;
+          width: 36px;
+          height: 36px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 4px 12px rgba(0,0,0,0.06);
+          transition: transform 0.2s ease, color 0.2s ease;
+          color: #cccccc;
+        }
+        .pr-wishlist-btn.active { color: #EAB308; }
+        .pr-wishlist-btn:hover { transform: scale(1.1); color: #000000; }
+        .pr-product-name { font-size: 14px; font-weight: 600; color: #000000; margin-bottom: 6px; letter-spacing: 0.02em; }
+        .pr-product-price { font-size: 13px; color: #666666; margin-bottom: 12px; }
+        .pr-swatches { display: flex; gap: 6px; flex-wrap: wrap; }
+        .pr-swatch {
+          width: 14px;
+          height: 14px;
+          border-radius: 50%;
+          border: 1px solid rgba(0,0,0,0.1);
+          cursor: pointer;
+          transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+        .pr-swatch:hover { transform: scale(1.25); border-color: rgba(0,0,0,0.3); }
 
         /* Pagination */
-        .pagination {
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            gap: 10px;
-            margin-top: 60px;
-            padding-bottom: 60px;
+        .pr-pagination {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 40px 0 64px;
+        }
+        .pr-page-btn {
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          border: 1px solid #EFEFEF;
+          background: #F9F9F9;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          color: #555555;
+          transition: all 0.2s ease;
+          font-family: 'Montserrat', sans-serif;
+          border-radius: 4px;
+        }
+        .pr-page-btn:hover { background: #EFEFEF; color: #000000; border-color: #dddddd; }
+        .pr-page-btn.active { background: #000000; color: #ffffff; border-color: #000000; }
+        .pr-page-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+        .pr-page-text {
+          padding: 0 16px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          font-size: 13px;
+          color: #888888;
         }
 
-        .page-btn {
-            width: 40px;
-            height: 40px;
-            border: 1px solid var(--border-light);
-            background: white;
-            color: var(--text-dark);
-            cursor: pointer;
-            transition: all 0.3s ease;
-            border-radius: 4px;
-            font-size: 14px;
-            font-weight: 500;
-        }
+        @media (max-width: 1024px) { .pr-product-grid { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 768px) { .pr-product-grid { grid-template-columns: repeat(2, 1fr); gap: 24px; } }
+        @media (max-width: 480px) { .pr-product-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; } }
+      `}</style>
 
-        .page-btn:hover,
-        .page-btn.active {
-            background: var(--primary-gold);
-            border-color: var(--primary-gold);
-            color: white;
-        }
-
-        /* Responsive */
-        @media (max-width: 1200px) {
-            .products-grid {
-                grid-template-columns: repeat(2, 1fr);
-            }
-        }
-
-        @media (max-width: 768px) {
-            nav {
-                padding: 20px 30px;
-            }
-            .content-wrapper {
-                flex-direction: column;
-                padding: 40px 30px;
-            }
-            .filters-sidebar {
-                width: 100%;
-            }
-            .products-grid {
-                grid-template-columns: 1fr;
-            }
-            .page-header {
-                padding: 60px 30px 40px;
-            }
-            .page-title {
-                font-size: 42px;
-            }
-        }
-    
-      `}} />
-      
-    {/* Navigation */}
-    <nav>
-        <div className="logo" onClick={() => window.location.href = '/Pages'}>Zulu Jewellers</div>
-        <ul className="nav-menu">
-            <li><a href="/Pages/engagement" className="active">Engagement</a></li>
-            <li><a href="/Pages/wedding">Wedding</a></li>
-            <li><a href="/Pages/custom">Custom</a></li>
-            <li><a href="/Pages/About">About</a></li>
-            <li><a href="/Pages/contact">Contact</a></li>
-        </ul>
-        <div className="nav-icons">
-            <div className="icon-btn" aria-label="User Profile" onClick={() => requireAuth(() => router.push('/Pages/Profile'))}>
-                <User size={18} strokeWidth={1.5} />
-            </div>
-            <div className="icon-btn" aria-label="Shopping Cart" onClick={() => requireAuth(() => router.push('/Pages/cart'))}>
-                <ShoppingCart size={18} strokeWidth={1.5} />
-            </div>
+      {/* Hero */}
+      <section className="pr-hero">
+        <div className="pr-hero-content">
+          <p className="pr-hero-eyebrow">Our Collections</p>
+          <h1 className="pr-hero-title">Rings Collection</h1>
+          <p className="pr-hero-sub">Discover timeless rings crafted with elegance and precision.</p>
         </div>
-    </nav>
+      </section>
 
-    {/* Page Header */}
-    <div className="page-header">
-        <div className="breadcrumb">
-            <a href="/Pages">Home</a> / Engagement Rings
+      {/* Toolbar */}
+      <div className="pr-toolbar">
+        <p className="pr-count">Showing <span>{(currentPage - 1) * itemsPerPage + 1}–{Math.min(currentPage * itemsPerPage, filtered.length)}</span> of <span>{filtered.length}</span> products</p>
+        <div className="pr-controls">
+          <div className="pr-select-wrap">
+            <select className="pr-select" value={genderFilter} onChange={e => { setGenderFilter(e.target.value); setCurrentPage(1); }}>
+              <option value="all">All</option>
+              <option value="women">Women</option>
+              <option value="men">Men</option>
+              <option value="unisex">Unisex</option>
+            </select>
+            <ChevronDown size={14} className="pr-select-arrow" />
+          </div>
+          <div className="pr-select-wrap">
+            <select className="pr-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
+              <option value="default">Sort By</option>
+              <option value="price-low">Price: Low to High</option>
+              <option value="price-high">Price: High to Low</option>
+              <option value="name">Name A–Z</option>
+            </select>
+            <ChevronDown size={14} className="pr-select-arrow" />
+          </div>
         </div>
-        <h1 className="page-title">Engagement Rings</h1>
-        <p className="page-subtitle">Discover our handcrafted collection of timeless engagement rings</p>
-    </div>
+      </div>
 
-    {/* Ring Builder Banner */}
-    <div className="ring-builder-banner">
-        <div className="builder-content">
-            <div className="builder-text">
-                <h3>Create Your Dream Ring</h3>
-                <p>Design a one-of-a-kind engagement ring with our ring builder</p>
+      {/* Product Grid */}
+      <div className="pr-grid-section">
+        <div className="pr-product-grid">
+          {paginated.map(p => (
+            <div key={p.id} className="pr-product-card">
+              <Link href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                <div className="pr-product-img-wrap">
+                  {p.images && p.images.length > 0 ? (
+                    <img 
+                      src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
+                      alt={p.name} 
+                      className="pr-product-img"
+                      style={{ objectFit: 'cover' }}
+                    />
+                  ) : (
+                    <div className="pr-product-img">💍</div>
+                  )}
+                  <button
+                    className={`pr-wishlist-btn ${wishlist[p.id] ? 'active' : ''}`}
+                    onClick={e => toggleWishlist(p.id, e)}
+                    aria-label="Toggle wishlist"
+                  >
+                    <Heart size={16} fill={wishlist[p.id] ? '#EAB308' : 'none'} />
+                  </button>
+                </div>
+                <p className="pr-product-name">{p.name}</p>
+                <p className="pr-product-price">₹{Number(p.price).toLocaleString()}</p>
+                <div className="pr-swatches">
+                  {(p.swatches || []).map((s, i) => (
+                    <span key={i} className="pr-swatch" style={{ background: s }} />
+                  ))}
+                </div>
+              </Link>
             </div>
-            <div className="builder-buttons">
-                <button className="builder-btn">Start With A Diamond</button>
-                <button className="builder-btn secondary">Start With A Setting</button>
-            </div>
+          ))}
         </div>
-    </div>
 
-    {/* Main Content */}
-    <div className="content-wrapper">
-        {/* Filters Sidebar */}
-        <aside className="filters-sidebar">
-            <div className="filter-section">
-                <h3 className="filter-title">Shape</h3>
-                <div className="shape-filters">
-                    <div className="shape-filter-btn active">
-                        <svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="40"/></svg>
-                        <div className="shape-filter-name">Round</div>
-                    </div>
-                    <div className="shape-filter-btn">
-                        <svg viewBox="0 0 100 100"><ellipse cx="50" cy="50" rx="30" ry="45"/></svg>
-                        <div className="shape-filter-name">Oval</div>
-                    </div>
-                    <div className="shape-filter-btn">
-                        <svg viewBox="0 0 100 100"><rect x="25" y="20" width="50" height="60" rx="2"/></svg>
-                        <div className="shape-filter-name">Emerald</div>
-                    </div>
-                    <div className="shape-filter-btn">
-                        <svg viewBox="0 0 100 100"><rect x="30" y="30" width="40" height="40"/></svg>
-                        <div className="shape-filter-name">Princess</div>
-                    </div>
-                    <div className="shape-filter-btn">
-                        <svg viewBox="0 0 100 100"><path d="M50,20 L70,50 L50,80 L30,50 Z"/></svg>
-                        <div className="shape-filter-name">Marquise</div>
-                    </div>
-                    <div className="shape-filter-btn">
-                        <svg viewBox="0 0 100 100"><path d="M50,20 Q70,30 70,50 Q70,70 50,80 L30,50 Q30,30 50,20"/></svg>
-                        <div className="shape-filter-name">Pear</div>
-                    </div>
-                </div>
-            </div>
+        {/* Pagination */}
+        {totalPages > 1 && (
+          <div className="pr-pagination">
+            <button className="pr-page-btn" onClick={() => setCurrentPage(p => p - 1)} disabled={currentPage === 1}>←</button>
+            {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => i + 1).map(page => (
+              <button
+                key={page}
+                className={`pr-page-btn ${currentPage === page ? 'active' : ''}`}
+                onClick={() => setCurrentPage(page)}
+              >
+                {page}
+              </button>
+            ))}
+            {totalPages > 5 && <span className="pr-page-text">...</span>}
+            {totalPages > 5 && (
+              <button className={`pr-page-btn ${currentPage === totalPages ? 'active' : ''}`} onClick={() => setCurrentPage(totalPages)}>{totalPages}</button>
+            )}
+            <button className="pr-page-btn" onClick={() => setCurrentPage(p => p + 1)} disabled={currentPage === totalPages}>→</button>
+          </div>
+        )}
+      </div>
+    </>
+  );
+}
 
-            <div className="filter-section">
-                <h3 className="filter-title">Metal Type</h3>
-                <div className="filter-options">
-                    <div className="filter-option">
-                        <input type="checkbox" id="white-gold" defaultChecked />
-                        <label htmlFor="white-gold">14K White Gold</label>
-                    </div>
-                    <div className="filter-option">
-                        <input type="checkbox" id="yellow-gold" />
-                        <label htmlFor="yellow-gold">14K Yellow Gold</label>
-                    </div>
-                    <div className="filter-option">
-                        <input type="checkbox" id="rose-gold" />
-                        <label htmlFor="rose-gold">14K Rose Gold</label>
-                    </div>
-                    <div className="filter-option">
-                        <input type="checkbox" id="platinum" />
-                        <label htmlFor="platinum">Platinum 950</label>
-                    </div>
-                </div>
-            </div>
-
-            <div className="filter-section">
-                <h3 className="filter-title">Style</h3>
-                <div className="filter-options">
-                    <div className="filter-option">
-                        <input type="checkbox" id="solitaire" />
-                        <label htmlFor="solitaire">Solitaire</label>
-                    </div>
-                    <div className="filter-option">
-                        <input type="checkbox" id="halo" />
-                        <label htmlFor="halo">Halo</label>
-                    </div>
-                    <div className="filter-option">
-                        <input type="checkbox" id="hidden-halo" />
-                        <label htmlFor="hidden-halo">Hidden Halo</label>
-                    </div>
-                    <div className="filter-option">
-                        <input type="checkbox" id="three-stone" />
-                        <label htmlFor="three-stone">Three Stone</label>
-                    </div>
-                    <div className="filter-option">
-                        <input type="checkbox" id="side-stone" />
-                        <label htmlFor="side-stone">Side Stone</label>
-                    </div>
-                </div>
-            </div>
-
-            <div className="filter-section">
-                <h3 className="filter-title">Price Range</h3>
-                <div className="price-range">
-                    <div className="price-inputs">
-                        <input type="number" className="price-input" placeholder="Min" defaultValue={1000} />
-                        <input type="number" className="price-input" placeholder="Max" defaultValue={5000} />
-                    </div>
-                    <button className="apply-filter-btn">Apply Filters</button>
-                </div>
-            </div>
-        </aside>
-
-        {/* Products Area */}
-        <div className="products-area">
-            <div className="products-header">
-                <div className="results-count">Showing 1-9 of 247 results</div>
-                <div className="sort-dropdown">
-                    <label htmlFor="sort">Sort by:</label>
-                    <select id="sort">
-                        <option>Best Selling</option>
-                        <option>Price: Low to High</option>
-                        <option>Price: High to Low</option>
-                        <option>Newest First</option>
-                        <option>Most Popular</option>
-                    </select>
-                </div>
-            </div>
-
-            <div className="products-grid">
-                {/* Product 1 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">30% OFF</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Serenity</h3>
-                        <div className="product-specs">14K White Gold | Round | Solitaire</div>
-                        <div className="product-price">
-                            <span className="price-current">$1,332</span>
-                            <span className="price-original">$1,904</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 2 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">30% OFF</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Luminaire</h3>
-                        <div className="product-specs">18K Yellow Gold | Oval | Halo</div>
-                        <div className="product-price">
-                            <span className="price-current">$1,866</span>
-                            <span className="price-original">$2,667</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 3 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">30% OFF</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Celestial</h3>
-                        <div className="product-specs">Platinum | Emerald | Three Stone</div>
-                        <div className="product-price">
-                            <span className="price-current">$2,100</span>
-                            <span className="price-original">$3,000</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 4 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">30% OFF</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Elegance</h3>
-                        <div className="product-specs">14K Rose Gold | Princess | Side Stone</div>
-                        <div className="product-price">
-                            <span className="price-current">$1,470</span>
-                            <span className="price-original">$2,100</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 5 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">BEST SELLER</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Radiance</h3>
-                        <div className="product-specs">14K White Gold | Round | Hidden Halo</div>
-                        <div className="product-price">
-                            <span className="price-current">$1,645</span>
-                            <span className="price-original">$2,350</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 6 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">30% OFF</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Aurora</h3>
-                        <div className="product-specs">18K White Gold | Cushion | Halo</div>
-                        <div className="product-price">
-                            <span className="price-current">$1,995</span>
-                            <span className="price-original">$2,850</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 7 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">NEW</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Solstice</h3>
-                        <div className="product-specs">Platinum | Oval | Solitaire</div>
-                        <div className="product-price">
-                            <span className="price-current">$2,450</span>
-                            <span className="price-original">$3,500</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 8 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">30% OFF</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Enchanted</h3>
-                        <div className="product-specs">14K Yellow Gold | Pear | Three Stone</div>
-                        <div className="product-price">
-                            <span className="price-current">$1,750</span>
-                            <span className="price-original">$2,500</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-
-                {/* Product 9 */}
-                <div className="product-card">
-                    <div className="product-image">
-                        <span className="product-badge">30% OFF</span>
-                        <div className="wishlist-btn">♡</div>
-                    </div>
-                    <div className="product-info">
-                        <h3 className="product-name">The Eternity</h3>
-                        <div className="product-specs">14K White Gold | Marquise | Side Stone</div>
-                        <div className="product-price">
-                            <span className="price-current">$1,540</span>
-                            <span className="price-original">$2,200</span>
-                        </div>
-                        <button className="product-cta">View Details</button>
-                    </div>
-                </div>
-            </div>
-
-            {/* Pagination */}
-            <div className="pagination">
-                <button className="page-btn">‹</button>
-                <button className="page-btn active">1</button>
-                <button className="page-btn">2</button>
-                <button className="page-btn">3</button>
-                <button className="page-btn">4</button>
-                <button className="page-btn">5</button>
-                <button className="page-btn">›</button>
-            </div>
-        </div>
-    </div>
-
+export default function EngagementPage() {
+  return (
+    <>
+      <Navbar />
+      <main style={{ fontFamily: 'Montserrat, sans-serif', background: '#fff', paddingTop: '72px' }}>
+        <Suspense fallback={<div style={{ padding: '80px', textAlign: 'center', color: '#888' }}>Loading...</div>}>
+          <ProductsContent />
+        </Suspense>
+      </main>
+      <Footer />
     </>
   );
 }

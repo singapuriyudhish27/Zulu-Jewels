@@ -1,11 +1,15 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 
-export async function GET() {
+export async function GET(request) {
     try {
+        const { searchParams } = new URL(request.url);
+        const categoryId = searchParams.get('category');
+        const search = searchParams.get('search');
+
         const connection = await getConnection();
 
-        const [rows] = await connection.execute(`
+        let query = `
             SELECT 
                 c.id AS category_id,
                 c.name AS category_name,
@@ -20,16 +24,33 @@ export async function GET() {
                 p.updated_at AS product_updated_at,
 
                 pi.id AS image_id,
-                pi.image_url,
+                pi.media_url,
                 pi.is_primary
             FROM categories c
             LEFT JOIN products p 
                 ON c.id = p.category_id
             LEFT JOIN product_images pi 
                 ON p.id = pi.product_id
-            ORDER BY c.name ASC, p.id DESC, pi.is_primary DESC
-        `);
-        console.log("Backend API To Get All Products.");
+            WHERE 1=1
+        `;
+
+        const queryParams = [];
+
+        if (categoryId) {
+            query += ` AND c.id = ?`;
+            queryParams.push(categoryId);
+        }
+
+        if (search) {
+            query += ` AND (p.name LIKE ? OR p.description LIKE ?)`;
+            const searchTerm = `%${search}%`;
+            queryParams.push(searchTerm, searchTerm);
+        }
+
+        query += ` ORDER BY c.name ASC, p.id DESC, pi.is_primary DESC`;
+
+        const [rows] = await connection.execute(query, queryParams);
+        console.log("Backend API To Get Products with Filters.");
 
         //Group The Data
         const categoriesMap = {};
@@ -60,7 +81,8 @@ export async function GET() {
                         is_active: row.is_active,
                         created_at: row.product_created_at,
                         updated_at: row.product_updated_at,
-                        images: []
+                        images: [],
+                        swatches: []
                     };
                     category.products.push(product);
                 }
@@ -69,7 +91,7 @@ export async function GET() {
                 if (row.image_id) {
                     product.images.push({
                         id: row.image_id,
-                        image_url: row.image_url,
+                        image_url: row.media_url,
                         is_primary: row.is_primary
                     });
                 }

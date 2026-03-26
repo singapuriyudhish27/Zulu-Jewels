@@ -53,6 +53,8 @@ export async function getConnection() {
         name VARCHAR(255) NOT NULL,
         description TEXT,
         price DECIMAL(12,2) NOT NULL,
+        material VARCHAR(255),
+        gender VARCHAR(100),
         is_active BOOLEAN DEFAULT TRUE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -60,16 +62,66 @@ export async function getConnection() {
       ) ENGINE=InnoDB;
     `);
 
-    // Products Images Table
+    // Product Variants Table
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS product_variants (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        product_id BIGINT NOT NULL,
+        material VARCHAR(100) NOT NULL,
+        description TEXT,
+        price DECIMAL(12,2),
+        stock INT DEFAULT 0,
+        is_active BOOLEAN DEFAULT TRUE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB;
+    `);
+
+    // Products Images/Videos Table
     await connection.execute(`
       CREATE TABLE IF NOT EXISTS product_images (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         product_id BIGINT NOT NULL,
-        image_url VARCHAR(255) NOT NUll,
+        variant_id BIGINT, 
+        media_url VARCHAR(255) NOT NULL,
+        media_type ENUM('image', 'video') DEFAULT 'image',
         is_primary BOOLEAN DEFAULT FALSE,
-        FOREIGN KEY (product_id) REFERENCES products(id)
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE CASCADE,
+        FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL
       ) ENGINE=InnoDB;
     `);
+
+    // Migration logic for existing tables
+    try {
+      const [columns] = await connection.execute("SHOW COLUMNS FROM product_images");
+      const hasImageUrl = columns.some(c => c.Field === 'image_url');
+      const hasMediaType = columns.some(c => c.Field === 'media_type');
+      const hasVariantId = columns.some(c => c.Field === 'variant_id');
+
+      if (hasImageUrl) {
+        await connection.execute("ALTER TABLE product_images CHANGE image_url media_url VARCHAR(255) NOT NULL");
+        console.log("✅ Migrated product_images.image_url to media_url");
+      }
+      if (!hasMediaType) {
+        await connection.execute("ALTER TABLE product_images ADD COLUMN media_type ENUM('image', 'video') DEFAULT 'image' AFTER media_url");
+        console.log("✅ Added product_images.media_type column");
+      }
+      if (!hasVariantId) {
+        await connection.execute("ALTER TABLE product_images ADD COLUMN variant_id BIGINT AFTER product_id");
+        console.log("✅ Added product_images.variant_id column");
+      }
+
+      // Products migration
+      const [pCols] = await connection.execute("SHOW COLUMNS FROM products");
+      if (!pCols.some(c => c.Field === 'material')) {
+        await connection.execute("ALTER TABLE products ADD COLUMN material VARCHAR(255) AFTER price");
+      }
+      if (!pCols.some(c => c.Field === 'gender')) {
+        await connection.execute("ALTER TABLE products ADD COLUMN gender VARCHAR(100) AFTER material");
+      }
+      
+    } catch (migrateError) {
+      console.warn("⚠️ Migration warning:", migrateError.message);
+    }
 
     // Customers Table
     await connection.execute(`

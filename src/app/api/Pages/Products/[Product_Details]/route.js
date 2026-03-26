@@ -13,50 +13,45 @@ export async function GET(request, { params }) {
                 p.name AS product_name,
                 p.description,
                 p.price,
+                p.material,
+                p.gender,
                 p.is_active,
                 p.created_at,
-                p.updated_at,
-
-                pi.id AS image_id,
-                pi.image_url,
-                pi.is_primary
+                p.updated_at
             FROM products p
-            LEFT JOIN product_images pi 
-                ON p.id = pi.product_id
             WHERE p.id = ?
-            ORDER BY pi.is_primary DESC
         `, [id]);
-        console.log("Backend API To Get Each Product's Details.");
 
-        //If No Product Found
         if (rows.length === 0) {
-            return NextResponse.json({
-                success: false,
-                message: "Product Not Found"
-            }, { status: 404 });
+            return NextResponse.json({ success: false, message: "Product Not Found" }, { status: 404 });
         }
 
-        //Build Product Object
+        const [variants] = await connection.execute(`
+            SELECT * FROM product_variants WHERE product_id = ?
+        `, [id]);
+
+        const [images] = await connection.execute(`
+            SELECT * FROM product_images WHERE product_id = ?
+        `, [id]);
+
         const product = {
             id: rows[0].product_id,
             category_id: rows[0].category_id,
             name: rows[0].product_name,
             description: rows[0].description,
             price: rows[0].price,
+            material: rows[0].material,
+            gender: rows[0].gender,
             is_active: rows[0].is_active,
             created_at: rows[0].created_at,
             updated_at: rows[0].updated_at,
-            images: []
+            variants: variants,
+            images: images
         }
 
-        rows.forEach(row => {
-            if (row.image_id) {
-                product.images.push({
-                    id: row.image_id,
-                    image_url: row.image_url,
-                    is_primary: row.is_primary
-                });
-            }
+        return NextResponse.json({
+            success: true,
+            product
         });
 
         return NextResponse.json({
