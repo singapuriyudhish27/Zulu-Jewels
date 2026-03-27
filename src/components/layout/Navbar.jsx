@@ -21,7 +21,11 @@ export default function Navbar() {
       if (!apiRoute) return;
 
       const response = await fetch(apiRoute);
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`);
+      }
       const data = await response.json();
+      console.log("Navbar Data: ", data);
 
       if (data.role === "Admin") {
         router.replace('/Pages/Admin');
@@ -33,8 +37,8 @@ export default function Navbar() {
       }
     } catch (error) {
       console.error("Error checking auth/role:", error);
-      // Fallback for errors
-      return response.json({success: false, message: error});
+      // Fallback for errors: redirect to login
+      router.replace('/auth/login');
     }
   };
 

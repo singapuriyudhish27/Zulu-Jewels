@@ -91,6 +91,7 @@ export default function ProductManagementPage() {
           credentials: 'include',
         });
         const result = await response.json();
+        console.log("Backend API To Get Products Data.", result);
         if (result.success) {
           setProductsData(result.data || []);
           setCategoriesData(result.categories || []);

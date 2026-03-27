@@ -3,17 +3,28 @@ import { getConnection } from "@/lib/db";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
-//Get User Id From Cookie
-async function getUserIdFromCookie() {
+//Get User Data From Cookie
+async function getUserFromCookie() {
     const cookieStore = await cookies();
     const cookie = cookieStore.get("zulu_jewels")?.value;
-    const decoded = jwt.verify(cookie, process.env.JWT_SECRET);
-    return decoded;
+    if (!cookie) return null;
+    try {
+        const decoded = jwt.verify(cookie, process.env.JWT_SECRET);
+        return decoded;
+    } catch (err) {
+        return null;
+    }
 }
 
 export async function GET() {
     try {
-        const user = await getUserIdFromCookie();
+        const user = await getUserFromCookie();
+        if (!user) {
+            return NextResponse.json(
+                { success: false, message: "Unauthorized: User not logged in" },
+                { status: 401 }
+            );
+        }
         const userId = user.userId;
         const email = user.email;
 
@@ -45,12 +56,9 @@ export async function GET() {
                 p.description,
                 p.price,
                 p.is_active,
-                pi.media_url AS image_url,
-                pi.is_primary
+                (SELECT media_url FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC LIMIT 1) AS media_url
             FROM cart_items ci
             JOIN products p ON ci.product_id = p.id
-            LEFT JOIN product_images pi 
-                ON p.id = pi.product_id AND pi.is_primary = TRUE
             WHERE ci.user_id = ?
             ORDER BY ci.created_at DESC
         `, [userId]);
@@ -69,8 +77,7 @@ export async function GET() {
                 description,
                 price,
                 is_active,
-                image_url,
-                is_primary,
+                media_url,
             } = row;
 
             if (!cartMap[cart_item_id]) {
@@ -89,10 +96,9 @@ export async function GET() {
                 };
             }
 
-            if (image_url) {
+            if (media_url) {
                 cartMap[cart_item_id].product.images.push({
-                    image_url,
-                    is_primary: Boolean(is_primary),
+                    media_url
                 });
             }
         }
@@ -112,7 +118,8 @@ export async function GET() {
 //Add New Cart Item
 export async function POST(request) {
     try {
-        const userId = await getUserIdFromCookie();
+        const user = await getUserFromCookie();
+        const userId = user?.userId;
 
         if (!userId) {
             return NextResponse.json(
@@ -170,7 +177,8 @@ export async function POST(request) {
 //Edit Cart Item
 export async function PUT(request) {
     try {
-        const userId = await getUserIdFromCookie();
+        const user = await getUserFromCookie();
+        const userId = user?.userId;
 
         if (!userId) {
             return NextResponse.json({

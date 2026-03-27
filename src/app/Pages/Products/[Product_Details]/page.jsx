@@ -49,6 +49,7 @@ export default function ProductDetailsPage() {
   const [selectedDiamond, setSelectedDiamond] = useState(1); // Lab Grown
   const [activeThumb, setActiveThumb] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
+  const [isInCart, setIsInCart] = useState(false);
   const [reviewFilter, setReviewFilter] = useState('all');
   const [helpfulVotes, setHelpfulVotes] = useState({});
 
@@ -57,9 +58,14 @@ export default function ProductDetailsPage() {
       try {
         const id = params.Product_Details;
         const res = await fetch(`/api/Pages/Products/${id}`);
+        if (!res.ok) {
+          throw new Error(`HTTP error! status: ${res.status}`);
+        }
         const data = await res.json();
         if (data.success) {
           setProduct(data.product);
+          if (data.product.is_wishlisted) setIsWishlisted(true);
+          if (data.product.in_cart) setIsInCart(true);
           // Auto-select first variant if exists
           if (data.product.variants && data.product.variants.length > 0) {
             setSelectedVariant(data.product.variants[0]);
@@ -96,25 +102,82 @@ export default function ProductDetailsPage() {
     type: img.media_type || (img.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? 'video' : 'image')
   }));
 
-  const requireAuth = (action) => {
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('zulu_jewels='))
-      ?.split('=')[1];
-    if (!token) {
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
-      return;
+  const addToCart = async () => {
+    try {
+      const id = product.id;
+      const res = await fetch(`/api/Pages/Products/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: id, action: 'cart', quantity: 1 })
+      });
+      
+      if (res.status === 401) {
+        router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setIsInCart(data.status === "added");
+        toast.success(data.message || (data.status === "added" ? 'Product added to cart!' : 'Product removed from cart'));
+      } else {
+        toast.error(data.message || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error("Add to cart error:", error);
+      toast.error(error.message || "An error occurred");
     }
-    if (action) action();
   };
 
-  const addToCart = () => {
-    toast.success('Product added to cart!');
+  const addToWishlist = async () => {
+    try {
+      const id = product.id;
+      const res = await fetch(`/api/Pages/Products/${id}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: id, action: 'wishlist' })
+      });
+
+      if (res.status === 401) {
+        router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+        return;
+      }
+
+      if (!res.ok) {
+        const errorData = await res.json().catch(() => ({}));
+        throw new Error(errorData.message || `HTTP error! status: ${res.status}`);
+      }
+
+      const data = await res.json();
+      if (data.success) {
+        setIsWishlisted(data.status === "added");
+        toast.success(data.message || (data.status === "added" ? 'Added to wishlist!' : 'Removed from wishlist'));
+      } else {
+        toast.error(data.message || 'Failed to add to wishlist');
+      }
+    } catch (error) {
+      console.error("Add to wishlist error:", error);
+      toast.error(error.message || "An error occurred");
+    }
   };
 
-  const addToWishlist = () => {
-    setIsWishlisted(w => !w);
-    toast.success(isWishlisted ? 'Removed from wishlist' : 'Added to wishlist!');
+  const handleCheckout = async () => {
+    try {
+      // Use the Profile API to check if user is authenticated
+      const res = await fetch('/api/Pages/Profile');
+      if (res.status === 401) {
+        router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+        return;
+      }
+      router.push('/Pages/cart');
+    } catch (error) {
+      router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    }
   };
 
 
@@ -516,9 +579,10 @@ export default function ProductDetailsPage() {
           <div className="pd-actions">
             <div className="pd-actions-row">
               <button className="pd-btn-primary" onClick={addToCart}>
-                <Plus size={18} /> Add To Cart
+                {isInCart ? <ShoppingBag size={18} /> : <Plus size={18} />} 
+                {isInCart ? 'Added to Cart' : 'Add To Cart'}
               </button>
-              <button className="pd-btn-secondary" onClick={() => requireAuth(() => router.push('/Pages/cart'))}>
+              <button className="pd-btn-secondary" onClick={handleCheckout}>
                 <ShoppingCart size={18} /> Checkout Now
               </button>
             </div>

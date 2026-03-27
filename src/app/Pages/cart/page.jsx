@@ -7,6 +7,7 @@ import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
+import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
 import { Trash2, Minus, Plus, ShoppingBag, Tag } from 'lucide-react';
 
@@ -54,29 +55,80 @@ export default function CartPage() {
   const [promoApplied, setPromoApplied] = useState(false);
   const router = useRouter();
 
-  const [cartItems, setCartItems] = useState([
-    { id: 1, name: 'Classic Solitaire Ring', specs: '18K Gold · Diamond · Size 6', price: 58999, qty: 1, discount: 10 },
-    { id: 2, name: 'Classic Pavé Band', specs: '18K Rose Gold · Diamond · Size 7', price: 34500, qty: 1, discount: 0 },
-    { id: 3, name: 'Diamond Stud Earrings', specs: 'Platinum · Lab Grown Diamond', price: 42000, qty: 1, discount: 5 },
-  ]);
+  const [cartItems, setCartItems] = useState([]);
+  const [loading, setLoading] = useState(true);
 
-  const subtotal = cartItems.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const fetchCart = async () => {
+    try {
+      const res = await fetch('/api/Pages/cart');
+      if (!res.ok) {
+        if (res.status === 401) {
+          router.push('/auth/login?callbackUrl=/Pages/cart');
+          return;
+        }
+        throw new Error('Failed to fetch cart');
+      }
+      const data = await res.json();
+      if (data.success) {
+        setCartItems(data.data || []);
+      }
+    } catch (error) {
+      console.error('Error fetching cart:', error);
+      toast.error('Could not load cart items');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCart();
+  }, []);
+
+  const subtotal = cartItems.reduce((sum, item) => sum + (item.product?.price * item.quantity), 0);
   const discountAmt = promoApplied ? Math.round(subtotal * 0.05) : 0;
   const shipping = subtotal > 50000 ? 0 : 999;
   const tax = Math.round((subtotal - discountAmt) * 0.03);
   const total = subtotal - discountAmt + shipping + tax;
 
-  const updateQty = (id, change) => {
-    setCartItems(prev => prev.map(item =>
-      item.id === id ? { ...item, qty: Math.max(1, item.qty + change) } : item
-    ));
+  const updateQty = async (cartItemId, newQty) => {
+    if (newQty < 1) return;
+    try {
+      const res = await fetch('/api/Pages/cart', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart_item_id: cartItemId, quantity: newQty }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCartItems(prev => prev.map(item =>
+          item.cart_item_id === cartItemId ? { ...item, quantity: newQty } : item
+        ));
+      } else {
+        toast.error(data.message || 'Failed to update quantity');
+      }
+    } catch (error) {
+      toast.error('Error updating cart');
+    }
   };
 
-  const removeItem = (id) => {
-    setCartItems(prev => prev.filter(item => item.id !== id));
+  const removeItem = async (cartItemId) => {
+    try {
+      const res = await fetch('/api/Pages/cart', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ cart_item_id: cartItemId, quantity: 0 }),
+      });
+      const data = await res.json();
+      if (data.success) {
+        setCartItems(prev => prev.filter(item => item.cart_item_id !== cartItemId));
+        toast.success('Item removed from cart');
+      } else {
+        toast.error(data.message || 'Failed to remove item');
+      }
+    } catch (error) {
+      toast.error('Error removing item');
+    }
   };
-
-  const [loading, setLoading] = useState(false);
 
   const loadRazorpay = () =>
     new Promise((resolve) => {
@@ -189,7 +241,7 @@ export default function CartPage() {
         .ca-layout {
           max-width: 1280px;
           margin: 0 auto;
-          padding: 0 24px 100px;
+          padding: 0 24px 40px;
           display: grid;
           grid-template-columns: 1fr 400px;
           gap: 64px;
@@ -520,27 +572,32 @@ export default function CartPage() {
               </div>
 
               {cartItems.map(item => (
-                <div key={item.id} className="ca-cart-item">
+                <div key={item.cart_item_id} className="ca-cart-item">
                   <div className="ca-item-details">
-                    <div className="ca-item-img">💍</div>
-                    <div>
-                      <p className="ca-item-name">{item.name}</p>
-                      <p className="ca-item-specs">{item.specs}</p>
-                      {item.discount > 0 && (
-                        <span className="ca-item-discount">
-                          <Tag size={9} /> {item.discount}% off
-                        </span>
+                    <div className="ca-item-img">
+                      {item.product?.images?.[0]?.media_url ? (
+                        <img 
+                          src={item.product.images[0].media_url} 
+                          alt={item.product.name}
+                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        '💍'
                       )}
                     </div>
+                    <div>
+                      <p className="ca-item-name">{item.product?.name}</p>
+                      <p className="ca-item-specs" style={{ whiteSpace: 'pre-line' }}>{item.product?.description}</p>
+                    </div>
                   </div>
-                  <div className="ca-item-price">₹{item.price.toLocaleString('en-IN')}</div>
+                  <div className="ca-item-price">₹{item.product?.price?.toLocaleString('en-IN')}</div>
                   <div className="ca-qty-control">
-                    <button className="ca-qty-btn" onClick={() => updateQty(item.id, -1)}><Minus size={12} /></button>
-                    <span className="ca-qty-val">{item.qty}</span>
-                    <button className="ca-qty-btn" onClick={() => updateQty(item.id, 1)}><Plus size={12} /></button>
+                    <button className="ca-qty-btn" onClick={() => updateQty(item.cart_item_id, item.quantity - 1)}><Minus size={12} /></button>
+                    <span className="ca-qty-val">{item.quantity}</span>
+                    <button className="ca-qty-btn" onClick={() => updateQty(item.cart_item_id, item.quantity + 1)}><Plus size={12} /></button>
                   </div>
                   <div className="ca-item-actions">
-                    <button className="ca-remove-btn" onClick={() => removeItem(item.id)} aria-label="Remove item">
+                    <button className="ca-remove-btn" onClick={() => removeItem(item.cart_item_id)} aria-label="Remove item">
                       <Trash2 size={16} />
                     </button>
                   </div>
@@ -554,7 +611,7 @@ export default function CartPage() {
                 <h2 className="ca-summary-title">Order Summary</h2>
 
                 <div className="ca-summary-row">
-                  <span className="ca-summary-label">Subtotal ({cartItems.reduce((s, i) => s + i.qty, 0)} items)</span>
+                  <span className="ca-summary-label">Subtotal ({cartItems.reduce((s, i) => s + i.quantity, 0)} items)</span>
                   <span className="ca-summary-value">₹{subtotal.toLocaleString('en-IN')}</span>
                 </div>
                 <div className="ca-summary-row">
@@ -647,6 +704,8 @@ export default function CartPage() {
             </div>
           </div>
         )}
+
+        <TrustBadge />
       </main>
 
       <Footer />
