@@ -41,7 +41,7 @@ export async function getConnection() {
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(150) NOT NULL UNIQUE,
         image_url VARCHAR(255),
-        available_materials JSON,
+        available_materials JSON NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
@@ -91,49 +91,6 @@ export async function getConnection() {
       ) ENGINE=InnoDB;
     `);
 
-    // Migration logic for existing tables
-    try {
-      const [columns] = await connection.execute("SHOW COLUMNS FROM product_images");
-      const hasImageUrl = columns.some(c => c.Field === 'image_url');
-      const hasMediaType = columns.some(c => c.Field === 'media_type');
-      const hasVariantId = columns.some(c => c.Field === 'variant_id');
-
-      if (hasImageUrl) {
-        await connection.execute("ALTER TABLE product_images CHANGE image_url media_url VARCHAR(255) NOT NULL");
-        console.log("✅ Migrated product_images.image_url to media_url");
-      }
-      if (!hasMediaType) {
-        await connection.execute("ALTER TABLE product_images ADD COLUMN media_type ENUM('image', 'video') DEFAULT 'image' AFTER media_url");
-        console.log("✅ Added product_images.media_type column");
-      }
-      if (!hasVariantId) {
-        await connection.execute("ALTER TABLE product_images ADD COLUMN variant_id BIGINT AFTER product_id");
-        console.log("✅ Added product_images.variant_id column");
-      }
-      
-      // Categories migration
-      const [cCols] = await connection.execute("SHOW COLUMNS FROM categories");
-      if (!cCols.some(c => c.Field === 'image_url')) {
-        await connection.execute("ALTER TABLE categories ADD COLUMN image_url VARCHAR(255) AFTER name");
-        console.log("✅ Added categories.image_url column");
-      }
-      if (cCols.find(c => c.Field === 'available_materials')?.Null === 'NO') {
-        await connection.execute("ALTER TABLE categories MODIFY available_materials JSON NULL");
-        console.log("✅ Modified categories.available_materials to allow NULL");
-      }
-
-      // Products migration
-      const [pCols] = await connection.execute("SHOW COLUMNS FROM products");
-      if (!pCols.some(c => c.Field === 'material')) {
-        await connection.execute("ALTER TABLE products ADD COLUMN material VARCHAR(255) AFTER price");
-      }
-      if (!pCols.some(c => c.Field === 'gender')) {
-        await connection.execute("ALTER TABLE products ADD COLUMN gender VARCHAR(100) AFTER material");
-      }
-      
-    } catch (migrateError) {
-      console.warn("⚠️ Migration warning:", migrateError.message);
-    }
 
     // Customers Table
     await connection.execute(`

@@ -1,26 +1,8 @@
 import { getConnection } from "@/lib/db";
 import { NextResponse } from "next/server";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { saveFile } from "@/lib/storage";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "categories");
-
-// Helper to save file
-async function saveFile(file) {
-    if (!file || typeof file === 'string') return file;
-    try {
-        await mkdir(UPLOAD_DIR, { recursive: true });
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
-        const filePath = path.join(UPLOAD_DIR, fileName);
-        await writeFile(filePath, buffer);
-        return `/uploads/categories/${fileName}`;
-    } catch (error) {
-        console.error("Error saving category image:", error);
-        return null;
-    }
-}
+// Helper removed - now using centralized storage utility
 
 //Add New Category
 export async function POST(request) {
@@ -39,7 +21,7 @@ export async function POST(request) {
             }, { status: 400 });
         }
 
-        const imageUrl = await saveFile(imageFile);
+        const imageUrl = await saveFile(imageFile, "categories");
 
         //Check If Category Exists
         const [existing] = await connection.execute(`
@@ -94,7 +76,7 @@ export async function PUT(request) {
 
         let imageUrl = formData.get("image_url"); // Existing URL if no new file
         if (imageFile && typeof imageFile !== 'string') {
-            imageUrl = await saveFile(imageFile);
+            imageUrl = await saveFile(imageFile, "categories");
         }
 
         // Check if another category with the same name exists (excluding current)

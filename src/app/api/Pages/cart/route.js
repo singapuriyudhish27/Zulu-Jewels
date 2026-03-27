@@ -8,12 +8,14 @@ async function getUserIdFromCookie() {
     const cookieStore = await cookies();
     const cookie = cookieStore.get("zulu_jewels")?.value;
     const decoded = jwt.verify(cookie, process.env.JWT_SECRET);
-    return decoded.userId;
+    return decoded;
 }
 
 export async function GET() {
     try {
-        const userId = await getUserIdFromCookie();
+        const user = await getUserIdFromCookie();
+        const userId = user.userId;
+        const email = user.email;
 
         if (!userId) {
             return NextResponse.json(
@@ -22,8 +24,16 @@ export async function GET() {
             );
         }
 
+        //If Admin Login
+        if (email === process.env.ADMIN_EMAIL) {
+            const role = "Admin";
+            const user = email;
+            return NextResponse.json({user, role}, {status: 200 });
+        }
+
         //Database Connection
         const connection = await getConnection();
+        const role = "User";
 
         const [rows] = await connection.execute(`
             SELECT 
@@ -35,11 +45,12 @@ export async function GET() {
                 p.description,
                 p.price,
                 p.is_active,
-                pi.image_url,
+                pi.media_url AS image_url,
                 pi.is_primary
             FROM cart_items ci
             JOIN products p ON ci.product_id = p.id
-            LEFT JOIN product_images pi ON p.id = pi.product_id
+            LEFT JOIN product_images pi 
+                ON p.id = pi.product_id AND pi.is_primary = TRUE
             WHERE ci.user_id = ?
             ORDER BY ci.created_at DESC
         `, [userId]);
@@ -88,6 +99,7 @@ export async function GET() {
 
         return NextResponse.json({
             success: true,
+            role,
             message: "Cart items fetched successfully",
             data: Object.values(cartMap)
         }, { status: 200 });

@@ -2,30 +2,39 @@ import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
-import { useId } from "react";
 
 async function getUserIdFromCookie() {
     const cookieStore = await cookies();
     const cookie = cookieStore.get("zulu_jewels");
     const token = cookie?.value;
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded?.userId;
+    return decoded;
 }
 
 //Fetch Logged In User's WhishList
-export async function GET(request) {
+export async function GET() {
     try {
-        const userId = await getUserIdFromCookie();
+        const user = await getUserIdFromCookie();
+        const userId = user.userId;
+        const email = user.email;
 
-        if (!userId) {
+        if (!user) {
             return NextResponse.json({
                 success: false,
                 message: "Unauthorized"
             }, { status: 401 });
         }
 
+        //If Admin Login
+        if (email === process.env.ADMIN_EMAIL) {
+            const role = "Admin";
+            const user = email;            
+            return NextResponse.json({user, role}, {status: 200 });
+        }
+
         //Database Connection
         const connection = await getConnection();
+        const role = "User";
 
         const [rows] = await connection.execute(`
             SELECT 
@@ -36,7 +45,7 @@ export async function GET(request) {
                 p.name,
                 p.description,
                 p.price,
-                pi.image_url
+                pi.media_url AS image_url
             FROM user_likes ul
             JOIN products p ON ul.product_id = p.id
             LEFT JOIN product_images pi 
@@ -48,6 +57,7 @@ export async function GET(request) {
 
         return NextResponse.json({
             success: true,
+            role,
             count: rows.length,
             data: rows
         }, { status: 200 });

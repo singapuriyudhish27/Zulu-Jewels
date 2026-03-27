@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
-import {getConnection} from "@/lib/db";
+import { getConnection } from "@/lib/db";
 
 //Get The Logged In User
 export async function GET() {
@@ -26,8 +26,9 @@ export async function GET() {
 
         //If Admin Login
         if (email === process.env.ADMIN_EMAIL) {
-            const user = email;
-            return NextResponse.json({user}, { status: 200 });
+            const role = "Admin";
+            const user = email;            
+            return NextResponse.json({user, role}, {status: 200 });
         }
 
         //Fetch User From Database
@@ -41,9 +42,10 @@ export async function GET() {
             return NextResponse.json({message: "User Not Found"}, {status: 404});
         }
 
+        const role = "User";
         const user = userRows[0];
 
-        return NextResponse.json({user}, {status: 200});
+        return NextResponse.json({user, role}, {status: 200});
     } catch (error) {
         console.error("Profile API Error:", error);
         return NextResponse.json({message: "Internal Server Error"}, {status: 500});

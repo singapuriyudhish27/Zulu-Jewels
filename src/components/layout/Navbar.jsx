@@ -10,22 +10,35 @@ export default function Navbar() {
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const router = useRouter();
-  const pathname = usePathname();
 
-  const requireAuth = (action) => {
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('zulu_jewels='))
-      ?.split('=')[1];
-    if (!token) {
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
-      return;
+  const handleIconClick = async (type, targetPage) => {
+    try {
+      let apiRoute = '';
+      if (type === 'profile') apiRoute = '/api/Pages/Profile';
+      else if (type === 'wishlist') apiRoute = '/api/Pages/Wishlist';
+      else if (type === 'cart') apiRoute = '/api/Pages/cart';
+
+      if (!apiRoute) return;
+
+      const response = await fetch(apiRoute);
+      const data = await response.json();
+
+      if (data.role === "Admin") {
+        router.replace('/Pages/Admin');
+      } else if (data.role === "User") {
+        router.replace(targetPage);
+      } else {
+        // Handle unauthenticated or other roles
+        router.replace('/auth/login'); // Or wherever a non-logged-in user should go
+      }
+    } catch (error) {
+      console.error("Error checking auth/role:", error);
+      // Fallback for errors
+      return response.json({success: false, message: error});
     }
-    if (action) action();
   };
 
   const [categories, setCategories] = useState([]);
-  const [isShopOpen, setIsShopOpen] = useState(false);
 
   useEffect(() => {
     // Fetch categories only on the client-side
@@ -351,13 +364,13 @@ export default function Navbar() {
               <button className="zj-nav-icon-btn" onClick={() => setShowSearch(!showSearch)} aria-label="Search">
                 {showSearch ? <X size={20} /> : <Search size={20} />}
               </button>
-              <button className="zj-nav-icon-btn" onClick={() => requireAuth(() => router.push('/Pages/Profile'))} aria-label="Profile">
+              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('profile', '/Pages/Profile')} aria-label="Profile">
                 <User size={20} />
               </button>
-              <button className="zj-nav-icon-btn" onClick={() => requireAuth(() => router.push('/Pages/wishlist'))} aria-label="Wishlist">
+              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('wishlist', '/Pages/wishlist')} aria-label="Wishlist">
                 <Heart size={20} />
               </button>
-              <button className="zj-nav-icon-btn" onClick={() => requireAuth(() => router.push('/Pages/cart'))} aria-label="Cart">
+              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('cart', '/Pages/cart')} aria-label="Cart">
                 <ShoppingBag size={20} />
                 <span className="zj-cart-badge">0</span>
               </button>

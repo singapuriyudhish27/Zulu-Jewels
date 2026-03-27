@@ -75,18 +75,6 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
 
 
-  const requireAuth = (action) => {
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('zulu_jewels='))
-      ?.split('=')[1];
-    if (!token) {
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
-      return;
-    }
-    if (action) action();
-  };
-
   useEffect(() => {
     const fetchPageData = async () => {
       try {

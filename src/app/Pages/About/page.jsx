@@ -9,18 +9,6 @@ export default function AboutPage() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const requireAuth = (action) => {
-    const token = document.cookie
-      .split('; ')
-      .find(row => row.startsWith('zulu_jewels='))
-      ?.split('=')[1];
-    if (!token) {
-      router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
-      return;
-    }
-    if (action) action();
-  };
-
   return (
     <>
       <style dangerouslySetInnerHTML={{ __html: `

@@ -1,26 +1,8 @@
 import { NextResponse } from "next/server";
 import { getConnection } from "@/lib/db";
-import { writeFile, mkdir } from "fs/promises";
-import path from "path";
+import { saveFile } from "@/lib/storage";
 
-const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "products");
-
-// Helper to save file
-async function saveFile(file) {
-    if (!file || typeof file === 'string') return file; // Return existing path if it's already a string
-    try {
-        await mkdir(UPLOAD_DIR, { recursive: true });
-        const bytes = await file.arrayBuffer();
-        const buffer = Buffer.from(bytes);
-        const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
-        const filePath = path.join(UPLOAD_DIR, fileName);
-        await writeFile(filePath, buffer);
-        return `/uploads/products/${fileName}`;
-    } catch (error) {
-        console.error("Error saving file:", error);
-        return null;
-    }
-}
+// Helper removed - now using centralized storage utility
 
 export async function GET() {
     try {
