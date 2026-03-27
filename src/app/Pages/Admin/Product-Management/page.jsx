@@ -66,11 +66,13 @@ export default function ProductManagementPage() {
     media: [] // Generic product media
   });
   const [editingProductId, setEditingProductId] = useState(null);
+  const [editingCategoryId, setEditingCategoryId] = useState(null);
 
   // Form states for Category
   const [categoryForm, setCategoryForm] = useState({
     name: "",
-    available_materials: ["Gold"],
+    image: null,
+    imagePreview: "",
     description: ""
   });
 
@@ -252,23 +254,90 @@ export default function ProductManagementPage() {
   const handleSaveCategory = async (e) => {
     e.preventDefault();
     try {
-      const res = await fetch("/api/Pages/Admin/Product-Management/Category", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(categoryForm),
+      const isEdit = !!editingCategoryId;
+      const url = "/api/Pages/Admin/Product-Management/Category";
+      const method = isEdit ? "PUT" : "POST";
+      
+      const formData = new FormData();
+      formData.append("name", categoryForm.name);
+      formData.append("description", categoryForm.description);
+      if (categoryForm.image) {
+        formData.append("image", categoryForm.image);
+      }
+      if (isEdit) {
+        formData.append("id", editingCategoryId);
+        // If editing and no new image, we might need to send the old URL or some signal
+        if (!categoryForm.image) {
+            const rawCat = categoriesData.find(c => c.id === editingCategoryId);
+            formData.append("image_url", rawCat.image_url || "");
+        }
+      }
+
+      const res = await fetch(url, {
+        method: method,
+        body: formData, // Send FormData instead of JSON string
         credentials: "include",
       });
       const data = await res.json();
       if (data.success) {
-        setCategoriesData(prev => [...prev, data.data]);
+        // Refresh categories
+        const catRes = await fetch('/api/Pages/Admin/Product-Management', { credentials: 'include' });
+        const catData = await catRes.json();
+        if (catData.success) {
+            setCategoriesData(catData.categories || []);
+        }
+
+        toast.success(`Category ${isEdit ? 'updated' : 'added'} successfully`);
         setShowAddCategory(false);
-        setCategoryForm({ name: "", available_materials: ["Gold"], description: "" });
+        setEditingCategoryId(null);
+        setCategoryForm({ name: "", image: null, imagePreview: "", description: "" });
       } else {
-        toast.error(data.message || "Failed to add category");
+        toast.error(data.message || `Failed to ${isEdit ? 'update' : 'add'} category`);
       }
     } catch (error) {
       console.error("Category save error:", error);
     }
+  };
+
+  const handleEditCategory = (cat) => {
+    const rawCat = categoriesData.find(c => c.id === cat.id);
+    setCategoryForm({
+      name: rawCat.name,
+      image: null,
+      imagePreview: rawCat.image_url || "",
+      description: rawCat.description || ""
+    });
+    setEditingCategoryId(cat.id);
+    setShowAddCategory(true);
+  };
+
+  const handleDeleteCategory = async (catId) => {
+    setConfirmConfig({
+      isOpen: true,
+      title: "Delete Category",
+      message: "Are you sure you want to delete this category? This will fail if products are linked to it.",
+      type: "danger",
+      onConfirm: async () => {
+        try {
+          const res = await fetch("/api/Pages/Admin/Product-Management/Category", {
+            method: "DELETE",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ category_id: catId }),
+            credentials: "include",
+          });
+          const data = await res.json();
+          if (data.success) {
+            setCategoriesData(prev => prev.filter(c => c.id !== catId));
+            toast.success("Category deleted successfully");
+          } else {
+            toast.error(data.message || "Failed to delete category");
+          }
+        } catch (error) {
+          console.error("Category delete error:", error);
+          toast.error("Something went wrong");
+        }
+      }
+    });
   };
 
   const handleSaveProduct = async (e) => {
@@ -472,7 +541,7 @@ export default function ProductManagementPage() {
           </div>
 
           {/* Categories */}
-          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#2c2c2c' }}>Categories (with Material Options)</h3>
+          <h3 style={{ fontSize: 18, fontWeight: 600, marginBottom: 16, color: '#2c2c2c' }}>Categories</h3>
           <div className="category-grid">
             {loading ? (
               Array(4).fill(0).map((_, i) => (
@@ -484,14 +553,24 @@ export default function ProductManagementPage() {
               ))
             ) : categories.length > 0 ? (
               categories.map((cat) => (
-                <div className={`category-card ${filterCategory === cat.name ? 'active' : ''}`} key={cat.id} onClick={() => setFilterCategory(filterCategory === cat.name ? 'all' : cat.name)}>
-                  <div className="category-name">{cat.name}</div>
-                  <div className="category-count">{cat.products} Products</div>
-                  <div className="material-tags">
-                    <span className="material-tag gold">Gold: {cat.gold}</span>
-                    <span className="material-tag silver">Silver: {cat.silver}</span>
-                    <span className="material-tag diamond">Diamond: {cat.diamond}</span>
+                <div 
+                  className={`category-card ${filterCategory === cat.name ? 'active' : ''}`} 
+                  key={cat.id} 
+                  onClick={() => setFilterCategory(filterCategory === cat.name ? 'all' : cat.name)}
+                  style={cat.image_url ? {
+                    backgroundImage: `linear-gradient(rgba(255,255,255,0.8), rgba(255,255,255,0.8)), url(${cat.image_url})`,
+                    backgroundSize: 'cover',
+                    backgroundPosition: 'center'
+                  } : {}}
+                >
+                  <div className="category-header-row">
+                    <div className="category-name">{cat.name}</div>
+                    <div className="category-actions">
+                      <button className="cat-action-btn edit" onClick={(e) => { e.stopPropagation(); handleEditCategory(cat); }} title="Edit Category"><Edit size={14} /></button>
+                      <button className="cat-action-btn delete" onClick={(e) => { e.stopPropagation(); handleDeleteCategory(cat.id); }} title="Delete Category"><Trash2 size={14} /></button>
+                    </div>
                   </div>
+                  <div className="category-count">{cat.products} Products</div>
                 </div>
               ))
             ) : (
@@ -759,36 +838,12 @@ export default function ProductManagementPage() {
                       <option value="Men">Men</option>
                       <option value="Women">Women</option>
                       <option value="Unisex">Unisex</option>
+                      <option value="Couple">Couple</option>
                     </select>
                   </div>
                 </div>
                 
-                {/* Legacy Material Multi-Selection (Optional, can keep for categories) */}
-                <div className="form-group">
-                  <label className="form-label">Available Metal Options (for filtering)</label>
-                  <div className="checkbox-group">
-                    {["Gold", "Silver", "Diamond", "Platinum", "Copper"].map(m => (
-                      <label className="checkbox-item" key={m}>
-                        <input 
-                          type="checkbox" 
-                          name="material" 
-                          value={m} 
-                          checked={productForm.material.includes(m)} 
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const isChecked = e.target.checked;
-                            setProductForm(prev => {
-                              const materials = isChecked
-                                ? [...prev.material, val]
-                                : prev.material.filter(item => item !== val);
-                              return { ...prev, material: materials };
-                            });
-                          }} 
-                        /> {m}
-                      </label>
-                    ))}
-                  </div>
-                </div>
+
 
                 <div className="form-row">
                   <div className="form-group">
@@ -822,11 +877,11 @@ export default function ProductManagementPage() {
 
       {/* Add Category Modal */}
       {showAddCategory && (
-        <div className="modal-overlay" onClick={() => setShowAddCategory(false)}>
+        <div className="modal-overlay" onClick={() => { setShowAddCategory(false); setEditingCategoryId(null); }}>
           <div className="modal" onClick={(e) => e.stopPropagation()} style={{ width: 500 }}>
             <div className="modal-header">
-              <h2 className="modal-title">Add New Category</h2>
-              <button className="modal-close" onClick={() => setShowAddCategory(false)}><X size={20} /></button>
+              <h2 className="modal-title">{editingCategoryId ? "Edit Category" : "Add New Category"}</h2>
+              <button className="modal-close" onClick={() => { setShowAddCategory(false); setEditingCategoryId(null); }}><X size={20} /></button>
             </div>
             <form onSubmit={handleSaveCategory}>
               <div className="modal-body">
@@ -835,29 +890,41 @@ export default function ProductManagementPage() {
                   <input type="text" className="form-input" value={categoryForm.name} onChange={(e) => setCategoryForm({ ...categoryForm, name: e.target.value })} required placeholder="e.g., Anklets, Nose Rings" />
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Available Materials *</label>
-                  <div className="checkbox-group">
-                    {["Gold", "Silver", "Diamond"].map(m => (
-                      <label className="checkbox-item" key={m}>
-                        <input
-                          type="checkbox"
-                          name="available_materials"
-                          value={m}
-                          checked={categoryForm.available_materials.includes(m)}
-                          onChange={(e) => {
-                            const val = e.target.value;
-                            const isChecked = e.target.checked;
-                            setCategoryForm(prev => {
-                              const materials = isChecked
-                                ? [...prev.available_materials, val]
-                                : prev.available_materials.filter(item => item !== val);
-                              return { ...prev, available_materials: materials };
-                            });
-                          }}
-                        /> {m}
-                      </label>
-                    ))}
+                  <label className="form-label">Landing Page Image *</label>
+                  <div className="media-upload-area" style={{ border: "2px dashed #ddd", padding: "15px", borderRadius: "8px", textAlign: "center", marginBottom: "12px" }}>
+                    <input 
+                      type="file" 
+                      id="category-image-input" 
+                      accept="image/*" 
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setCategoryForm({ 
+                            ...categoryForm, 
+                            image: file, 
+                            imagePreview: URL.createObjectURL(file) 
+                          });
+                        }
+                      }} 
+                      style={{ display: "none" }} 
+                    />
+                    <label htmlFor="category-image-input" style={{ cursor: "pointer", color: "#666", fontSize: '13px' }}>
+                      <Plus size={20} style={{ marginBottom: "4px" }} />
+                      <p>{categoryForm.imagePreview ? "Change Image" : "Upload Category Image"}</p>
+                    </label>
                   </div>
+                  {categoryForm.imagePreview && (
+                    <div style={{ position: "relative", width: "100%", height: "120px", borderRadius: "8px", overflow: "hidden", border: "1px solid #ddd" }}>
+                      <img src={categoryForm.imagePreview} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
+                      <button 
+                        type="button" 
+                        onClick={() => setCategoryForm({ ...categoryForm, image: null, imagePreview: "" })} 
+                        style={{ position: "absolute", top: "5px", right: "5px", background: "white", border: "none", borderRadius: "50%", width: "24px", height: "24px", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}
+                      >
+                        <X size={14} color="#e74c3c" />
+                      </button>
+                    </div>
+                  )}
                 </div>
                 <div className="form-group">
                   <label className="form-label">Description</label>
@@ -865,7 +932,7 @@ export default function ProductManagementPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="submit" className="add-btn"><Save size={16} /> Create Category</button>
+                <button type="submit" className="add-btn"><Save size={16} /> {editingCategoryId ? "Update Category" : "Create Category"}</button>
               </div>
             </form>
           </div>

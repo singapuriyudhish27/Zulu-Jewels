@@ -13,9 +13,10 @@ export async function GET(request) {
             SELECT 
                 c.id AS category_id,
                 c.name AS category_name,
+                c.image_url AS category_image,
 
                 p.id AS product_id,
-                p.category_id,
+                p.category_id AS product_category_id,
                 p.name AS product_name,
                 p.description,
                 p.price,
@@ -61,6 +62,7 @@ export async function GET(request) {
                 categoriesMap[row.category_id] = {
                     id: row.category_id,
                     name: row.category_name,
+                    image: row.category_image,
                     products: []
                 }
             }

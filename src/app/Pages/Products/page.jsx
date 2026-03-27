@@ -12,6 +12,7 @@ function ProductsContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
 
+  const [activeCategory, setActiveCategory] = useState(null);
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sortBy, setSortBy] = useState('default');
@@ -36,6 +37,13 @@ function ProductsContent() {
           // Flatten the category-nested products for display
           const allProducts = res.categories.flatMap(cat => cat.products || []);
           setProducts(allProducts);
+          // Set active category if categoryId is provided
+          if (categoryId) {
+            const cat = res.categories.find(c => String(c.id) === categoryId);
+            setActiveCategory(cat);
+          } else {
+            setActiveCategory(null);
+          }
         }
         setLoading(false);
       })
@@ -109,7 +117,7 @@ function ProductsContent() {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(20,20,20,0.6) 100%);
+          background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.3) 100%);
         }
         .pr-hero-content { position: relative; z-index: 1; padding: 0 24px; }
         .pr-hero-eyebrow {
@@ -270,11 +278,15 @@ function ProductsContent() {
       `}</style>
 
       {/* Hero */}
-      <section className="pr-hero">
+      <section className="pr-hero" style={activeCategory?.image ? {
+        backgroundImage: `url(${activeCategory.image})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center'
+      } : {}}>
         <div className="pr-hero-content">
           <p className="pr-hero-eyebrow">Our Collections</p>
-          <h1 className="pr-hero-title">Rings Collection</h1>
-          <p className="pr-hero-sub">Discover timeless rings crafted with elegance and precision.</p>
+          <h1 className="pr-hero-title">{activeCategory ? `${activeCategory.name} Collection` : "All Collections"}</h1>
+          <p className="pr-hero-sub">{activeCategory ? `Discover our exquisite ${activeCategory.name.toLowerCase()} pieces, crafted with elegance and precision.` : "Discover timeless jewelry crafted with elegance and precision."}</p>
         </div>
       </section>
 

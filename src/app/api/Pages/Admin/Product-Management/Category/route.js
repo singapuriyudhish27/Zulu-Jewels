@@ -1,42 +1,45 @@
 import { getConnection } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { writeFile, mkdir } from "fs/promises";
+import path from "path";
+
+const UPLOAD_DIR = path.join(process.cwd(), "public", "uploads", "categories");
+
+// Helper to save file
+async function saveFile(file) {
+    if (!file || typeof file === 'string') return file;
+    try {
+        await mkdir(UPLOAD_DIR, { recursive: true });
+        const bytes = await file.arrayBuffer();
+        const buffer = Buffer.from(bytes);
+        const fileName = `${Date.now()}-${file.name.replace(/\s+/g, "_")}`;
+        const filePath = path.join(UPLOAD_DIR, fileName);
+        await writeFile(filePath, buffer);
+        return `/uploads/categories/${fileName}`;
+    } catch (error) {
+        console.error("Error saving category image:", error);
+        return null;
+    }
+}
 
 //Add New Category
 export async function POST(request) {
     try {
-        //Database Connection
         const connection = await getConnection();
-        const body = await request.json();
-        const { name, available_materials } = body;
+        const formData = await request.formData();
+        
+        const name = formData.get("name");
+        const description = formData.get("description");
+        const imageFile = formData.get("image");
 
-        if (!name || !available_materials) {
+        if (!name) {
             return NextResponse.json({
                 success: false,
                 message: "Category Name Is Required"
             }, { status: 400 });
         }
 
-        // Validate material value
-        const allowedMaterials = ["Gold", "Silver", "Diamond"];
-
-        if (!Array.isArray(available_materials) || available_materials.length === 0) {
-            return NextResponse.json({
-                success: false,
-                message: "Invalid material. Allowed: Gold, Silver, Diamond."
-            }, { status: 400 });
-        }
-
-        // validate each material
-        const invalidMaterials = available_materials.filter(
-            m => !allowedMaterials.includes(m)
-        );
-
-        if (invalidMaterials.length > 0) {
-            return NextResponse.json({
-                success: false,
-                message: `Invalid materials: ${invalidMaterials.join(", ")}`
-            }, { status: 400 });
-        }
+        const imageUrl = await saveFile(imageFile);
 
         //Check If Category Exists
         const [existing] = await connection.execute(`
@@ -52,8 +55,8 @@ export async function POST(request) {
 
         //Insert Category
         const [result] = await connection.execute(`
-            INSERT INTO categories (name, available_materials) VALUES (?, CAST(? AS JSON))
-        `, [name, JSON.stringify(available_materials)]);
+            INSERT INTO categories (name, image_url, available_materials) VALUES (?, ?, ?)
+        `, [name, imageUrl, JSON.stringify(["Gold", "Silver", "Diamond"])]); // Default materials for compatibility
 
         return NextResponse.json({
             success: true,
@@ -61,7 +64,8 @@ export async function POST(request) {
             data: {
                 id: result.insertId,
                 name,
-                available_materials
+                image_url: imageUrl,
+                description
             }
         }, { status: 201 });
     } catch (error) {
@@ -69,6 +73,58 @@ export async function POST(request) {
         return NextResponse.json({ message: "Error In Backend API Call" });
     }
 }
+
+//Update Category
+export async function PUT(request) {
+    try {
+        const connection = await getConnection();
+        const formData = await request.formData();
+        
+        const id = formData.get("id");
+        const name = formData.get("name");
+        const description = formData.get("description");
+        const imageFile = formData.get("image");
+
+        if (!id || !name) {
+            return NextResponse.json({
+                success: false,
+                message: "Category ID and Name are required"
+            }, { status: 400 });
+        }
+
+        let imageUrl = formData.get("image_url"); // Existing URL if no new file
+        if (imageFile && typeof imageFile !== 'string') {
+            imageUrl = await saveFile(imageFile);
+        }
+
+        // Check if another category with the same name exists (excluding current)
+        const [existing] = await connection.execute(`
+            SELECT id FROM categories WHERE name = ? AND id != ?
+        `, [name, id]);
+
+        if (existing.length > 0) {
+            return NextResponse.json({
+                success: false,
+                message: "Another category with this name already exists"
+            }, { status: 409 });
+        }
+
+        // Update Category
+        await connection.execute(`
+            UPDATE categories SET name = ?, image_url = ? WHERE id = ?
+        `, [name, imageUrl, id]);
+
+        return NextResponse.json({
+            success: true,
+            message: "Category updated successfully"
+        }, { status: 200 });
+    } catch (error) {
+        console.error("Error Updating Category:", error);
+        return NextResponse.json({ message: "Error In Backend API Call" });
+    }
+}
+
+
 
 //Delete Category
 export async function DELETE(request) {

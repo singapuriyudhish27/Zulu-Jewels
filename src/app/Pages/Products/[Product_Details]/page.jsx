@@ -473,6 +473,8 @@ export default function ProductDetailsPage() {
             <span>1,238 sold</span>
           </div>
           <p className="pd-emi-text">EMI Starting at ₹{(currentPrice / 24).toFixed(0).toLocaleString('en-IN')}/month</p>
+          <p style={{ fontSize: '14px', color: '#556', marginTop: '16px', lineHeight: '1.6' }}>{product.description}</p>
+
 
           <hr className="pd-divider" />
 

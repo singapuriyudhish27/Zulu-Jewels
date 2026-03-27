@@ -322,21 +322,24 @@ export default function Navbar() {
             <div className="zj-nav-link-item">
               <Link href="/Pages/Products?category=wedding" className="zj-nav-link">Wedding Collection</Link>
             </div>
+            <div className="zj-nav-link-item">
+              <Link href="/Pages/custom" className="zj-nav-link">Custom Jewelry</Link>
+            </div>
           </div>
 
           {/* Centered Logo */}
           <Link href="/Pages" className="zj-nav-logo">
             <div className="zj-nav-logo-wrapper">
-              <img src="/logo_admin.png" alt="Logo" className="zj-nav-logo-icon" />
+              <img src="/vector 1.png" alt="Logo" className="zj-nav-logo-icon" />
+              <img src="/Frame 65.png" alt="Logo" className="zj-nav-logo-text" />
             </div>
-            <span className="zj-nav-logo-text">Zulu Jewellers</span>
           </Link>
 
           {/* Right nav links + icons */}
           <div className="zj-nav-links right">
-            <div className="zj-nav-link-item">
+            {/* <div className="zj-nav-link-item">
               <Link href="/Pages/custom" className="zj-nav-link">Custom Jewelry</Link>
-            </div>
+            </div> */}
             <div className="zj-nav-link-item">
               <Link href="/Pages/about" className="zj-nav-link">About Us</Link>
             </div>

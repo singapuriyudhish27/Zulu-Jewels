@@ -40,7 +40,8 @@ export async function getConnection() {
       CREATE TABLE IF NOT EXISTS categories (
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         name VARCHAR(150) NOT NULL UNIQUE,
-        available_materials JSON NOT NULL,
+        image_url VARCHAR(255),
+        available_materials JSON,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       ) ENGINE=InnoDB;
     `);
@@ -108,6 +109,17 @@ export async function getConnection() {
       if (!hasVariantId) {
         await connection.execute("ALTER TABLE product_images ADD COLUMN variant_id BIGINT AFTER product_id");
         console.log("✅ Added product_images.variant_id column");
+      }
+      
+      // Categories migration
+      const [cCols] = await connection.execute("SHOW COLUMNS FROM categories");
+      if (!cCols.some(c => c.Field === 'image_url')) {
+        await connection.execute("ALTER TABLE categories ADD COLUMN image_url VARCHAR(255) AFTER name");
+        console.log("✅ Added categories.image_url column");
+      }
+      if (cCols.find(c => c.Field === 'available_materials')?.Null === 'NO') {
+        await connection.execute("ALTER TABLE categories MODIFY available_materials JSON NULL");
+        console.log("✅ Modified categories.available_materials to allow NULL");
       }
 
       // Products migration

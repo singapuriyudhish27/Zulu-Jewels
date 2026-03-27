@@ -14,13 +14,8 @@ const PRODUCTS = [
   { id: 4, name: "Diamond Halo Ring", price: "₹3,100 – ₹4,500", swatches: ["#D4AF37","#F5C85A","#E8D5A3","#C0C0C0","#E8E8E8","#B8860B","#8B7355"] },
 ];
 
-const SECTIONS = [
-  { title: "Timeless Rings", products: PRODUCTS },
-  { title: "Statement Earrings", products: PRODUCTS },
-  { title: "Timeless Neckline Elegance", products: PRODUCTS },
-  { title: "Minimal & Statement Bracelets", products: PRODUCTS },
-  { title: "Wedding Jewels for Your Big Day", products: PRODUCTS },
-];
+// Static sections removed in favor of dynamic backend data
+
 
 const MOST_LOVED = [
   { id: 101, img: "/Home Page/Most Loved Pieces/Frame 122.png" },
@@ -76,6 +71,9 @@ const BLOGS = [
 export default function HomePage() {
   const router = useRouter();
   const pathname = usePathname();
+  const [sections, setSections] = useState([]);
+  const [loading, setLoading] = useState(true);
+
 
   const requireAuth = (action) => {
     const token = document.cookie
@@ -88,6 +86,38 @@ export default function HomePage() {
     }
     if (action) action();
   };
+
+  useEffect(() => {
+    const fetchPageData = async () => {
+      try {
+        const response = await fetch('/api/Pages');
+        const result = await response.json();
+        if (result.success) {
+          const mapping = {
+            "Rings": "Timeless Rings",
+            "Earrings": "Statement Earrings",
+            "Necklaces": "Timeless Neckline Elegance",
+            "Bracelets": "Minimal & Statement Bracelets",
+            "Pendants": "Pendants",
+            "Watches": "Watches",
+            "Anklets": "Anklets"
+          };
+
+          const formattedSections = result.data.map(category => ({
+            title: mapping[category.name] || category.name,
+            products: category.products
+          })).filter(section => section.products.length > 0);
+
+          setSections(formattedSections);
+        }
+      } catch (error) {
+        console.error("Error fetching page data:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchPageData();
+  }, []);
 
   useEffect(() => {
     const observer = new IntersectionObserver((entries) => {
@@ -106,7 +136,8 @@ export default function HomePage() {
       observer.observe(el);
     });
     return () => observer.disconnect();
-  }, []);
+  }, [sections]); // Re-run observer when sections data loads
+
 
   return (
     <>
@@ -209,7 +240,7 @@ export default function HomePage() {
         }
 
         /* Section Headings */
-        .zj-section { max-width: 1280px; margin: 0 auto; padding: 80px 24px; }
+        .zj-section { max-width: 1280px; margin: 0 auto; padding: 40px 24px; }
         .zj-section-header {
           display: flex;
           align-items: baseline;
@@ -704,36 +735,55 @@ export default function HomePage() {
         <hr className="zj-divider" />
 
         {/* Product Sections */}
-        {SECTIONS.map((section, si) => (
-          <div key={si}>
-            <section className="zj-section">
-              <div className="zj-section-header zj-animate">
-                <h2 className="zj-section-title">{section.title}</h2>
-                <Link href="/Pages/Products" className="zj-view-all">View All</Link>
-              </div>
-              <div className="zj-product-grid">
-                {section.products.map((p, pi) => (
-                  <div key={pi} className="zj-product-card zj-animate" style={{ transitionDelay: `${pi * 80}ms` }}>
-                    <Link href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                      <div className="zj-product-img-wrap">
-                        <div className="zj-product-img-placeholder">💍</div>
-                        <button className="zj-product-wishlist" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>♡</button>
-                      </div>
-                      <div className="zj-product-name">{p.name}</div>
-                      <div className="zj-product-price">{p.price}</div>
-                      <div className="zj-product-swatches">
-                        {p.swatches.map((s, i) => (
-                          <span key={i} className="zj-swatch" style={{ background: s }} />
-                        ))}
-                      </div>
-                    </Link>
-                  </div>
-                ))}
-              </div>
-            </section>
-            {si < SECTIONS.length - 1 && <hr className="zj-divider" />}
+        {loading ? (
+          <div style={{ textAlign: 'center', padding: '100px 0', fontSize: '18px', color: '#666' }}>
+            Loading stunning collections...
           </div>
-        ))}
+        ) : (
+          sections.map((section, si) => (
+            <div key={si}>
+              <section className="zj-section">
+                <div className="zj-section-header zj-animate">
+                  <h2 className="zj-section-title">{section.title}</h2>
+                  <Link href="/Pages/Products" className="zj-view-all">View All</Link>
+                </div>
+                <div className="zj-product-grid">
+                  {section.products.map((p, pi) => (
+                    <div key={pi} className="zj-product-card zj-animate" style={{ transitionDelay: `${pi * 80}ms` }}>
+                      <Link href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                        <div className="zj-product-img-wrap">
+                          {p.images && p.images.length > 0 ? (
+                            <img 
+                              src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
+                              alt={p.name} 
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                            />
+                          ) : (
+                            <div className="zj-product-img-placeholder">💍</div>
+                          )}
+                          <button className="zj-product-wishlist" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>♡</button>
+                        </div>
+                        <div className="zj-product-name">{p.name}</div>
+                        <div className="zj-product-price">
+                          {p.price ? `₹${Number(p.price).toLocaleString()}` : "Price on Request"}
+                        </div>
+                        {p.swatches && p.swatches.length > 0 && (
+                          <div className="zj-product-swatches">
+                            {p.swatches.map((s, i) => (
+                              <span key={i} className="zj-swatch" style={{ background: s }} />
+                            ))}
+                          </div>
+                        )}
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              </section>
+              {si < sections.length - 1 && <hr className="zj-divider" />}
+            </div>
+          ))
+        )}
+
 
         {/* Custom Design CTA */}
         <div className="zj-cta-banner-wrap">

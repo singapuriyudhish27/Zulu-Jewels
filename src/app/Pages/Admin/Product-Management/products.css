@@ -545,3 +545,43 @@
             grid-template-columns: 1fr; 
           } 
         }
+
+        .category-header-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: flex-start;
+          margin-bottom: 8px;
+        }
+        .category-actions {
+          display: flex;
+          gap: 6px;
+          opacity: 0;
+          transition: opacity 0.2s ease;
+        }
+        .category-card:hover .category-actions {
+          opacity: 1;
+        }
+        .cat-action-btn {
+          width: 28px;
+          height: 28px;
+          border-radius: 6px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          border: 1px solid var(--border);
+          background: var(--white);
+          transition: all 0.2s ease;
+          color: var(--charcoal-light);
+          padding: 0;
+        }
+        .cat-action-btn:hover {
+          background: var(--gray-light);
+          border-color: var(--gold);
+          color: var(--gold);
+        }
+        .cat-action-btn.delete:hover {
+          background: rgba(231, 76, 60, 0.1);
+          border-color: var(--danger);
+          color: var(--danger);
+        }

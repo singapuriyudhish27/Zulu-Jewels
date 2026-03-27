@@ -9,6 +9,7 @@ export async function GET() {
             SELECT 
                 c.id AS category_id,
                 c.name AS category_name,
+                c.image_url AS category_image,
                 p.id AS product_id,
                 p.name AS product_name,
                 p.description,
@@ -16,13 +17,13 @@ export async function GET() {
                 p.is_active,
                 p.created_at,
                 pi.id AS image_id,
-                pi.image_url,
+                pi.media_url AS image_url,
                 pi.is_primary
             FROM categories c
             LEFT JOIN products p ON c.id = p.category_id
             LEFT JOIN product_images pi ON p.id = pi.product_id
             WHERE c.id IS NOT NULL
-            ORDER BY c.id, p.id, pi.is_primary DESC
+            ORDER BY c.id, p.id DESC, pi.is_primary DESC
         `);
         console.log("Backend API To Get Home Page Data.");
 
@@ -33,6 +34,7 @@ export async function GET() {
             const {
                 category_id,
                 category_name,
+                category_image,
                 product_id,
                 product_name,
                 description,
@@ -49,6 +51,7 @@ export async function GET() {
                 categoriesMap[category_id] = {
                     id: category_id,
                     name: category_name,
+                    image: category_image,
                     products: [],
                 };
             }
@@ -85,7 +88,7 @@ export async function GET() {
         const result = Object.values(categoriesMap);
 
         return NextResponse.json({
-            succedd: true,
+            success: true,
             message: "Category Wise Products Fetching Successfully",
             data: result
         }, { status: 200 });
