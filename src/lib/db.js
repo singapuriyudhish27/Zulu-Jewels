@@ -126,11 +126,13 @@ export async function getConnection() {
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         order_id BIGINT NOT NULL,
         product_id BIGINT NOT NULL,
+        variant_id BIGINT DEFAULT NULL,
         quantity INT NOT NULL,
         price DECIMAL(12,2) NOT NULL,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (order_id) REFERENCES orders(id),
-        FOREIGN KEY (product_id) REFERENCES products(id)
+        FOREIGN KEY (product_id) REFERENCES products(id),
+        FOREIGN KEY (variant_id) REFERENCES product_variants(id) ON DELETE SET NULL
       ) ENGINE=InnoDB;
     `);
 
@@ -262,9 +264,10 @@ export async function getConnection() {
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         user_id BIGINT UNSIGNED NOT NULL,
         product_id BIGINT NOT NULL,
+        variant_id BIGINT DEFAULT NULL,
         is_custom BOOLEAN NOT NULL DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_like (user_id, product_id),
+        UNIQUE KEY unique_like_v2 (user_id, product_id, variant_id),
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (product_id) REFERENCES products(id)
       ) ENGINE=InnoDB;
@@ -276,13 +279,59 @@ export async function getConnection() {
         id BIGINT AUTO_INCREMENT PRIMARY KEY,
         user_id BIGINT UNSIGNED NOT NULL,
         product_id BIGINT NOT NULL,
+        variant_id BIGINT DEFAULT NULL,
         quantity INT NOT NULL DEFAULT 1,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        UNIQUE KEY unique_cart_item (user_id, product_id),
+        UNIQUE KEY unique_cart_item_v2 (user_id, product_id, variant_id),
         FOREIGN KEY (user_id) REFERENCES users(id),
         FOREIGN KEY (product_id) REFERENCES products(id)
       ) ENGINE=InnoDB;
     `);
+
+    // Migration for existing tables: Add variant_id if missing and update unique keys
+    const tablesToUpdate = ['user_likes', 'cart_items', 'order_items'];
+    const uniqueKeysV2 = {
+        user_likes: 'unique_like_v2',
+        cart_items: 'unique_cart_item_v2',
+        order_items: 'unique_order_item_v2'
+    };
+    const oldKeys = {
+        user_likes: 'unique_like',
+        cart_items: 'unique_cart_item',
+        order_items: 'unique_order_item'
+    };
+
+    for (const table of tablesToUpdate) {
+        try {
+            // 1. Check if column exists
+            const [columns] = await connection.execute(`SHOW COLUMNS FROM ${table} LIKE 'variant_id'`);
+            if (columns.length === 0) {
+                console.log(`Adding variant_id to ${table}...`);
+                await connection.execute(`ALTER TABLE ${table} ADD COLUMN variant_id BIGINT DEFAULT NULL AFTER product_id`);
+            }
+
+            // 2. Add New V2 Unique Key
+            try {
+                const keyName = uniqueKeysV2[table];
+                await connection.execute(`ALTER TABLE ${table} ADD UNIQUE KEY ${keyName} (user_id, product_id, variant_id)`);
+                console.log(`✅ Applied new unique key ${keyName} to ${table}`);
+                
+                // 3. Try to drop old key now that new one is safe
+                const oldKeyName = oldKeys[table];
+                try {
+                    console.log(`Attempting to drop old key ${oldKeyName} from ${table}...`);
+                    await connection.execute(`ALTER TABLE ${table} DROP INDEX ${oldKeyName}`);
+                    console.log(`✅ Successfully dropped old key ${oldKeyName}`);
+                } catch (dropErr) {
+                    console.warn(`⚠️ Could not drop old key ${oldKeyName} from ${table}: ${dropErr.message}`);
+                }
+            } catch (indexErr) {
+                // Key likely already exists
+            }
+        } catch (err) {
+            console.error(`Error migrating table ${table}:`, err.message);
+        }
+    }
 
     console.log('✅ Tables ensured');
 

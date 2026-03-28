@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
                 p.is_active,
                 p.created_at,
                 p.updated_at,
-                (SELECT COUNT(*) FROM cart_items WHERE user_id = ? AND product_id = p.id) > 0 AS in_cart,
+                (SELECT COUNT(*) FROM cart_items WHERE user_id = ? AND product_id = p.id AND (variant_id IS NULL OR variant_id = 0)) > 0 AS in_cart,
                 (SELECT COUNT(*) FROM user_likes WHERE user_id = ? AND product_id = p.id) > 0 AS is_wishlisted
             FROM products p
             WHERE p.id = ?
@@ -92,7 +92,7 @@ export async function POST(request) {
         }
 
         const body = await request.json();
-        const {product_id, quantity = 1, action} = body;
+        const {product_id, variant_id, quantity = 1, action} = body;
 
         if (!product_id || !action) {
             return NextResponse.json({
@@ -106,10 +106,10 @@ export async function POST(request) {
 
         // ================= CART =================
         if (action === "cart") {
-            //Check If product already exists in cart
+            //Check If product already exists in cart with this variant
             const [existing] = await connection.execute(`
-                SELECT id FROM cart_items WHERE user_id = ? AND product_id = ?
-            `, [userId, product_id]);
+                SELECT id FROM cart_items WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
+            `, [userId, product_id, variant_id || null]);
 
             if (existing.length > 0) {
                 // Remove from Cart
@@ -125,8 +125,8 @@ export async function POST(request) {
             } else {
                 //Insert New Product
                 await connection.execute(`
-                    INSERT INTO cart_items (user_id, product_id, quantity) VALUES (?, ?, ?)
-                `, [userId, product_id, quantity]);
+                    INSERT INTO cart_items (user_id, product_id, variant_id, quantity) VALUES (?, ?, ?, ?)
+                `, [userId, product_id, variant_id || null, quantity]);
 
                 return NextResponse.json({
                     success: true,
@@ -138,10 +138,10 @@ export async function POST(request) {
 
         // ================= WISHLIST =================
         if (action === "wishlist") {
-            //Check If product already exists in wishlist
+            //Check If product already exists in wishlist with this variant
             const [existing] = await connection.execute(`
-                SELECT id FROM user_likes WHERE user_id = ? AND product_id = ?
-            `, [userId, product_id]);
+                SELECT id FROM user_likes WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
+            `, [userId, product_id, variant_id || null]);
 
             if (existing.length > 0) {
                 // Remove from Wishlist
@@ -157,8 +157,8 @@ export async function POST(request) {
             } else {
                 //Insert New Product
                 await connection.execute(`
-                    INSERT INTO user_likes (user_id, product_id) VALUES (?, ?)
-                `, [userId, product_id]);
+                    INSERT INTO user_likes (user_id, product_id, variant_id) VALUES (?, ?, ?)
+                `, [userId, product_id, variant_id || null]);
 
                 return NextResponse.json({
                     success: true,

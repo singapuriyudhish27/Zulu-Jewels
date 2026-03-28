@@ -42,8 +42,10 @@ export default function ContactPage() {
         /* Hero Banner */
         .ct-hero {
           position: relative;
-          min-height: 360px;
-          background: #000000;
+          min-height: 480px;
+          background-image: url("/Contact Page/Header/Contac Us Header.png");
+          background-size: cover;
+          background-position: center;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -54,7 +56,7 @@ export default function ContactPage() {
           content: '';
           position: absolute;
           inset: 0;
-          background: linear-gradient(135deg, rgba(0,0,0,0.8) 0%, rgba(20,20,20,0.6) 100%);
+          background: linear-gradient(135deg, rgba(0,0,0,0.4) 0%, rgba(0,0,0,0.2) 100%);
         }
         .ct-hero-content { position: relative; z-index: 1; padding: 0 24px; }
         .ct-hero-eyebrow {
@@ -69,12 +71,12 @@ export default function ContactPage() {
           font-family: 'Cormorant Garamond', serif;
           font-size: clamp(36px, 6vw, 60px);
           color: #ffffff;
-          font-weight: 500;
+          font-weight: 700;
           line-height: 1.1;
         }
 
         /* Main section */
-        .ct-main { max-width: 1280px; margin: 0 auto; padding: 100px 24px; }
+        .ct-main { max-width: 1280px; margin: 0 auto; padding: 40px 24px; }
         .ct-grid {
           display: grid;
           grid-template-columns: 1fr 1.3fr;
@@ -197,20 +199,21 @@ export default function ContactPage() {
         .ct-submit-btn:hover { background: #EAB308; color: #000000; }
 
         /* Map Section */
-        .ct-map-section { background: #F9F9F9; padding: 0; overflow: hidden; }
-        .ct-map-placeholder {
+        .ct-map-section { 
           width: 100%;
           height: 480px;
+          padding-left: 40px;
+          padding-right: 40px;
           background: #F9F9F9;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          flex-direction: column;
-          gap: 16px;
-          color: #888888;
+          border-top: 1px solid #EFEFEF;
         }
-        .ct-map-icon { font-size: 48px; }
-        .ct-map-text { font-size: 14px; letter-spacing: 0.1em; color: #555555; text-transform: uppercase; font-weight: 600; }
+        .ct-map-iframe {
+          width: 100%;
+          height: 100%;
+          padding: 40px;
+          border: none;
+          filter: contrast(1.1);
+        }
 
         @media (max-width: 768px) {
           .ct-grid { grid-template-columns: 1fr; gap: 64px; }
@@ -267,8 +270,8 @@ export default function ContactPage() {
                   <div className="ct-contact-icon"><MapPin size={16} /></div>
                   <div>
                     <p className="ct-contact-item-label">Address</p>
-                    <p className="ct-contact-item-value">42 Jeweller&apos;s Lane, Zaveri Bazaar<br/>Mumbai, Maharashtra 400002</p>
-                    <p className="ct-info-text" style={{ marginTop: '6px', fontSize: '12px' }}>Mon – Sat: 10:00 AM – 7:30 PM<br/>Sunday: 11:00 AM – 6:00 PM</p>
+                    <p className="ct-contact-item-value">Soni Diamond Business Institute<br/>Varachha, Surat, Gujarat 395006</p>
+                    <p className="ct-info-text" style={{ marginTop: '6px', fontSize: '12px' }}>Mon – Sat: 10:00 AM – 7:30 PM<br/>Sunday: Closed</p>
                   </div>
                 </div>
               </div>
@@ -321,10 +324,13 @@ export default function ContactPage() {
 
         {/* Map Section */}
         <section className="ct-map-section">
-          <div className="ct-map-placeholder">
-            <div className="ct-map-icon">📍</div>
-            <p className="ct-map-text">42 Jeweller&apos;s Lane, Zaveri Bazaar, Mumbai</p>
-          </div>
+          <iframe 
+            className="ct-map-iframe"
+            src="https://maps.google.com/maps?q=Soni%20Diamond%20Business%20Institute&t=k&z=19&output=embed"
+            allowFullScreen="" 
+            loading="lazy" 
+            referrerPolicy="no-referrer-when-downgrade"
+          ></iframe>
         </section>
       </main>
 

@@ -50,15 +50,18 @@ export async function GET() {
             SELECT 
                 ci.id AS cart_item_id,
                 ci.quantity,
+                ci.variant_id,
                 ci.created_at,
                 p.id AS product_id,
                 p.name AS product_name,
                 p.description,
-                p.price,
+                COALESCE(pv.price, p.price) AS price,
+                pv.material AS variant_material,
                 p.is_active,
-                (SELECT media_url FROM product_images WHERE product_id = p.id ORDER BY is_primary DESC LIMIT 1) AS media_url
+                (SELECT media_url FROM product_images WHERE product_id = p.id AND (variant_id = ci.variant_id OR variant_id IS NULL OR variant_id = 0) ORDER BY is_primary DESC LIMIT 1) AS media_url
             FROM cart_items ci
             JOIN products p ON ci.product_id = p.id
+            LEFT JOIN product_variants pv ON ci.variant_id = pv.id
             WHERE ci.user_id = ?
             ORDER BY ci.created_at DESC
         `, [userId]);
@@ -71,11 +74,13 @@ export async function GET() {
             const {
                 cart_item_id,
                 quantity,
+                variant_id,
                 created_at,
                 product_id,
                 product_name,
                 description,
                 price,
+                variant_material,
                 is_active,
                 media_url,
             } = row;
@@ -84,6 +89,8 @@ export async function GET() {
                 cartMap[cart_item_id] = {
                     cart_item_id,
                     quantity,
+                    variant_id,
+                    variant_material,
                     created_at,
                     product: {
                         id: product_id,
@@ -129,7 +136,7 @@ export async function POST(request) {
         }
 
         const body = await request.json();
-        const {product_id, quantity = 1} = body;
+        const {product_id, variant_id, quantity = 1} = body;
 
         if (!product_id) {
             return NextResponse.json({
@@ -141,10 +148,10 @@ export async function POST(request) {
         //Database Connection
         const connection = await getConnection();
 
-        //Check If product already exists in cart
+        //Check If product already exists in cart with this variant
         const [existing] = await connection.execute(`
-            SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ?
-        `, [userId, product_id]);
+            SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
+        `, [userId, product_id, variant_id || null]);
 
         if (existing.length > 0) {
             //Update Quantity
@@ -159,8 +166,8 @@ export async function POST(request) {
         } else {
             //Insert New Product
             await connection.execute(`
-                INSERT INTO cart_items (user_id, product_id, quantity) VALUES (?, ?, ?)
-            `, [userId, product_id, quantity]);
+                INSERT INTO cart_items (user_id, product_id, variant_id, quantity) VALUES (?, ?, ?, ?)
+            `, [userId, product_id, variant_id || null, quantity]);
             console.log("Backend API To Add New Cart Item.");
 
             return NextResponse.json({

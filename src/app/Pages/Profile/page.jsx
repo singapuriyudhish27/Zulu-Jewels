@@ -1,17 +1,20 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff } from 'lucide-react';
+import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff, Plus, Search, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import Navbar from '@/components/layout/Navbar';
+import Footer from '@/components/layout/Footer';
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState(0);
   const [user, setUser] = useState(null);
+  const [wishlist, setWishlist] = useState([]);
+  const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [showCurrentPassword, setShowCurrentPassword] = useState(false);
-  const [showNewPassword, setShowNewPassword] = useState(false);
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [wishlistLoading, setWishlistLoading] = useState(false);
+  const [ordersLoading, setOrdersLoading] = useState(false);
   const router = useRouter();
 
   useEffect(() => {
@@ -37,6 +40,74 @@ export default function ProfilePage() {
     }
     fetchProfile();
   }, [router]);
+
+  // 🔹 Fetch Wishlist handler
+  const fetchWishlist = async () => {
+    setWishlistLoading(true);
+    try {
+      const response = await fetch('/api/Pages/Wishlist', {
+        credentials: 'include',
+      });
+      const result = await response.json();
+      console.log("Wishlist Data:", result);
+      if (response.ok && result.success) {
+        setWishlist(result.data);
+      }
+    } catch (error) {
+      console.error("Wishlist Fetching Error:", error);
+    } finally {
+      setWishlistLoading(false);
+    }
+  };
+
+  // 🔹 Fetch Orders handler
+  const fetchOrders = async () => {
+    setOrdersLoading(true);
+    try {
+      const response = await fetch('/api/Pages/Profile/Recent-Orders', {
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        setOrders(result.data);
+      }
+    } catch (error) {
+      console.error("Orders Fetching Error:", error);
+    } finally {
+      setOrdersLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (activeTab === 2) {
+      fetchWishlist();
+    }
+    if (activeTab === 1) {
+      fetchOrders();
+    }
+  }, [activeTab]);
+
+  // 🔹 Remove from Wishlist handler
+  const handleRemoveWishlist = async (productId, variantId) => {
+    try {
+      const response = await fetch('/api/Pages/Wishlist', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, variant_id: variantId }),
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (response.ok && result.success) {
+        toast.success("Removed from wishlist");
+        fetchWishlist();
+      } else {
+        toast.error(result.message || "Failed to remove item");
+      }
+    } catch (error) {
+      console.error("Remove Wishlist Error:", error);
+      toast.error("An error occurred");
+    }
+  };
 
   // 🔹 Profile update handler
   const handleProfileSubmit = async (e) => {
@@ -126,1192 +197,721 @@ export default function ProfilePage() {
   return (
     <>
       <style dangerouslySetInnerHTML={{__html: `
+        :root {
+          --primary-gold: #D4AF37;
+          --dark-bg: #1a1a1a;
+          --light-bg: #ffffff;
+          --text-dark: #1a1a1a;
+          --text-muted: #666666;
+          --bg-gray: #F5F5F5;
+          --border-color: #E5E5E5;
+          --font-main: 'Montserrat', sans-serif;
+          --font-heading: 'Cormorant Garamond', serif;
+        }
+
         * {
           margin: 0;
           padding: 0;
           box-sizing: border-box;
         }
 
-        :root {
-          --primary-gold: #D4AF37;
-          --dark-bg: #1a1a1a;
-          --light-bg: #ffffff;
-          --text-dark: #2c2c2c;
-          --text-light: #f5f5f5;
-          --accent-rose: #C8A882;
-          --border-light: #e8e8e8;
-        }
-
         body {
-          font-family: 'Montserrat', sans-serif;
-          background: #f9f9f9;
+          font-family: var(--font-main);
+          background: #ffffff;
           color: var(--text-dark);
+          -webkit-font-smoothing: antialiased;
         }
 
-        /* Navigation */
-        .main-nav {
-          padding: 25px 80px;
+        .promo-bar {
           background: white;
-          box-shadow: 0 2px 20px rgba(0,0,0,0.05);
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-          position: sticky;
-          top: 0;
-          z-index: 100;
-        }
-
-        .logo {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 28px;
-          font-weight: 600;
-          color: var(--primary-gold);
-          letter-spacing: 2px;
-          text-transform: uppercase;
-          cursor: pointer;
-        }
-
-        .nav-menu {
-          display: flex;
-          gap: 50px;
-          list-style: none;
-        }
-
-        .nav-menu a {
-          color: var(--text-dark);
-          text-decoration: none;
-          font-size: 14px;
-          font-weight: 500;
-          letter-spacing: 1px;
-          text-transform: uppercase;
-          transition: color 0.3s ease;
-          position: relative;
-        }
-
-        .nav-menu a::after {
-            content: '';
-            position: absolute;
-            bottom: -5px;
-            left: 0;
-            width: 0;
-            height: 2px;
-            background: var(--primary-gold);
-            transition: width 0.3s ease;
-        }
-
-        .nav-menu a:hover::after {
-            width: 100%;
-        }
-
-        .nav-icons {
-          display: flex;
-          gap: 20px;
-        }
-
-        .icon-btn {
-          width: 40px;
-          height: 40px;
-          border: 1px solid var(--border-light);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          color: var(--text-dark);
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-size: 18px;
-          position: relative;
-        }
-
-        .icon-btn:hover,
-        .icon-btn.active {
-          background: var(--primary-gold);
-          border-color: var(--primary-gold);
-          color: white;
-        }
-
-        /* Profile Container */
-        .profile-container {
-          max-width: 1400px;
-          margin: 60px auto;
-          padding: 0 80px;
-          display: grid;
-          grid-template-columns: 300px 1fr;
-          gap: 40px;
-          min-height: calc(100vh - 200px);
-        }
-
-        /* Sidebar */
-        .profile-sidebar {
-          background: white;
-          border-radius: 16px;
-          padding: 40px 0;
-          box-shadow: 0 2px 20px rgba(0,0,0,0.05);
-          height: fit-content;
-          position: sticky;
-          top: 120px;
-        }
-
-        .profile-header {
+          color: #000;
           text-align: center;
-          padding: 0 30px 30px;
-          border-bottom: 1px solid var(--border-light);
-        }
-
-        .profile-avatar {
-          width: 100px;
-          height: 100px;
-          border-radius: 50%;
-          background: linear-gradient(135deg, var(--primary-gold), var(--accent-rose));
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 36px;
+          padding: 20px 0;
+          font-size: 11px;
+          letter-spacing: 0.1em;
+          text-transform: uppercase;
           font-weight: 600;
-          color: white;
-          margin: 0 auto 20px;
-          position: relative;
-          cursor: pointer;
         }
 
-        .profile-avatar:hover::after {
-          content: '📷';
-          position: absolute;
-          inset: 0;
-          background: rgba(0,0,0,0.6);
-          border-radius: 50%;
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          font-size: 28px;
+        .profile-wrapper {
+          max-width: 1200px;
+          margin: 0 auto;
+          padding: 40px 24px;
         }
 
-        .profile-header h2 {
-          font-size: 24px;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 5px;
+        .welcome-section {
+          margin-bottom: 48px;
         }
 
-        .profile-header p {
-          font-size: 14px;
-          color: #666;
-        }
-
-        .profile-menu {
-          list-style: none;
-          padding: 30px 0 0;
-        }
-
-        .profile-menu li {
-          padding: 18px 40px;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          font-size: 15px;
+        .welcome-title {
+          font-family: var(--font-main);
+          font-size: 32px;
           font-weight: 500;
-          color: #666;
-          border-left: 3px solid transparent;
-        }
-
-        .profile-menu li:hover {
-          background: rgba(212,175,55,0.05);
-          color: var(--primary-gold);
-        }
-
-        .profile-menu li.active {
-          background: rgba(212,175,55,0.1);
-          color: var(--primary-gold);
-          border-left-color: var(--primary-gold);
-        }
-
-        .profile-menu li::before {
-          content: '';
-          display: inline-block;
-          width: 20px;
-          margin-right: 15px;
-        }
-
-        .logout-btn {
-          margin: 20px 40px;
-          padding: 12px 20px;
-          background: #e74c3c;
-          color: white;
-          border: none;
-          border-radius: 8px;
-          font-size: 14px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          width: calc(100% - 80px);
-        }
-
-        .logout-btn:hover {
-          background: #c0392b;
-          transform: translateY(-2px);
-        }
-
-        /* Main Content */
-        .profile-content {
-          background: white;
-          border-radius: 16px;
-          padding: 50px;
-          box-shadow: 0 2px 20px rgba(0,0,0,0.05);
-        }
-
-        .profile-section {
-          display: none;
-        }
-
-        .profile-section.active {
-          display: block;
-          animation: fadeIn 0.3s ease;
-        }
-
-        @keyframes fadeIn {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-
-        .section-header {
+          color: #000;
           margin-bottom: 40px;
         }
 
-        .section-header h1 {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 36px;
-          color: var(--text-dark);
-          margin-bottom: 10px;
+        /* Tabs Navigation */
+        .profile-tabs {
+          display: flex;
+          justify-content: center;
+          gap: 60px;
+          border-bottom: 1px solid var(--border-color);
+          margin-bottom: 20px;
         }
 
-        .section-header p {
-          font-size: 15px;
+        .tab-btn {
+          background: none;
+          border: none;
+          padding: 16px 0;
+          font-size: 13px;
+          font-weight: 600;
           color: #666;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+          position: relative;
+          transition: color 0.3s ease;
         }
 
-        /* Form Styles */
-        .profile-form {
+        .tab-btn:hover {
+          color: #000;
+        }
+
+        .tab-btn.active {
+          color: #000;
+        }
+
+        .tab-btn.active::after {
+          content: '';
+          position: absolute;
+          bottom: -1px;
+          left: 0;
+          width: 100%;
+          height: 2px;
+          background: #CEA268;
+        }
+
+        /* Active Tab Content */
+        .tab-content {
+          animation: fadeIn 0.4s ease;
+          width: 100%;
+          margin: 0 auto;
+        }
+
+        @keyframes fadeIn {
+          from { opacity: 0; transform: translateY(10px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+
+        .section-title {
+          font-family: var(--font-main);
+          font-size: 24px;
+          font-weight: 600;
+          text-align: center;
+          margin-bottom: 40px;
+          color: #000;
+        }
+
+        .profile-details-section {
+          max-width: 40%;
+          margin: 0 auto;
+        }
+
+        /* Form Controls */
+        .form-container {
+          width: 100%;
           display: flex;
           flex-direction: column;
-          gap: 30px;
-        }
-
-        .form-row {
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 30px;
+          gap: 24px;
         }
 
         .form-group {
           display: flex;
           flex-direction: column;
-          gap: 10px;
+          gap: 8px;
+        }
+
+        .form-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          gap: 20px;
         }
 
         .form-label {
           font-size: 13px;
           font-weight: 600;
-          color: var(--text-dark);
-          letter-spacing: 0.5px;
-          text-transform: uppercase;
+          color: #000;
+          margin-bottom: 4px;
         }
 
-        .form-input,
-        .form-select,
-        .form-textarea {
-          padding: 15px 20px;
-          border: 2px solid var(--border-light);
-          border-radius: 8px;
-          font-size: 15px;
-          font-family: 'Montserrat', sans-serif;
-          transition: all 0.3s ease;
-          background: #fafafa;
+        .input-wrapper {
+          position: relative;
+          width: 100%;
         }
 
-        .form-input:focus,
-        .form-select:focus,
-        .form-textarea:focus {
-          outline: none;
-          border-color: var(--primary-gold);
-          background: white;
-          box-shadow: 0 0 0 4px rgba(212,175,55,0.1);
-        }
-
-        .form-input:disabled {
-          background: #f5f5f5;
-          cursor: not-allowed;
-        }
-
-        .save-btn {
-          padding: 16px 40px;
-          background: var(--primary-gold);
-          color: var(--dark-bg);
-          border: none;
+        .text-field {
+          width: 100%;
+          padding: 14px 16px;
+          background: #fff;
+          border: 1px solid var(--border-color);
+          border-radius: 4px;
+          font-family: var(--font-main);
           font-size: 14px;
-          font-weight: 700;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          cursor: pointer;
+          color: #1a1a1a;
           transition: all 0.3s ease;
-          border-radius: 8px;
-          width: fit-content;
         }
 
-        .save-btn:hover {
-          background: var(--accent-rose);
-          transform: translateY(-2px);
-          box-shadow: 0 10px 30px rgba(212,175,55,0.3);
+        .text-field:focus {
+          outline: none;
+          border-color: #000;
         }
 
-        /* Order History */
-        .orders-list {
+        .text-field.readonly {
+          background: #F9F9F9;
+          color: #777;
+          border-color: transparent;
+          cursor: default;
+        }
+
+        .date-joined {
+          font-size: 13px;
+          color: #666;
+          white-space: nowrap;
+        }
+
+        .location-box {
+          padding: 16px;
+          background: #F9F9F9;
+          border-radius: 4px;
+          font-size: 13px;
+          line-height: 1.6;
+          color: #333;
+        }
+
+        .add-location-btn {
           display: flex;
-          flex-direction: column;
-          gap: 20px;
+          align-items: center;
+          gap: 8px;
+          background: none;
+          border: none;
+          color: #000;
+          font-size: 13px;
+          font-weight: 600;
+          cursor: pointer;
+          margin-top: 12px;
+          transition: opacity 0.3s;
         }
 
-        .order-card {
-          border: 2px solid var(--border-light);
-          border-radius: 12px;
-          padding: 30px;
-          transition: all 0.3s ease;
+        .add-location-btn:hover {
+          opacity: 0.7;
         }
 
-        .order-card:hover {
-          border-color: var(--primary-gold);
-          box-shadow: 0 5px 20px rgba(212,175,55,0.1);
+        .profile-btn-group {
+          display: flex;
+          gap: 16px;
+          margin-top: 32px;
         }
 
-        .order-header {
+        .save-button {
+          flex: 1;
+          background: #000;
+          color: #fff;
+          border: 1px solid #000;
+          padding: 14px;
+          border-radius: 4px;
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+
+        .save-button:hover {
+          background: #333;
+          border-color: #333;
+        }
+
+        .logout-button {
+          flex: 1;
+          background: #fff;
+          color: #e74c3c;
+          border: 1px solid #e74c3c;
+          padding: 14px;
+          border-radius: 4px;
+          font-size: 13px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.12em;
+          cursor: pointer;
+          transition: all 0.3s;
+        }
+
+        .logout-button:hover {
+          background: #e74c3c;
+          color: #fff;
+        }
+
+        /* Order Card Specifics (Minimalist) */
+        .order-item-minimal {
           display: flex;
           justify-content: space-between;
-          align-items: start;
-          margin-bottom: 20px;
-          padding-bottom: 20px;
-          border-bottom: 1px solid var(--border-light);
+          padding: 24px 0;
+          border-bottom: 1px solid var(--border-color);
         }
 
-        .order-info h3 {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 8px;
-        }
-
-        .order-info p {
-          font-size: 14px;
-          color: #666;
-        }
-
-        .order-status {
-          padding: 8px 20px;
-          border-radius: 20px;
-          font-size: 13px;
-          font-weight: 600;
-        }
-
-        .order-status.delivered {
-          background: rgba(46,204,113,0.1);
-          color: #27ae60;
-        }
-
-        .order-status.processing {
-          background: rgba(241,196,15,0.1);
-          color: #f39c12;
-        }
-
-        .order-status.shipped {
-          background: rgba(52,152,219,0.1);
-          color: #3498db;
-        }
-
-        .order-items {
-          display: flex;
-          flex-direction: column;
-          gap: 15px;
-          margin-bottom: 20px;
-        }
-
-        .order-item {
-          display: flex;
-          gap: 20px;
-          align-items: center;
-        }
-
-        .item-image {
-          width: 80px;
-          height: 80px;
-          background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
-          border-radius: 8px;
-        }
-
-        .item-details h4 {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 5px;
-        }
-
-        .item-details p {
-          font-size: 14px;
-          color: #666;
-        }
-
-        .order-actions {
-          display: flex;
-          gap: 15px;
-        }
-
-        .btn-track,
-        .btn-reorder {
-          padding: 10px 24px;
-          border: 2px solid var(--border-light);
-          background: white;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .btn-track:hover {
-          border-color: var(--primary-gold);
-          color: var(--primary-gold);
-        }
-
-        .btn-reorder {
-          background: var(--primary-gold);
-          border-color: var(--primary-gold);
-          color: var(--dark-bg);
-        }
-
-        .btn-reorder:hover {
-          background: var(--accent-rose);
-          border-color: var(--accent-rose);
-        }
-
-        /* Saved Items */
-        .saved-items-grid {
+        .wishlist-grid {
           display: grid;
           grid-template-columns: repeat(3, 1fr);
           gap: 30px;
         }
 
         .saved-item-card {
-          border: 2px solid var(--border-light);
-          border-radius: 12px;
+          background: #fff;
+          border-radius: 4px;
           overflow: hidden;
-          transition: all 0.3s ease;
+          transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
 
         .saved-item-card:hover {
-          border-color: var(--primary-gold);
           transform: translateY(-5px);
-          box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-        }
-
-        .saved-item-image {
-          width: 100%;
-          height: 250px;
-          background: linear-gradient(135deg, #f5f5f5, #e8e8e8);
-        }
-
-        .saved-item-info {
-          padding: 20px;
-        }
-
-        .saved-item-info h3 {
-          font-size: 18px;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 8px;
-        }
-
-        .saved-item-info p {
-          font-size: 14px;
-          color: #666;
-          margin-bottom: 15px;
-        }
-
-        .saved-item-price {
-          font-size: 20px;
-          font-weight: 700;
-          color: var(--primary-gold);
-          margin-bottom: 15px;
-        }
-
-        .saved-item-actions {
-          display: flex;
-          gap: 10px;
-        }
-
-        .btn-add-cart,
-        .btn-remove {
-          flex: 1;
-          padding: 12px;
-          border: 2px solid var(--border-light);
-          background: white;
-          border-radius: 8px;
-          font-size: 13px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .btn-add-cart {
-          background: var(--primary-gold);
-          border-color: var(--primary-gold);
-          color: var(--dark-bg);
-        }
-
-        .btn-add-cart:hover {
-          background: var(--accent-rose);
-          border-color: var(--accent-rose);
-        }
-
-        .btn-remove:hover {
-          border-color: #e74c3c;
-          color: #e74c3c;
-        }
-
-        /* Addresses */
-        .addresses-grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 25px;
-          margin-bottom: 30px;
-        }
-
-        .address-card {
-          border: 2px solid var(--border-light);
-          border-radius: 12px;
-          padding: 25px;
-          position: relative;
-          transition: all 0.3s ease;
-        }
-
-        .address-card.default {
-          border-color: var(--primary-gold);
-          background: rgba(212,175,55,0.05);
-        }
-
-        .address-card:hover {
-          box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        }
-
-        .address-badge {
-          position: absolute;
-          top: 15px;
-          right: 15px;
-          padding: 5px 15px;
-          background: var(--primary-gold);
-          color: white;
-          border-radius: 20px;
-          font-size: 11px;
-          font-weight: 700;
-          text-transform: uppercase;
-        }
-
-        .address-card h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 15px;
-        }
-
-        .address-card p {
-          font-size: 14px;
-          color: #666;
-          line-height: 1.8;
-          margin-bottom: 20px;
-        }
-
-        .address-actions {
-          display: flex;
-          gap: 10px;
-        }
-
-        .btn-edit,
-        .btn-delete {
-          padding: 8px 20px;
-          border: 1px solid var(--border-light);
-          background: white;
-          border-radius: 6px;
-          font-size: 12px;
-          font-weight: 600;
-          cursor: pointer;
-          transition: all 0.3s ease;
-        }
-
-        .btn-edit:hover {
-          border-color: var(--primary-gold);
-          color: var(--primary-gold);
-        }
-
-        .btn-delete:hover {
-          border-color: #e74c3c;
-          color: #e74c3c;
-        }
-
-        .btn-add-address {
-          padding: 16px 40px;
-          background: var(--primary-gold);
-          color: var(--dark-bg);
-          border: none;
-          font-size: 14px;
-          font-weight: 700;
-          letter-spacing: 1.5px;
-          text-transform: uppercase;
-          cursor: pointer;
-          transition: all 0.3s ease;
-          border-radius: 8px;
-        }
-
-        .btn-add-address:hover {
-          background: var(--accent-rose);
-          transform: translateY(-2px);
-        }
-
-        /* Settings */
-        .settings-section {
-          display: flex;
-          flex-direction: column;
-          gap: 30px;
-        }
-
-        .setting-item {
-          padding: 25px;
-          border: 2px solid var(--border-light);
-          border-radius: 12px;
-          display: flex;
-          justify-content: space-between;
-          align-items: center;
-        }
-
-        .setting-info h3 {
-          font-size: 16px;
-          font-weight: 600;
-          color: var(--text-dark);
-          margin-bottom: 8px;
-        }
-
-        .setting-info p {
-          font-size: 14px;
-          color: #666;
-        }
-
-        .toggle-switch {
-          position: relative;
-          width: 60px;
-          height: 30px;
-        }
-
-        .toggle-switch input {
-          opacity: 0;
-          width: 0;
-          height: 0;
-        }
-
-        .toggle-slider {
-          position: absolute;
-          cursor: pointer;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: #ccc;
-          transition: 0.4s;
-          border-radius: 30px;
-        }
-
-        .toggle-slider:before {
-          position: absolute;
-          content: "";
-          height: 22px;
-          width: 22px;
-          left: 4px;
-          bottom: 4px;
-          background-color: white;
-          transition: 0.4s;
-          border-radius: 50%;
-        }
-
-        .toggle-switch input:checked + .toggle-slider {
-          background-color: var(--primary-gold);
-        }
-
-        .toggle-switch input:checked + .toggle-slider:before {
-          transform: translateX(30px);
+          box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
 
         /* Responsive */
-        @media (max-width: 1024px) {
-          .profile-container {
-            grid-template-columns: 1fr;
-            padding: 0 40px;
+        @media (max-width: 768px) {
+          .profile-tabs {
+            gap: 24px;
+            overflow-x: auto;
+            justify-content: flex-start;
+            padding-bottom: 8px;
           }
-
-          .profile-sidebar {
-            position: relative;
-            top: 0;
-          }
-
-          .saved-items-grid {
+          .wishlist-grid {
             grid-template-columns: repeat(2, 1fr);
-          }
-
-          .addresses-grid {
-            grid-template-columns: 1fr;
           }
         }
 
+        /* Wishlist List View Styles */
+        .wishlist-list-container {
+          width: 100%;
+          border-top: 1px solid #000;
+          margin-top: 30px;
+        }
+
+        .wishlist-list-header {
+          display: grid;
+          grid-template-columns: 2.5fr 1.2fr 1fr 80px;
+          padding: 20px 10px;
+          border-bottom: 2px solid #000;
+          font-size: 12px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: #000;
+          background: #f4ede4;
+        }
+
+        .wishlist-list-item {
+          display: grid;
+          grid-template-columns: 2.5fr 1.2fr 1fr 80px;
+          padding: 24px 10px;
+          border-bottom: 1px solid var(--border-color);
+          align-items: center;
+          transition: background 0.3s ease;
+        }
+
+        .wishlist-list-item:hover {
+          background: #fdfdfd;
+        }
+
+        .wishlist-column-product {
+          display: flex;
+          align-items: center;
+          gap: 24px;
+        }
+
+        .wishlist-item-img {
+          width: 90px;
+          height: 90px;
+          background: #f9f9f9;
+          object-fit: cover;
+          border-radius: 2px;
+        }
+
+        .wishlist-item-name {
+          font-family: var(--font-main);
+          font-size: 14px;
+          font-weight: 600;
+          color: #000;
+          text-decoration: none;
+        }
+
+        .wishlist-item-name:hover {
+          color: #CEA268;
+        }
+
+        .wishlist-column-variant {
+          font-size: 13px;
+          color: #666;
+          font-weight: 500;
+        }
+
+        .wishlist-column-price {
+          font-size: 14px;
+          color: #000;
+          font-weight: 600;
+        }
+
+        .wishlist-column-action {
+          display: flex;
+          justify-content: flex-end;
+        }
+
+        .wishlist-remove-link {
+          background: none;
+          border: none;
+          color: #999;
+          cursor: pointer;
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-weight: 600;
+          padding: 8px;
+          transition: color 0.3s;
+          display: flex;
+          align-items: center;
+          gap: 6px;
+        }
+
+        .wishlist-remove-link:hover {
+          color: #e74c3c;
+        }
+
         @media (max-width: 768px) {
-          .form-row {
-            grid-template-columns: 1fr;
+          .wishlist-list-header {
+            display: none;
           }
-
-          .saved-items-grid {
-            grid-template-columns: 1fr;
+          .wishlist-list-item {
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 20px 0;
           }
+          .wishlist-column-product {
+            grid-column: span 2;
+          }
+          .wishlist-column-variant, .wishlist-column-price {
+            font-size: 12px;
+          }
+          .wishlist-column-action {
+            grid-column: span 2;
+            justify-content: flex-start;
+          }
+        }
+        /* Orders List View Styles */
+        .orders-list-container {
+          width: 100%;
+          border-top: 1px solid #000;
+          margin-top: 30px;
+        }
 
-          .profile-content {
-            padding: 30px 20px;
+        .orders-list-header {
+          display: grid;
+          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr;
+          padding: 20px 10px;
+          border-bottom: 2px solid #000;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.1em;
+          color: #000;
+          background: #f4ede4;
+          gap: 10px;
+        }
+
+        .orders-list-item {
+          display: grid;
+          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr;
+          padding: 24px 10px;
+          border-bottom: 1px solid var(--border-color);
+          align-items: center;
+          transition: background 0.3s ease;
+          gap: 10px;
+        }
+
+        .orders-list-item:hover {
+          background: #fdfdfd;
+        }
+
+        .orders-column-id, .orders-column-product-name {
+          font-family: var(--font-main);
+          font-size: 13px;
+          font-weight: 600;
+          color: #000;
+        }
+
+        .orders-column-date, .orders-column-total, .orders-column-variant, .orders-column-payment {
+          font-size: 12px;
+          color: #333;
+          font-weight: 500;
+        }
+
+        .orders-column-status {
+          font-size: 10px;
+          text-transform: uppercase;
+          letter-spacing: 0.05em;
+          font-weight: 700;
+          color: #CEA268;
+        }
+
+        @media (max-width: 768px) {
+          .orders-list-header {
+            display: none;
+          }
+          .orders-list-item {
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            padding: 20px 0;
+          }
+          .orders-column-id {
+            grid-column: span 2;
+          }
+          .orders-column-status {
+            grid-column: span 1;
+            text-align: left;
+          }
+          .orders-column-total {
+            text-align: right;
           }
         }
       `}} />
 
-      {/* Navigation */}
-      <nav className="main-nav">
-        <div className="logo" onClick={() => window.location.href='/Pages'}>Zulu Jewellers</div>
-        <ul className="nav-menu">
-          <li><a href="/Pages">Home</a></li>
-          <li><a href="/Pages/engagement">Engagement</a></li>
-          <li><a href="/Pages/wedding">Wedding</a></li>
-          <li><a href="/Pages/custom">Cusstom</a></li>
-          <li><a href="/Pages/About">About</a></li>
-          <li><a href="/Pages/contact">Contact</a></li>
-        </ul>
-        <div className="nav-icons">
-          <Link href="/Pages/Profile" className="icon-btn active" aria-label="User Profile">
-            <User size={18} strokeWidth={1.5} />
-          </Link>
-          <Link href="/Pages/cart" className="icon-btn" aria-label="Shopping Cart">
-            <ShoppingCart size={18} strokeWidth={1.5} />
-          </Link>
+      <div className="promo-bar">50%off</div>
+      <Navbar />
+
+      <main className="profile-wrapper">
+
+        {/* Horizontal Tabs */}
+        <nav className="profile-tabs">
+          <button 
+            className={`tab-btn ${activeTab === 1 ? 'active' : ''}`} 
+            onClick={() => setActiveTab(1)}
+          >
+            Recent Orders
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 2 ? 'active' : ''}`} 
+            onClick={() => setActiveTab(2)}
+          >
+            Wishlist
+          </button>
+          <button 
+            className={`tab-btn ${activeTab === 0 ? 'active' : ''}`} 
+            onClick={() => setActiveTab(0)}
+          >
+            Profile Details
+          </button>
+        </nav>
+
+        <div className="welcome-section">
+          <h1 className="welcome-title">Welcome back, {user?.firstName || 'Guest'}</h1>
         </div>
-      </nav>
 
-      {/* Profile Container */}
-      <div className="profile-container">
-        {/* Sidebar */}
-        <aside className="profile-sidebar">
-          <div className="profile-header">
-            {/* <div className="profile-avatar">JD</div>
-            <h2>John Doe</h2>
-            <p>john.doe@email.com</p> */}
-            {user && (
-              <>
-                <div className="profile-avatar">
-                  {user.firstName?.[0]}{user.lastName?.[0]}
+        <div className="tab-content">
+          {/* Recent Orders Content */}
+          {activeTab === 1 && (
+            <div className="orders-section">
+              <h2 className="section-title">Recent Orders</h2>
+              <div className="orders-list-container">
+                <div className="orders-list-header">
+                  <div>Date</div>
+                  <div>Order ID</div>
+                  <div>Product</div>
+                  <div>Variant</div>
+                  <div>Price</div>
+                  <div>Payment</div>
+                  <div>Status</div>
                 </div>
-                <h2>{user.firstName} {user.lastName}</h2>
-                <p>{user.email}</p>
-              </>
-            )}
-          </div>
-          
-          <ul className="profile-menu">
-            <li className={activeTab === 0 ? 'active' : ''} onClick={() => setActiveTab(0)}>
-              <User size={20} strokeWidth={1.5} />&nbsp; Account Details
-            </li>
-            <li className={activeTab === 1 ? 'active' : ''} onClick={() => setActiveTab(1)}>
-              <ShoppingCart size={20} strokeWidth={2} />&nbsp; Order History
-            </li>
-            <li className={activeTab === 2 ? 'active' : ''} onClick={() => setActiveTab(2)}>
-              <Heart size={20} strokeWidth={2} />&nbsp; Saved Items
-            </li>
-            <li className={activeTab === 3 ? 'active' : ''} onClick={() => setActiveTab(3)}>
-              <MapPin size={20} strokeWidth={2} />&nbsp; Addresses
-            </li>
-            <li className={activeTab === 4 ? 'active' : ''} onClick={() => setActiveTab(4)}>
-              <Settings size={20} strokeWidth={2} />&nbsp; Settings
-            </li>
-          </ul>
-
-          <button className="logout-btn" onClick={handleLogout}>Logout</button>
-        </aside>
-
-        {/* Main Content */}
-        <main className="profile-content">
-          {/* Account Details Section */}
-          <div className={`profile-section ${activeTab === 0 ? 'active' : ''}`}>
-            <div className="section-header">
-              <h1>Account Details</h1>
-              <p>Manage your personal information</p>
+                
+                {ordersLoading ? (
+                  <p style={{ textAlign: 'center', padding: '40px 0' }}>Loading your orders...</p>
+                ) : orders.length > 0 ? (
+                  orders.map((order, idx) => (
+                    <div key={`${order.order_id}-${idx}`} className="orders-list-item">
+                      <div className="orders-column-date">
+                        {new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                      </div>
+                      <div className="orders-column-id">#ZJ-{order.order_id.toString().padStart(6, '0')}</div>
+                      <div className="orders-column-product" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div style={{ width: '40px', height: '40px', background: '#f9f9f9', borderRadius: '2px', overflow: 'hidden' }}>
+                          {order.image_url ? (
+                            <img src={order.image_url} alt={order.product_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '20px' }}>💍</div>
+                          )}
+                        </div>
+                        <span className="orders-column-product-name">{order.product_name}</span>
+                      </div>
+                      <div className="orders-column-variant">{order.variant_material || "Standard"}</div>
+                      <div className="orders-column-total">
+                        {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(order.item_price)}
+                      </div>
+                      <div className="orders-column-payment" style={{ color: order.is_paid ? '#2ecc71' : '#f39c12' }}>
+                        {order.is_paid ? 'Success' : 'Pending'}
+                      </div>
+                      <div className="orders-column-status" style={{ 
+                        color: order.order_status === 'Delivered' ? '#2ecc71' : (order.order_status === 'Processing' ? '#CEA268' : '#3498db') 
+                      }}>
+                        {order.order_status || 'Ordered'}
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                    <ShoppingBag size={48} color="#E5E5E5" style={{ marginBottom: '16px' }} />
+                    <p style={{ fontSize: '15px', color: '#666' }}>You haven't placed any orders yet.</p>
+                    <Link href="/Pages/Products" style={{ color: '#CEA268', fontSize: '13px', fontWeight: 600, textDecoration: 'none', marginTop: '12px', display: 'inline-block' }}>Start Shopping</Link>
+                  </div>
+                )}
+              </div>
             </div>
+          )}
 
-            <form className="profile-form" onSubmit={handleProfileSubmit}>
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">First Name</label>
-                  <input
-                  type="text"
-                  className="form-input"
-                  value={user?.firstName || ''}
-                  onChange={(e) => setUser({ ...user, firstName: e.target.value })}
-                  required
-                  />
+          {/* Wishlist Content */}
+          {activeTab === 2 && (
+            <div className="wishlist-section">
+              <h2 className="section-title">Your Wishlist</h2>
+              {wishlistLoading ? (
+                <p style={{ textAlign: 'center', py: '20px' }}>Loading your favorites...</p>
+              ) : wishlist.length > 0 ? (
+                <div className="wishlist-list-container">
+                  <div className="wishlist-list-header">
+                    <div>Product</div>
+                    <div>Variant</div>
+                    <div>Price</div>
+                    <div style={{ textAlign: 'right' }}>Action</div>
+                  </div>
+                  {wishlist.map((item, index) => (
+                    <div key={`${item.wishlist_id}-${index}`} className="wishlist-list-item">
+                      {/* Product Column */}
+                      <div className="wishlist-column-product">
+                        <Link href={`/Pages/Products/${item.product_id}`}>
+                          {item.image_url ? (
+                            <img 
+                              src={item.image_url} 
+                              alt={item.name} 
+                              className="wishlist-item-img"
+                            />
+                          ) : (
+                            <div className="wishlist-item-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>💍</div>
+                          )}
+                        </Link>
+                        <Link href={`/Pages/Products/${item.product_id}`} className="wishlist-item-name">
+                          {item.name}
+                        </Link>
+                      </div>
+
+                      {/* Variant Column */}
+                      <div className="wishlist-column-variant">
+                        {item.variant_material || "Standard"}
+                      </div>
+
+                      {/* Price Column */}
+                      <div className="wishlist-column-price">
+                        {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.price)}
+                      </div>
+
+                      {/* Action Column */}
+                      <div className="wishlist-column-action">
+                        <button 
+                          className="wishlist-remove-link"
+                          onClick={() => handleRemoveWishlist(item.product_id, item.variant_id)}
+                          title="Remove from wishlist"
+                        >
+                          <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
+                          <span className="remove-text">Remove</span>
+                        </button>
+                      </div>
+                    </div>
+                  ))}
                 </div>
-                <div className="form-group">
-                  <label className="form-label">Last Name</label>
-                  <input
-                  type="text"
-                  className="form-input"
-                  value={user?.lastName || ''}
-                  onChange={(e) => setUser({ ...user, lastName: e.target.value })}
-                  required
-                  />
+              ) : (
+                <div style={{ textAlign: 'center', padding: '60px 0' }}>
+                  <Heart size={48} color="#E5E5E5" style={{ marginBottom: '16px' }} />
+                  <p style={{ fontSize: '15px', color: '#666' }}>Your wishlist is currently empty.</p>
+                  <Link href="/Pages/Products" style={{ color: '#CEA268', fontSize: '13px', fontWeight: 600, textDecoration: 'none', marginTop: '12px', display: 'inline-block' }}>Discover Our Collection</Link>
                 </div>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                type="text"
-                className="form-input"
-                value={user?.email || ''}
-                disabled
-                readOnly
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Phone Number</label>
-                {/* <input type="tel" className="form-input" defaultValue="+1 (555) 123-4567" /> */}
-                <input
-                type="text"
-                className="form-input"
-                value={user?.phone || ''}
-                onChange={(e) => setUser({ ...user, contact_no: e.target.value })}
-                required
-                />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Date of Birth</label>
-                <input
-                type="date"
-                className="form-input"
-                value={user?.dob || ''}
-                onChange={(e) => setUser({ ...user, dob: e.target.value })}
-                required
-                />
-              </div>
-
-              <button type="submit" className="save-btn">Save Changes</button>
-            </form>
-
-            <div className="section-header" style={{marginTop: '60px'}}>
-              <h1>Change Password</h1>
-              <p>Update your password to keep your account secure</p>
+              )}
             </div>
+          )}
 
-            <form className="profile-form" onSubmit={handlePasswordSubmit}>
-              <div className="form-group">
-                <label className="form-label">Current Password</label>
-                <div style={{ position: 'relative' }}>
+          {/* Profile Details (Account Details + Location) */}
+          {activeTab === 0 && (
+            <div className="profile-details-section">
+              <h2 className="section-title">Profile Details</h2>
+              <form className="form-container" onSubmit={handleProfileSubmit}>
+                <div className="form-group">
+                  <label className="form-label">Name</label>
+                  <div className="form-row">
+                    <input 
+                      type="text" 
+                      className="text-field readonly" 
+                      value={user ? `${user.firstName || ''} ${user.lastName || ''}` : ''} 
+                      readOnly 
+                    />
+                    <span className="date-joined">Date Joined: {user?.created_at ? new Date(user.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }) : '15 January 2026'}</span>
+                  </div>
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Email</label>
                   <input 
-                    style={{ paddingRight: '52px' }}
-                    type={showCurrentPassword ? 'text' : 'password'} 
-                    name="currentPassword" 
-                    className="form-input" 
-                    required 
+                    type="email" 
+                    className="text-field readonly" 
+                    value={user?.email || ''} 
+                    readOnly 
                   />
-                  <span
-                    onClick={() => setShowCurrentPassword(!showCurrentPassword)}
-                    style={{
-                      position: 'absolute',
-                      right: '16px',
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      cursor: 'pointer',
-                      color: '#999',
-                      display: 'flex',
-                      alignItems: 'center',
-                    }}
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Mobile number</label>
+                  <input 
+                    type="tel" 
+                    className="text-field" 
+                    value={user?.contact_no || ''} 
+                    onChange={(e) => setUser({ ...user, contact_no: e.target.value })}
+                    placeholder="+91 00000 00000"
+                  />
+                </div>
+
+                <div className="form-group">
+                  <label className="form-label">Location</label>
+                  <div className="location-box">
+                    {user?.address || '101, Gold Residency Ring Road, Surat Gujarat – 395007 India'}
+                  </div>
+                  <button type="button" className="add-location-btn">
+                    <Plus size={16} /> Add Location
+                  </button>
+                </div>
+
+                <div className="profile-btn-group">
+                  <button type="submit" className="save-button">Save</button>
+                  <button 
+                    type="button" 
+                    onClick={handleLogout}
+                    className="logout-button"
                   >
-                    {showCurrentPassword ? <EyeOff size={26} /> : <Eye size={26} />}
-                  </span>
+                    Logout
+                  </button>
                 </div>
-              </div>
-
-              <div className="form-row">
-                <div className="form-group">
-                  <label className="form-label">New Password</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      style={{ paddingRight: '50px' }}
-                      type={showNewPassword ? 'text' : 'password'} 
-                      name="newPassword" 
-                      className="form-input" 
-                      required 
-                    />
-                    <span
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '16px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        cursor: 'pointer',
-                        color: '#999',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {showNewPassword ? <EyeOff size={26} /> : <Eye size={26} />}
-                    </span>
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Confirm Password</label>
-                  <div style={{ position: 'relative' }}>
-                    <input 
-                      style={{ paddingRight: '50px' }}
-                      type={showConfirmPassword ? 'text' : 'password'} 
-                      name="confirmPassword" 
-                      className="form-input" 
-                      required 
-                    />
-                    <span
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      style={{
-                        position: 'absolute',
-                        right: '16px',
-                        top: '50%',
-                        transform: 'translateY(-50%)',
-                        cursor: 'pointer',
-                        color: '#999',
-                        display: 'flex',
-                        alignItems: 'center'
-                      }}
-                    >
-                      {showConfirmPassword ? <EyeOff size={26} /> : <Eye size={26} />}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button type="submit" className="save-btn">Update Password</button>
-            </form>
-          </div>
-
-          {/* Order History Section */}
-          <div className={`profile-section ${activeTab === 1 ? 'active' : ''}`}>
-            <div className="section-header">
-              <h1>Order History</h1>
-              <p>Track and manage your orders</p>
+              </form>
             </div>
+          )}
+        </div>
+      </main>
 
-            <div className="orders-list">
-              <div className="order-card">
-                <div className="order-header">
-                  <div className="order-info">
-                    <h3>Order #ZJ-2024-001</h3>
-                    <p>Placed on December 15, 2024 · Total: $3,500.00</p>
-                  </div>
-                  <span className="order-status delivered">Delivered</span>
-                </div>
-
-                <div className="order-items">
-                  <div className="order-item">
-                    <div className="item-image"></div>
-                    <div className="item-details">
-                      <h4>The Eternal Solitaire Ring</h4>
-                      <p>18K White Gold | 2.0 CT Round Diamond</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="order-actions">
-                  <button className="btn-track">Track Order</button>
-                  <button className="btn-reorder">Reorder</button>
-                </div>
-              </div>
-
-              <div className="order-card">
-                <div className="order-header">
-                  <div className="order-info">
-                    <h3>Order #ZJ-2024-002</h3>
-                    <p>Placed on December 20, 2024 · Total: $2,800.00</p>
-                  </div>
-                  <span className="order-status processing">Processing</span>
-                </div>
-
-                <div className="order-items">
-                  <div className="order-item">
-                    <div className="item-image"></div>
-                    <div className="item-details">
-                      <h4>Classic Diamond Studs</h4>
-                      <p>18K Yellow Gold | 1.5 CT Total Weight</p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="order-actions">
-                  <button className="btn-track">Track Order</button>
-                  <button className="btn-reorder">Reorder</button>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Saved Items Section */}
-          <div className={`profile-section ${activeTab === 2 ? 'active' : ''}`}>
-            <div className="section-header">
-              <h1>Saved Items</h1>
-              <p>Your wishlist of favorite jewelry pieces</p>
-            </div>
-
-            <div className="saved-items-grid">
-              <div className="saved-item-card">
-                <div className="saved-item-image"></div>
-                <div className="saved-item-info">
-                  <h3>The Classic Solitaire</h3>
-                  <p>18K White Gold | Round</p>
-                  <div className="saved-item-price">$2,800</div>
-                  <div className="saved-item-actions">
-                    <button className="btn-add-cart">Add to Cart</button>
-                    <button className="btn-remove">Remove</button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="saved-item-card">
-                <div className="saved-item-image"></div>
-                <div className="saved-item-info">
-                  <h3>Halo Diamond Ring</h3>
-                  <p>Platinum | Princess Cut</p>
-                  <div className="saved-item-price">$4,200</div>
-                  <div className="saved-item-actions">
-                    <button className="btn-add-cart">Add to Cart</button>
-                    <button className="btn-remove">Remove</button>
-                  </div>
-                </div>
-              </div>
-
-              <div className="saved-item-card">
-                <div className="saved-item-image"></div>
-                <div className="saved-item-info">
-                  <h3>Eternity Band</h3>
-                  <p>18K Rose Gold | Round</p>
-                  <div className="saved-item-price">$1,950</div>
-                  <div className="saved-item-actions">
-                    <button className="btn-add-cart">Add to Cart</button>
-                    <button className="btn-remove">Remove</button>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Addresses Section */}
-          <div className={`profile-section ${activeTab === 3 ? 'active' : ''}`}>
-            <div className="section-header">
-              <h1>Saved Addresses</h1>
-              <p>Manage your shipping and billing addresses</p>
-            </div>
-
-            <div className="addresses-grid">
-              <div className="address-card default">
-                <span className="address-badge">Default</span>
-                <h3>Home</h3>
-                <p>
-                  John Doe<br />
-                  123 Main Street, Apt 4B<br />
-                  New York, NY 10001<br />
-                  United States<br />
-                  Phone: +1 (555) 123-4567
-                </p>
-                <div className="address-actions">
-                  <button className="btn-edit">Edit</button>
-                  <button className="btn-delete">Delete</button>
-                </div>
-              </div>
-
-              <div className="address-card">
-                <h3>Work</h3>
-                <p>
-                  John Doe<br />
-                  456 Business Ave, Suite 100<br />
-                  New York, NY 10002<br />
-                  United States<br />
-                  Phone: +1 (555) 987-6543
-                </p>
-                <div className="address-actions">
-                  <button className="btn-edit">Edit</button>
-                  <button className="btn-delete">Delete</button>
-                </div>
-              </div>
-            </div>
-
-            <button className="btn-add-address">+ Add New Address</button>
-          </div>
-
-          {/* Settings Section */}
-          <div className={`profile-section ${activeTab === 4 ? 'active' : ''}`}>
-            <div className="section-header">
-              <h1>Account Settings</h1>
-              <p>Manage your preferences and notifications</p>
-            </div>
-
-            <div className="settings-section">
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>Email Notifications</h3>
-                  <p>Receive updates about your orders and special offers</p>
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" defaultChecked />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>SMS Notifications</h3>
-                  <p>Get text messages about order updates</p>
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>Marketing Communications</h3>
-                  <p>Receive newsletters and promotional content</p>
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" defaultChecked />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>Two-Factor Authentication</h3>
-                  <p>Add an extra layer of security to your account</p>
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
-            </div>
-          </div>
-        </main>
-      </div>
+      <Footer />
     </>
   );
 }

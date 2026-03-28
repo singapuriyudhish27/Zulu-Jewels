@@ -4,11 +4,16 @@ import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
 async function getUserIdFromCookie() {
-    const cookieStore = await cookies();
-    const cookie = cookieStore.get("zulu_jewels");
-    const token = cookie?.value;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded;
+    try {
+        const cookieStore = await cookies();
+        const cookie = cookieStore.get("zulu_jewels");
+        const token = cookie?.value;
+        if (!token) return null;
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded;
+    } catch (error) {
+        return null;
+    }
 }
 
 //Fetch Logged In User's WhishList
@@ -41,15 +46,16 @@ export async function GET() {
                 ul.id AS wishlist_id,
                 ul.user_id,
                 ul.product_id,
+                ul.variant_id,
                 ul.created_at,
                 p.name,
                 p.description,
-                p.price,
-                pi.media_url AS image_url
+                COALESCE(pv.price, p.price) AS price,
+                pv.material AS variant_material,
+                (SELECT media_url FROM product_images WHERE product_id = p.id AND (variant_id = ul.variant_id OR variant_id IS NULL OR variant_id = 0) ORDER BY is_primary DESC LIMIT 1) AS image_url
             FROM user_likes ul
             JOIN products p ON ul.product_id = p.id
-            LEFT JOIN product_images pi 
-                ON p.id = pi.product_id AND pi.is_primary = TRUE
+            LEFT JOIN product_variants pv ON ul.variant_id = pv.id
             WHERE ul.user_id = ?
             ORDER BY ul.created_at DESC
         `, [userId]);
@@ -70,16 +76,16 @@ export async function GET() {
 //Add New Product To User's WhishList
 export async function POST(req) {
     try {
-        const userId = await getUserIdFromCookie();
+        const user = await getUserIdFromCookie();
 
-        if (!userId) {
+        if (!user) {
             return NextResponse.json({
                 success: false,
                 message: "Unauthorized"
             }, { status: 401 });
         }
 
-        const {product_id, is_custom = false} = await req.json();
+        const {product_id, variant_id, is_custom = false} = await req.json();
 
         if (!product_id) {
             return NextResponse.json({
@@ -91,11 +97,13 @@ export async function POST(req) {
         //Database Connection
         const connection = await getConnection();
 
+        const userId = user.userId;
+
         await connection.execute(`
-            INSERT INTO user_likes (user_id, product_id, is_custom)
-            VALUES (?, ?, ?)
+            INSERT INTO user_likes (user_id, product_id, variant_id, is_custom)
+            VALUES (?, ?, ?, ?)
             ON DUPLICATE KEY UPDATE is_custom = VALUES(is_custom)
-        `, [userId, product_id, is_custom]);
+        `, [userId, product_id, variant_id || null, is_custom]);
         console.log("Backend API To Add New Products To User's Wishlists.");
 
         return NextResponse.json({
@@ -111,16 +119,16 @@ export async function POST(req) {
 //Remove Product from User's WhishList
 export async function DELETE(req) {
     try {
-        const userId = await getUserIdFromCookie();
+        const user = await getUserIdFromCookie();
 
-        if (!userId) {
+        if (!user) {
             return NextResponse.json({
                 success: false,
                 message: "Unauthorized"
             }, { status: 401 });
         }
 
-        const {product_id} = await req.json();
+        const {product_id, variant_id} = await req.json();
 
         if (!product_id) {
             return NextResponse.json({
@@ -132,10 +140,12 @@ export async function DELETE(req) {
         //Database Connection
         const connection = await getConnection();
 
+        const userId = user.userId;
+
         const [result] = await connection.execute(`
-            DELETE FROM user_likes WHERE user_id = ? AND product_id = ?
-        `, [userId, product_id]);
-        console.log("Backend API To Add New Products To User's Wishlists.");
+            DELETE FROM user_likes WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
+        `, [userId, product_id, variant_id || null]);
+        console.log("Backend API To Remove Products From User's Wishlists.");
 
         if (result.affectedRows === 0) {
             return NextResponse.json(

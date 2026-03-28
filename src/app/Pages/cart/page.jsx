@@ -587,6 +587,11 @@ export default function CartPage() {
                     </div>
                     <div>
                       <p className="ca-item-name">{item.product?.name}</p>
+                      {item.variant_material && (
+                         <p style={{ fontSize: '11px', fontWeight: 700, textTransform: 'uppercase', color: '#CEA268', letterSpacing: '0.05em', marginBottom: '4px' }}>
+                           Metal: {item.variant_material}
+                         </p>
+                      )}
                       <p className="ca-item-specs" style={{ whiteSpace: 'pre-line' }}>{item.product?.description}</p>
                     </div>
                   </div>
@@ -680,7 +685,7 @@ export default function CartPage() {
                   </div>
                 )}
 
-                <Link href="/Pages/Products" className="ca-continue-btn">
+                <Link href="/Pages" className="ca-continue-btn">
                   <ShoppingBag size={14} /> Continue Shopping
                 </Link>
               </div>

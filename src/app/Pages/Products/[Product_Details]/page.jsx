@@ -108,7 +108,7 @@ export default function ProductDetailsPage() {
       const res = await fetch(`/api/Pages/Products/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: id, action: 'cart', quantity: 1 })
+        body: JSON.stringify({ product_id: id, variant_id: selectedVariant?.id, action: 'cart', quantity: 1 })
       });
       
       if (res.status === 401) {
@@ -140,7 +140,7 @@ export default function ProductDetailsPage() {
       const res = await fetch(`/api/Pages/Products/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: id, action: 'wishlist' })
+        body: JSON.stringify({ product_id: id, variant_id: selectedVariant?.id, action: 'wishlist' })
       });
 
       if (res.status === 401) {
@@ -168,12 +168,18 @@ export default function ProductDetailsPage() {
 
   const handleCheckout = async () => {
     try {
-      // Use the Profile API to check if user is authenticated
+      // Check authentication
       const res = await fetch('/api/Pages/Profile');
       if (res.status === 401) {
         router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
         return;
       }
+      
+      // Add selected variant to cart if not already present
+      if (!isInCart) {
+        await addToCart();
+      }
+      
       router.push('/Pages/cart');
     } catch (error) {
       router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
