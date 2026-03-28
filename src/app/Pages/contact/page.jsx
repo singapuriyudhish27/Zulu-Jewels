@@ -1,5 +1,5 @@
 'use client';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -10,9 +10,12 @@ import { Phone, Mail, MapPin, Instagram, Twitter, Facebook } from 'lucide-react'
 export default function ContactPage() {
   const router = useRouter();
   const pathname = usePathname();
+  const [loading, setLoading] = useState(false);
 
-  const handleContactForm = (e) => {
+  const handleContactForm = async (e) => {
     e.preventDefault();
+    setLoading(true);
+
     const formData = new FormData(e.target);
     const data = {
       name: formData.get('name'),
@@ -21,9 +24,30 @@ export default function ContactPage() {
       subject: formData.get('subject'),
       message: formData.get('message')
     };
-    console.log('Contact form submitted:', data);
-    toast.success('Thank you for contacting us! We will get back to you within 24 hours.');
-    e.target.reset();
+
+    try {
+      const response = await fetch('/api/Pages/Contact', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(data)
+      });
+
+      const result = await response.json();
+
+      if (response.ok && result.success) {
+        toast.success('Thank you for contacting us! We will get back to you within 24 hours.');
+        e.target.reset();
+      } else {
+        toast.error(result.message || 'Failed to submit inquiry. Please try again.');
+      }
+    } catch (error) {
+      console.error('Contact Form Error:', error);
+      toast.error('An error occurred. Please check your connection.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -308,15 +332,17 @@ export default function ContactPage() {
                     <input className="ct-form-input" type="tel" name="phone" placeholder="+91 XXXXX XXXXX" />
                   </div>
                   <div className="ct-form-group">
-                    <label className="ct-form-label">Subject</label>
-                    <input className="ct-form-input" type="text" name="subject" placeholder="How can we help?" />
+                    <label className="ct-form-label">Subject *</label>
+                    <input className="ct-form-input" type="text" name="subject" placeholder="How can we help?" required />
                   </div>
                 </div>
                 <div className="ct-form-group">
-                  <label className="ct-form-label">Message</label>
-                  <textarea className="ct-form-textarea" name="message" placeholder="Tell us more about your enquiry..." />
+                  <label className="ct-form-label">Message *</label>
+                  <textarea className="ct-form-textarea" name="message" placeholder="Tell us more about your enquiry..." required />
                 </div>
-                <button type="submit" className="ct-submit-btn">Submit Message</button>
+                <button type="submit" className="ct-submit-btn" disabled={loading}>
+                  {loading ? 'Sending...' : 'Submit Message'}
+                </button>
               </form>
             </div>
           </div>

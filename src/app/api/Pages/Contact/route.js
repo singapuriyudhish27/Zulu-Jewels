@@ -4,17 +4,23 @@ import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
 async function getUserIdFromCookie() {
-    const cookieStore = await cookies();
-    const cookie = cookieStore.get("zulu_jewels");
-    const token = cookie?.value;
-    const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    return decoded?.userId;
+    try {
+        const cookieStore = await cookies();
+        const cookie = cookieStore.get("zulu_jewels");
+        const token = cookie?.value;
+        if (!token) return null;
+        
+        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        return decoded?.userId || null;
+    } catch (error) {
+        return null; // Return null instead of throwing on invalid tokens
+    }
 }
 
 export async function POST(req) {
     try {
         const body = await req.json();
-        const {subject, message} = body;
+        const { name, email, phone, subject, message } = body;
 
         if (!message || !subject) {
             return NextResponse.json({
@@ -23,54 +29,53 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
-        //Get User From Cookie
+        // Get User if logged in
         const userId = await getUserIdFromCookie();
-
-        if (!userId) {
-            return NextResponse.json(
-                { success: false, message: "Unauthorized. Please login." },
-                { status: 401 }
-            );
-        }
-
-        //Database Connection
         const connection = await getConnection();
 
-        //Get User Details
-        const [users] = await connection.execute(`
-            SELECT id, firstName, lastName, email, phone FROM users WHERE id = ?
-        `, [userId]);
+        let userData = { name, email, phone };
 
-        if (!users.length) {
-            return NextResponse.json(
-                { success: false, message: "User not found." },
-                { status: 404 }
-            );
+        // If logged in, fetch user details to complement/verify
+        if (userId) {
+            const [users] = await connection.execute(`
+                SELECT id, firstName, lastName, email, phone FROM users WHERE id = ?
+            `, [userId]);
+
+            if (users.length > 0) {
+                const user = users[0];
+                userData.name = userData.name || `${user.firstName} ${user.lastName}`;
+                userData.email = userData.email || user.email;
+                userData.phone = userData.phone || user.phone;
+            }
         }
-        const user = users[0];
 
-        //Inquiry Insert
+        // Inquiry Insert
         await connection.execute(`
             INSERT INTO inquiries (user_id, inquiry_category, message) VALUES (?, ?, ?)
             `, [
-                user.id, 
+                userId, // Can be NULL for guest inquiries
                 subject, 
                 JSON.stringify({ 
-                    name: `${user.firstName} ${user.lastName}`, 
-                    email: user.email, 
-                    phone: user.phone, 
+                    name: userData.name || 'Anonymous', 
+                    email: userData.email || 'N/A', 
+                    phone: userData.phone || 'N/A', 
                     message 
                 })
             ]
         );
-        console.log("Backend API To POST New Inquiry.");
+        
+        console.log("Inquiry stored in database.");
 
         return NextResponse.json({
             success: true,
             message: "Inquiry submitted successfully"
         }, { status: 201 });
     } catch (error) {
-        console.error("Error Getting Data:", error);
-        NextResponse.json({message: "Error In Backend API Call"});
+        console.error("Contact API Error:", error);
+        return NextResponse.json({ 
+            success: false, 
+            message: "Error in backend API call",
+            error: error.message 
+        }, { status: 500 });
     }
-}
+}
