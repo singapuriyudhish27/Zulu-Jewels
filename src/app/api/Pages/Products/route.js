@@ -21,6 +21,7 @@ export async function GET(request) {
                 p.description,
                 p.price,
                 p.is_active,
+                p.gender,
                 p.created_at AS product_created_at,
                 p.updated_at AS product_updated_at,
 
@@ -81,6 +82,7 @@ export async function GET(request) {
                         description: row.description,
                         price: row.price,
                         is_active: row.is_active,
+                        gender: row.gender,
                         created_at: row.product_created_at,
                         updated_at: row.product_updated_at,
                         images: [],

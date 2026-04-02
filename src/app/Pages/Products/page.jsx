@@ -62,15 +62,19 @@ function ProductsContent() {
   // Filtering implementation
   let filtered = [...products];
   
-  // 1. Filter by Gender from dropdown (Still handled on frontend for now)
+  // 1. Filter by Gender from dropdown
   if (genderFilter !== 'all') {
-    filtered = filtered.filter(p => p.gender === genderFilter || p.gender === 'unisex');
+    filtered = filtered.filter(p => 
+      p.gender?.toLowerCase() === genderFilter.toLowerCase() || 
+      p.gender?.toLowerCase() === 'unisex'
+    );
   }
 
   // 3. Sorting
   if (sortBy === 'price-low') filtered.sort((a, b) => a.price - b.price);
   if (sortBy === 'price-high') filtered.sort((a, b) => b.price - a.price);
   if (sortBy === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
+  if (sortBy === 'newest') filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
   if (loading) return <div style={{ padding: '80px', textAlign: 'center', color: '#888' }}>Loading products...</div>;
 
@@ -294,6 +298,7 @@ function ProductsContent() {
           <div className="pr-select-wrap">
             <select className="pr-select" value={sortBy} onChange={e => setSortBy(e.target.value)}>
               <option value="default">Sort By</option>
+              <option value="newest">Newest First</option>
               <option value="price-low">Price: Low to High</option>
               <option value="price-high">Price: High to Low</option>
               <option value="name">Name A–Z</option>

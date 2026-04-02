@@ -276,7 +276,11 @@ export default function CartPage() {
           align-items: center;
           transition: opacity 0.3s, transform 0.3s;
         }
-        .ca-item-details { display: flex; gap: 24px; align-items: center; }
+        .ca-item-details { 
+          display: flex; gap: 24px; align-items: center; 
+          transition: transform 0.2s ease, opacity 0.2s ease; 
+        }
+        .ca-item-details:hover { opacity: 0.7; transform: translateX(4px); }
         .ca-item-img {
           width: 80px;
           height: 80px;
@@ -573,7 +577,11 @@ export default function CartPage() {
 
               {cartItems.map(item => (
                 <div key={item.cart_item_id} className="ca-cart-item">
-                  <div className="ca-item-details">
+                  <Link 
+                    href={`/Pages/Products/${item.product.id}`} 
+                    className="ca-item-details" 
+                    style={{ textDecoration: 'none', color: 'inherit' }}
+                  >
                     <div className="ca-item-img">
                       {item.product?.images?.[0]?.media_url ? (
                         <img 
@@ -594,7 +602,7 @@ export default function CartPage() {
                       )}
                       <p className="ca-item-specs" style={{ whiteSpace: 'pre-line' }}>{item.product?.description}</p>
                     </div>
-                  </div>
+                  </Link>
                   <div className="ca-item-price">₹{item.product?.price?.toLocaleString('en-IN')}</div>
                   <div className="ca-qty-control">
                     <button className="ca-qty-btn" onClick={() => updateQty(item.cart_item_id, item.quantity - 1)}><Minus size={12} /></button>

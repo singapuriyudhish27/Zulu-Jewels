@@ -3,10 +3,48 @@ import { useEffect, useState } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Navbar from '@/components/layout/Navbar';
 import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
 import { Heart, Share2, ShoppingBag, CreditCard, ChevronLeft, ChevronRight, Star, ThumbsUp, ThumbsDown, Plus, ShoppingCart } from 'lucide-react';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
+
+function StripeCheckoutForm({ onSuccess, onClose }) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!stripe || !elements) return;
+    setLoading(true);
+    const { error, paymentIntent } = await stripe.confirmPayment({
+      elements,
+      confirmParams: { return_url: window.location.origin + '/payment-success' },
+      redirect: 'if_required',
+    });
+    if (error) {
+      toast.error(error.message);
+    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
+      onSuccess();
+    }
+    setLoading(false);
+  };
+
+  return (
+    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1a1a1a', marginBottom: '8px' }}>Pay with Card</h3>
+      <PaymentElement />
+      <button type="submit" className="pd-pay-btn" disabled={loading || !stripe}>
+        {loading ? 'Processing...' : 'Pay Now'}
+      </button>
+      <button type="button" className="pd-pay-cancel-btn" onClick={onClose}>Cancel</button>
+    </form>
+  );
+}
 
 // Removed hardcoded PRODUCT constant for dynamic fetching
 const MOCKUP_OPTIONS = {
@@ -49,9 +87,12 @@ export default function ProductDetailsPage() {
   const [selectedDiamond, setSelectedDiamond] = useState(1); // Lab Grown
   const [activeThumb, setActiveThumb] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
-  const [isInCart, setIsInCart] = useState(false);
+  const [inCartVariantIds, setInCartVariantIds] = useState([]);
   const [reviewFilter, setReviewFilter] = useState('all');
   const [helpfulVotes, setHelpfulVotes] = useState({});
+  const [showStripeModal, setShowStripeModal] = useState(false);
+  const [stripeClientSecret, setStripeClientSecret] = useState(null);
+  const [paymentLoading, setPaymentLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -65,7 +106,7 @@ export default function ProductDetailsPage() {
         if (data.success) {
           setProduct(data.product);
           if (data.product.is_wishlisted) setIsWishlisted(true);
-          if (data.product.in_cart) setIsInCart(true);
+          if (data.product.cart_variants) setInCartVariantIds(data.product.cart_variants.map(id => id === 'base' ? null : Number(id)));
           // Auto-select first variant if exists
           if (data.product.variants && data.product.variants.length > 0) {
             setSelectedVariant(data.product.variants[0]);
@@ -123,7 +164,12 @@ export default function ProductDetailsPage() {
 
       const data = await res.json();
       if (data.success) {
-        setIsInCart(data.status === "added");
+        const currentId = selectedVariant?.id || null;
+        if (data.status === "added") {
+          setInCartVariantIds(prev => [...prev, currentId]);
+        } else {
+          setInCartVariantIds(prev => prev.filter(id => id !== currentId));
+        }
         toast.success(data.message || (data.status === "added" ? 'Product added to cart!' : 'Product removed from cart'));
       } else {
         toast.error(data.message || 'Failed to add to cart');
@@ -166,21 +212,116 @@ export default function ProductDetailsPage() {
     }
   };
 
+  const loadRazorpay = () =>
+    new Promise((resolve) => {
+      const script = document.createElement('script');
+      script.src = 'https://checkout.razorpay.com/v1/checkout.js';
+      script.onload = () => resolve(true);
+      script.onerror = () => resolve(false);
+      document.body.appendChild(script);
+    });
+
+  const handleRazorpayPayment = async (amountInRupees) => {
+    setPaymentLoading(true);
+    try {
+      const res = await fetch('/api/Pages/Payments/RazorPay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amountInRupees * 100 }),
+      });
+      const order = await res.json();
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+        toast.error('Razorpay SDK failed to load');
+        return;
+      }
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Zulu Jewellers',
+        description: `Order: ${product.name}`,
+        order_id: order.id,
+        handler: async function (response) {
+          await fetch('/api/payments/verify', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(response),
+          });
+          toast.success('Payment Successful! Thank you for your order.');
+        },
+        prefill: { name: 'Customer Name', email: 'customer@example.com', contact: '9999999999' },
+        theme: { color: '#CEA268' },
+      };
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+    } catch (err) {
+      toast.error('Razorpay payment failed. Please try again.');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
+  const handleStripePayment = async (amountInRupees) => {
+    setPaymentLoading(true);
+    try {
+      const res = await fetch('/api/Pages/Payments/Stripe/create-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ amount: amountInRupees }),
+      });
+      const { clientSecret } = await res.json();
+      if (!clientSecret) {
+        toast.error('Failed to create payment. Please try again.');
+        return;
+      }
+      setStripeClientSecret(clientSecret);
+      setShowStripeModal(true);
+    } catch (err) {
+      toast.error('Stripe payment failed. Please try again.');
+    } finally {
+      setPaymentLoading(false);
+    }
+  };
+
   const handleCheckout = async () => {
     try {
-      // Check authentication
-      const res = await fetch('/api/Pages/Profile');
-      if (res.status === 401) {
+      // 1. Check authentication
+      const authRes = await fetch('/api/Pages/Profile');
+      if (authRes.status === 401) {
         router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
         return;
       }
-      
-      // Add selected variant to cart if not already present
-      if (!isInCart) {
+
+      const currentVariantId = selectedVariant?.id || null;
+      const isThisVariantInCart = inCartVariantIds.includes(currentVariantId);
+
+      // 2. Add to cart if not already present
+      if (!isThisVariantInCart) {
         await addToCart();
       }
-      
-      router.push('/Pages/cart');
+
+      const price = selectedVariant ? selectedVariant.price : product.price;
+
+      // 3. Detect user's country via IP geolocation
+      let country = 'XX'; // Default: unknown
+      try {
+        const geoRes = await fetch('https://ipapi.co/json/');
+        const geoData = await geoRes.json();
+        country = geoData.country_code || 'XX';
+      } catch (_) {
+        // Geolocation failed — default to Stripe (international)
+        toast('Could not detect location. Defaulting to international payment.', { icon: '🌐' });
+      }
+
+      // 4. Route to appropriate payment provider
+      if (country === 'IN') {
+        toast('Detected India 🇮🇳 — Opening Razorpay', { icon: '💳' });
+        await handleRazorpayPayment(price);
+      } else {
+        toast('Opening Stripe for international payment 🌐', { icon: '💳' });
+        await handleStripePayment(price);
+      }
     } catch (error) {
       router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
     }
@@ -191,6 +332,57 @@ export default function ProductDetailsPage() {
   return (
     <>
       <style>{`
+        /* Payment Modal Styles */
+        .pd-modal-overlay {
+          position: fixed;
+          inset: 0;
+          background: rgba(0,0,0,0.6);
+          z-index: 2000;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 24px;
+        }
+        .pd-modal {
+          background: #ffffff;
+          padding: 40px;
+          max-width: 480px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          border-radius: 4px;
+        }
+        .pd-pay-btn {
+          width: 100%;
+          padding: 15px;
+          background: #000000;
+          color: #ffffff;
+          border: none;
+          font-size: 11px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-family: 'Montserrat', sans-serif;
+        }
+        .pd-pay-btn:hover { background: #EAB308; color: #000000; }
+        .pd-pay-btn:disabled { background: #EFEFEF; cursor: not-allowed; color: #aaaaaa; }
+        .pd-pay-cancel-btn {
+          width: 100%;
+          padding: 13px;
+          background: transparent;
+          color: #000000;
+          border: 1px solid #000000;
+          font-size: 11px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-family: 'Montserrat', sans-serif;
+        }
+        .pd-pay-cancel-btn:hover { background: #000000; color: #ffffff; }
         .pd-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 72px; }
 
         /* General Variables */
@@ -584,12 +776,15 @@ export default function ProductDetailsPage() {
           {/* Action Buttons */}
           <div className="pd-actions">
             <div className="pd-actions-row">
-              <button className="pd-btn-primary" onClick={addToCart}>
-                {isInCart ? <ShoppingBag size={18} /> : <Plus size={18} />} 
-                {isInCart ? 'Added to Cart' : 'Add To Cart'}
+              <button 
+                className={`pd-btn-primary ${inCartVariantIds.includes(selectedVariant?.id || null) ? 'active' : ''}`} 
+                onClick={addToCart}
+              >
+                {inCartVariantIds.includes(selectedVariant?.id || null) ? <ShoppingBag size={18} /> : <Plus size={18} />} 
+                {inCartVariantIds.includes(selectedVariant?.id || null) ? 'In Cart' : 'Add To Cart'}
               </button>
-              <button className="pd-btn-secondary" onClick={handleCheckout}>
-                <ShoppingCart size={18} /> Checkout Now
+              <button className="pd-btn-secondary" onClick={handleCheckout} disabled={paymentLoading}>
+                <ShoppingCart size={18} /> {paymentLoading ? 'Processing...' : 'Checkout Now'}
               </button>
             </div>
             <button className={`pd-btn-wishlist ${isWishlisted ? 'active' : ''}`} onClick={addToWishlist}>
@@ -743,6 +938,24 @@ export default function ProductDetailsPage() {
       </div>
 
       </div>
+
+      {/* Stripe Payment Modal */}
+      {showStripeModal && stripeClientSecret && (
+        <div className="pd-modal-overlay" onClick={e => e.target === e.currentTarget && setShowStripeModal(false)}>
+          <div className="pd-modal">
+            <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
+              <StripeCheckoutForm
+                onSuccess={() => {
+                  setShowStripeModal(false);
+                  toast.success('Payment Successful! Thank you for your order.');
+                }}
+                onClose={() => setShowStripeModal(false)}
+              />
+            </Elements>
+          </div>
+        </div>
+      )}
+
       <Footer />
     </>
   );

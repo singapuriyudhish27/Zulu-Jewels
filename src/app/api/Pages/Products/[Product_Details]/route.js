@@ -34,7 +34,7 @@ export async function GET(request, { params }) {
                 p.is_active,
                 p.created_at,
                 p.updated_at,
-                (SELECT COUNT(*) FROM cart_items WHERE user_id = ? AND product_id = p.id AND (variant_id IS NULL OR variant_id = 0)) > 0 AS in_cart,
+                (SELECT GROUP_CONCAT(COALESCE(variant_id, 'base')) FROM cart_items WHERE user_id = ? AND product_id = p.id) AS cart_variants,
                 (SELECT COUNT(*) FROM user_likes WHERE user_id = ? AND product_id = p.id) > 0 AS is_wishlisted
             FROM products p
             WHERE p.id = ?
@@ -63,8 +63,8 @@ export async function GET(request, { params }) {
             is_active: rows[0].is_active,
             created_at: rows[0].created_at,
             updated_at: rows[0].updated_at,
-            in_cart: Boolean(rows[0].in_cart),
             is_wishlisted: Boolean(rows[0].is_wishlisted),
+            cart_variants: rows[0].cart_variants ? rows[0].cart_variants.split(',') : [],
             variants: variants,
             images: images
         }

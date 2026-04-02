@@ -369,10 +369,10 @@ export default function Navbar() {
               <button className="zj-nav-icon-btn" onClick={() => setShowSearch(!showSearch)} aria-label="Search">
                 {showSearch ? <X size={20} /> : <Search size={20} />}
               </button>
-              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('profile', '/Pages/Profile')} aria-label="Profile">
+              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('profile', '/Pages/Profile?tab=profile')} aria-label="Profile">
                 <User size={20} />
               </button>
-              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('wishlist', '/Pages/Profile')} aria-label="Wishlist">
+              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('wishlist', '/Pages/Profile?tab=wishlist')} aria-label="Wishlist">
                 <Heart size={20} />
               </button>
               <button className="zj-nav-icon-btn" onClick={() => handleIconClick('cart', '/Pages/cart')} aria-label="Cart">

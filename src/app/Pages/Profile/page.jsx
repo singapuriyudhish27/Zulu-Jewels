@@ -2,7 +2,7 @@
 import { useEffect, useState } from 'react';
 import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff, Plus, Search, ShoppingBag } from 'lucide-react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
@@ -16,6 +16,19 @@ export default function ProfilePage() {
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const router = useRouter();
+
+  const searchParams = useSearchParams();
+  const currentTab = searchParams.get('tab');
+
+  useEffect(() => {
+    if (currentTab === 'wishlist') {
+      setActiveTab(2);
+    } else if (currentTab === 'profile') {
+      setActiveTab(0);
+    } else if (currentTab === 'orders') {
+      setActiveTab(1);
+    }
+  }, [currentTab]);
 
   useEffect(() => {
     //Backend API Call

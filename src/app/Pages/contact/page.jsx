@@ -6,6 +6,7 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { Phone, Mail, MapPin, Instagram, Twitter, Facebook } from 'lucide-react';
+import TrustBadge from '@/components/home/trustBadge';
 
 export default function ContactPage() {
   const router = useRouter();
@@ -358,6 +359,8 @@ export default function ContactPage() {
             referrerPolicy="no-referrer-when-downgrade"
           ></iframe>
         </section>
+
+        <TrustBadge />
       </main>
 
       <Footer />
