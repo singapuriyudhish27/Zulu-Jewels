@@ -173,11 +173,11 @@ export default function Footer() {
           <div className="zj-footer-col">
             <h4 className="zj-footer-col-title">Customer Services</h4>
             <ul>
-              <li><a href="#">Contact Us</a></li>
-              <li><a href="#">Track your Order</a></li>
-              <li><a href="#">Shipping &amp; Returns</a></li>
-              <li><a href="#">FAQ</a></li>
-              <li><a href="#">Schedule an Appointment</a></li>
+              <li><Link href="/Pages/contact">Contact Us</Link></li>
+              <li><Link href="#">Track your Order</Link></li>
+              <li><Link href="#">Shipping &amp; Returns</Link></li>
+              <li><Link href="#">FAQ</Link></li>
+              <li><Link href="/Pages/custom">Schedule an Appointment</Link></li>
             </ul>
           </div>
 
@@ -187,9 +187,9 @@ export default function Footer() {
             <ul>
               <li><Link href="/Pages/about">Origins</Link></li>
               <li><Link href="/Pages/about">Our Purpose</Link></li>
-              <li><a href="#">Careers</a></li>
-              <li><a href="#">Sustainability</a></li>
-              <li><a href="#">Giving Back</a></li>
+              <li><Link href="#">Careers</Link></li>
+              <li><Link href="#">Sustainability</Link></li>
+              <li><Link href="#">Giving Back</Link></li>
             </ul>
           </div>
 
@@ -197,10 +197,10 @@ export default function Footer() {
           <div className="zj-footer-col">
             <h4 className="zj-footer-col-title">Material Care</h4>
             <ul>
-              <li><a href="#">Jewelry Repair</a></li>
-              <li><a href="#">Ring Sizing</a></li>
-              <li><a href="#">Metal Allergy Resources</a></li>
-              <li><a href="#">Styling Tips</a></li>
+              <li><Link href="#">Jewelry Repair</Link></li>
+              <li><Link href="#">Ring Sizing</Link></li>
+              <li><Link href="#">Metal Allergy Resources</Link></li>
+              <li><Link href="#">Styling Tips</Link></li>
             </ul>
           </div>
 
@@ -208,10 +208,10 @@ export default function Footer() {
           <div className="zj-footer-col">
             <h4 className="zj-footer-col-title">Main Locations</h4>
             <ul>
-              <li><a href="#">Mumbai, MH</a></li>
-              <li><a href="#">Delhi, DL</a></li>
-              <li><a href="#">Bangalore, KA</a></li>
-              <li><a href="#">Chennai, TN</a></li>
+              <li><Link href="#">Surat, GJ</Link></li>
+              <li><Link href="#">Mumbai, MH</Link></li>
+              <li><Link href="#">Hyderabad, TS</Link></li>
+              <li><Link href="#">New York, USA</Link></li>
             </ul>
           </div>
 
@@ -230,7 +230,7 @@ export default function Footer() {
                 <button className="zj-footer-signup-btn">Sign Up</button>
               </div>
               <div className="zj-footer-socials">
-                <a href="#" className="zj-footer-social-icon" aria-label="Instagram"><Instagram size={16} /></a>
+                <a href="" className="zj-footer-social-icon" aria-label="Instagram"><Instagram size={16} /></a>
                 <a href="#" className="zj-footer-social-icon" aria-label="Twitter"><Twitter size={16} /></a>
                 <a href="#" className="zj-footer-social-icon" aria-label="Facebook"><Facebook size={16} /></a>
                 <a href="#" className="zj-footer-social-icon" aria-label="YouTube"><Youtube size={16} /></a>
