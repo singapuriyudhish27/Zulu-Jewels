@@ -70,7 +70,8 @@ export default function CartPage() {
       }
       const data = await res.json();
       if (data.success) {
-        setCartItems(data.data || []);
+        const sortedItems = (data.data || []).sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+        setCartItems(sortedItems);
       }
     } catch (error) {
       console.error('Error fetching cart:', error);

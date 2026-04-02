@@ -68,7 +68,7 @@ export async function GET() {
         console.log("Backend API To Get Users & Cart Items.");
 
         //Product Images Grouping
-        const cartMap = {};
+        const cartMap = new Map();
 
         for (const row of rows) {
             const {
@@ -85,8 +85,8 @@ export async function GET() {
                 media_url,
             } = row;
 
-            if (!cartMap[cart_item_id]) {
-                cartMap[cart_item_id] = {
+            if (!cartMap.has(cart_item_id)) {
+                cartMap.set(cart_item_id, {
                     cart_item_id,
                     quantity,
                     variant_id,
@@ -100,11 +100,11 @@ export async function GET() {
                         is_active,
                         images: [],
                     },
-                };
+                });
             }
 
             if (media_url) {
-                cartMap[cart_item_id].product.images.push({
+                cartMap.get(cart_item_id).product.images.push({
                     media_url
                 });
             }
@@ -114,7 +114,7 @@ export async function GET() {
             success: true,
             role,
             message: "Cart items fetched successfully",
-            data: Object.values(cartMap)
+            data: Array.from(cartMap.values())
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Cart Data:", error);
