@@ -2,6 +2,7 @@
 
 import "./orders.css";
 import { useState, useEffect } from "react";
+import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -46,6 +47,7 @@ export default function OrderManagementPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusToUpdate, setStatusToUpdate] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const searchParams = useSearchParams();
 
   // Dropdown state for multiple items
   const [showItemDropdown, setShowItemDropdown] = useState(false);
@@ -76,6 +78,19 @@ export default function OrderManagementPage() {
       setStatusToUpdate(selectedOrder.status);
     }
   }, [selectedOrder]);
+
+  // Auto-select order from query param (e.g. redirected from Customer Management)
+  useEffect(() => {
+    if (loading) return;
+    const orderId = searchParams.get("orderId");
+    if (!orderId) return;
+    const match = orders.find(o => String(o.rawId) === String(orderId));
+    if (match) {
+      setSelectedOrder(match);
+      setShowItemDropdown(false);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [loading, searchParams]);
 
   // Format currency helper
   const formatCurrency = (amount) => {

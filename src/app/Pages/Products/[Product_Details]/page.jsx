@@ -93,6 +93,11 @@ export default function ProductDetailsPage() {
   const [showStripeModal, setShowStripeModal] = useState(false);
   const [stripeClientSecret, setStripeClientSecret] = useState(null);
   const [paymentLoading, setPaymentLoading] = useState(false);
+  const [showOrderModal, setShowOrderModal] = useState(false);
+  const [shippingAddress, setShippingAddress] = useState('');
+  const [addressError, setAddressError] = useState(false);
+  const [mapLocation, setMapLocation] = useState(null); // { lat, lon, display_name }
+  const [mapLoading, setMapLoading] = useState(false);
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -122,6 +127,31 @@ export default function ProductDetailsPage() {
     };
     if (params.Product_Details) fetchProduct();
   }, [params.Product_Details]);
+
+  // Geocode address using our server-side proxy (avoids Nominatim User-Agent blocking)
+  useEffect(() => {
+    if (!shippingAddress.trim() || shippingAddress.trim().length < 8) {
+      setMapLocation(null);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      setMapLoading(true);
+      try {
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(shippingAddress)}`);
+        const data = await res.json();
+        if (data.found) {
+          setMapLocation({ lat: data.lat, lon: data.lon, display_name: data.display_name });
+        } else {
+          setMapLocation(null);
+        }
+      } catch (_) {
+        setMapLocation(null);
+      } finally {
+        setMapLoading(false);
+      }
+    }, 900);
+    return () => clearTimeout(timer);
+  }, [shippingAddress]);
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
   if (!product) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Product not found</div>;
@@ -221,7 +251,7 @@ export default function ProductDetailsPage() {
       document.body.appendChild(script);
     });
 
-  const handleRazorpayPayment = async (amountInRupees) => {
+  const handleRazorpayPayment = async (amountInRupees, specificItem) => {
     setPaymentLoading(true);
     try {
       const res = await fetch('/api/Pages/Payments/RazorPay/create-order', {
@@ -243,10 +273,10 @@ export default function ProductDetailsPage() {
         description: `Order: ${product.name}`,
         order_id: order.id,
         handler: async function (response) {
-          await fetch('/api/payments/verify', {
+          await fetch('/api/Pages/Payments/RazorPay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(response),
+            body: JSON.stringify({ ...response, specificItem }),
           });
           toast.success('Payment Successful! Thank you for your order.');
         },
@@ -262,13 +292,13 @@ export default function ProductDetailsPage() {
     }
   };
 
-  const handleStripePayment = async (amountInRupees) => {
+  const handleStripePayment = async (amountInRupees, specificItem) => {
     setPaymentLoading(true);
     try {
       const res = await fetch('/api/Pages/Payments/Stripe/create-intent', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amountInRupees }),
+        body: JSON.stringify({ amount: amountInRupees, specificItem }),
       });
       const { clientSecret } = await res.json();
       if (!clientSecret) {
@@ -293,37 +323,55 @@ export default function ProductDetailsPage() {
         return;
       }
 
+      // 2. Add to cart if not already present
       const currentVariantId = selectedVariant?.id || null;
       const isThisVariantInCart = inCartVariantIds.includes(currentVariantId);
-
-      // 2. Add to cart if not already present
       if (!isThisVariantInCart) {
         await addToCart();
       }
 
-      const price = selectedVariant ? selectedVariant.price : product.price;
-
-      // 3. Detect user's country via IP geolocation
-      let country = 'XX'; // Default: unknown
-      try {
-        const geoRes = await fetch('https://ipapi.co/json/');
-        const geoData = await geoRes.json();
-        country = geoData.country_code || 'XX';
-      } catch (_) {
-        // Geolocation failed — default to Stripe (international)
-        toast('Could not detect location. Defaulting to international payment.', { icon: '🌐' });
-      }
-
-      // 4. Route to appropriate payment provider
-      if (country === 'IN') {
-        toast('Detected India 🇮🇳 — Opening Razorpay', { icon: '💳' });
-        await handleRazorpayPayment(price);
-      } else {
-        toast('Opening Stripe for international payment 🌐', { icon: '💳' });
-        await handleStripePayment(price);
-      }
+      // 3. Open Order Review Modal
+      setShippingAddress('');
+      setAddressError(false);
+      setShowOrderModal(true);
     } catch (error) {
       router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    }
+  };
+
+  const confirmAndPay = async () => {
+    if (!shippingAddress.trim()) {
+      setAddressError(true);
+      return;
+    }
+    setAddressError(false);
+    setShowOrderModal(false);
+
+    const price = selectedVariant ? selectedVariant.price : product.price;
+    const specificItem = {
+      productId: product.id,
+      variantId: selectedVariant?.id || null,
+      quantity: 1,
+      price: price,
+      shippingAddress: shippingAddress.trim()
+    };
+
+    // Detect user country and route to correct payment gateway
+    let country = 'XX';
+    try {
+      const geoRes = await fetch('https://ipapi.co/json/');
+      const geoData = await geoRes.json();
+      country = geoData.country_code || 'XX';
+    } catch (_) {
+      toast('Could not detect location. Defaulting to international payment.', { icon: '🌐' });
+    }
+
+    if (country === 'IN') {
+      toast('Detected India 🇮🇳 — Opening Razorpay', { icon: '💳' });
+      await handleRazorpayPayment(price, specificItem);
+    } else {
+      toast('Opening Stripe for international payment 🌐', { icon: '💳' });
+      await handleStripePayment(price, specificItem);
     }
   };
 
@@ -352,6 +400,193 @@ export default function ProductDetailsPage() {
           overflow-y: auto;
           border-radius: 4px;
         }
+
+        /* Order Review Modal */
+        .pd-order-modal {
+          background: #ffffff;
+          max-width: 560px;
+          width: 100%;
+          max-height: 90vh;
+          overflow-y: auto;
+          border-radius: 4px;
+          box-shadow: 0 24px 80px rgba(0,0,0,0.25);
+          animation: pd-modal-in 0.25s ease;
+        }
+        @keyframes pd-modal-in {
+          from { opacity: 0; transform: translateY(16px) scale(0.98); }
+          to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        .pd-om-header {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 28px 32px 20px;
+          border-bottom: 1px solid #EFEFEF;
+        }
+        .pd-om-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 24px;
+          font-weight: 500;
+          color: #000000;
+        }
+        .pd-om-close {
+          width: 36px; height: 36px;
+          border: 1px solid #EFEFEF;
+          border-radius: 50%;
+          background: transparent;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          color: #555;
+          font-size: 18px;
+          transition: all 0.2s;
+        }
+        .pd-om-close:hover { border-color: #000; color: #000; }
+        .pd-om-body { padding: 28px 32px; }
+
+        /* Product Card inside modal */
+        .pd-om-product {
+          display: flex;
+          gap: 20px;
+          align-items: flex-start;
+          padding-bottom: 24px;
+          border-bottom: 1px solid #EFEFEF;
+          margin-bottom: 24px;
+        }
+        .pd-om-img {
+          width: 96px;
+          height: 96px;
+          flex-shrink: 0;
+          background: #F9F9F9;
+          border: 1px solid #EFEFEF;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          overflow: hidden;
+        }
+        .pd-om-img img { width: 100%; height: 100%; object-fit: cover; }
+        .pd-om-product-info { flex: 1; }
+        .pd-om-product-name {
+          font-size: 16px;
+          font-weight: 700;
+          color: #000;
+          margin-bottom: 6px;
+          line-height: 1.4;
+        }
+        .pd-om-product-variant {
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          color: #CEA268;
+          margin-bottom: 8px;
+        }
+        .pd-om-product-price {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 22px;
+          font-weight: 600;
+          color: #000;
+        }
+
+        /* Price Breakdown */
+        .pd-om-breakdown { margin-bottom: 24px; }
+        .pd-om-breakdown-row {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          font-size: 13px;
+          color: #555;
+          margin-bottom: 10px;
+        }
+        .pd-om-breakdown-row.total {
+          font-size: 15px;
+          font-weight: 700;
+          color: #000;
+          border-top: 1px solid #EFEFEF;
+          padding-top: 14px;
+          margin-top: 4px;
+        }
+        .pd-om-breakdown-row.total span:last-child {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 22px;
+          font-weight: 600;
+        }
+
+        /* Address Section */
+        .pd-om-section-label {
+          font-size: 11px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          font-weight: 700;
+          color: #000;
+          margin-bottom: 12px;
+          display: flex;
+          align-items: center;
+          gap: 8px;
+        }
+        .pd-om-address-input {
+          width: 100%;
+          padding: 14px 16px;
+          border: 1px solid #EFEFEF;
+          background: #F9F9F9;
+          font-size: 13px;
+          font-family: 'Montserrat', sans-serif;
+          color: #000;
+          outline: none;
+          resize: none;
+          height: 90px;
+          border-radius: 2px;
+          transition: border-color 0.2s;
+          box-sizing: border-box;
+        }
+        .pd-om-address-input:focus { border-color: #000; background: #fff; }
+        .pd-om-address-input.error { border-color: #dc2626; }
+        .pd-om-error { color: #dc2626; font-size: 11px; margin-top: 6px; }
+
+        /* Footer buttons */
+        .pd-om-footer {
+          padding: 20px 32px 28px;
+          display: flex;
+          flex-direction: column;
+          gap: 10px;
+          border-top: 1px solid #EFEFEF;
+        }
+        .pd-om-confirm-btn {
+          width: 100%;
+          padding: 17px;
+          background: #000000;
+          color: #ffffff;
+          border: none;
+          font-size: 11px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          font-weight: 700;
+          cursor: pointer;
+          transition: all 0.3s ease;
+          font-family: 'Montserrat', sans-serif;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 10px;
+          border-radius: 2px;
+        }
+        .pd-om-confirm-btn:hover { background: #EAB308; color: #000; }
+        .pd-om-confirm-btn:disabled { background: #EFEFEF; color: #aaa; cursor: not-allowed; }
+        .pd-om-cancel-btn {
+          width: 100%;
+          padding: 14px;
+          background: transparent;
+          color: #000;
+          border: 1px solid #EFEFEF;
+          font-size: 11px;
+          letter-spacing: 0.14em;
+          text-transform: uppercase;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s;
+          font-family: 'Montserrat', sans-serif;
+          border-radius: 2px;
+        }
+        .pd-om-cancel-btn:hover { border-color: #000; }\n\n        /* Map Preview */\n        .pd-om-map-wrap {\n          margin-top: 14px;\n          border-radius: 4px;\n          overflow: hidden;\n        }\n        .pd-om-map-loading {\n          display: flex;\n          align-items: center;\n          gap: 10px;\n          font-size: 12px;\n          color: #888;\n          padding: 14px;\n          background: #F9F9F9;\n          border: 1px solid #EFEFEF;\n          border-radius: 4px;\n        }\n        @keyframes pd-spin { to { transform: rotate(360deg); } }\n        .pd-om-map-spinner {\n          display: inline-block;\n          width: 14px;\n          height: 14px;\n          border: 2px solid #EFEFEF;\n          border-top-color: #000;\n          border-radius: 50%;\n          animation: pd-spin 0.7s linear infinite;\n          flex-shrink: 0;\n        }\n        .pd-om-map-found {\n          font-size: 11px;\n          color: #555;\n          padding: 8px 2px 10px;\n          line-height: 1.5;\n          white-space: nowrap;\n          overflow: hidden;\n          text-overflow: ellipsis;\n        }\n        .pd-om-map-iframe {\n          width: 100%;\n          height: 220px;\n          border: 1px solid #EFEFEF;\n          border-radius: 4px;\n          display: block;\n        }\n        .pd-om-map-link {\n          display: inline-block;\n          margin-top: 8px;\n          font-size: 11px;\n          color: #555;\n          text-decoration: underline;\n          transition: color 0.2s;\n        }\n        .pd-om-map-link:hover { color: #000; }\n        .pd-om-map-notfound {\n          font-size: 11px;\n          color: #d97706;\n          padding: 10px 12px;\n          background: #FFFBEB;\n          border: 1px solid #FDE68A;\n          border-radius: 4px;\n          margin-top: 8px;\n        }
         .pd-pay-btn {
           width: 100%;
           padding: 15px;
@@ -938,6 +1173,134 @@ export default function ProductDetailsPage() {
       </div>
 
       </div>
+
+      {/* Order Review Modal */}
+      {showOrderModal && product && (() => {
+        const price = selectedVariant ? selectedVariant.price : product.price;
+        const gst = Math.round(price * 0.03);
+        const shipping = price > 50000 ? 0 : 999;
+        const total = price + gst + shipping;
+        const img = selectedVariant
+          ? product.images?.find(img => img.variant_id === selectedVariant.id)?.media_url
+          : product.images?.find(img => !img.variant_id)?.media_url;
+        return (
+          <div className="pd-modal-overlay" onClick={e => e.target === e.currentTarget && setShowOrderModal(false)}>
+            <div className="pd-order-modal">
+              {/* Header */}
+              <div className="pd-om-header">
+                <h2 className="pd-om-title">Review Your Order</h2>
+                <button className="pd-om-close" onClick={() => setShowOrderModal(false)}>✕</button>
+              </div>
+
+              {/* Body */}
+              <div className="pd-om-body">
+
+                {/* Product Card */}
+                <div className="pd-om-product">
+                  <div className="pd-om-img">
+                    {img
+                      ? <img src={img} alt={product.name} />
+                      : <span style={{ fontSize: 40 }}>💍</span>
+                    }
+                  </div>
+                  <div className="pd-om-product-info">
+                    <p className="pd-om-product-name">{product.name}</p>
+                    {selectedVariant && (
+                      <p className="pd-om-product-variant">Metal: {selectedVariant.material}</p>
+                    )}
+                    <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
+                      Qty: 1 &nbsp;·&nbsp; {MOCKUP_OPTIONS.carats[selectedCarat]} &nbsp;·&nbsp; {MOCKUP_OPTIONS.diamonds[selectedDiamond]}
+                    </p>
+                    <p className="pd-om-product-price">₹{price.toLocaleString('en-IN')}</p>
+                  </div>
+                </div>
+
+                {/* Price Breakdown */}
+                <div className="pd-om-breakdown">
+                  <div className="pd-om-breakdown-row">
+                    <span>Item Price</span>
+                    <span>₹{price.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="pd-om-breakdown-row">
+                    <span>GST (3%)</span>
+                    <span>₹{gst.toLocaleString('en-IN')}</span>
+                  </div>
+                  <div className="pd-om-breakdown-row">
+                    <span>Shipping</span>
+                    <span style={{ color: shipping === 0 ? '#15803D' : '#000' }}>
+                      {shipping === 0 ? 'Free' : `₹${shipping.toLocaleString('en-IN')}`}
+                    </span>
+                  </div>
+                  <div className="pd-om-breakdown-row total">
+                    <span>Total Payable</span>
+                    <span>₹{total.toLocaleString('en-IN')}</span>
+                  </div>
+                </div>
+
+                {/* Shipping Address */}
+                <div style={{ marginBottom: 4 }}>
+                  <p className="pd-om-section-label">
+                    <span style={{ fontSize: 16 }}>📦</span> Shipping Address
+                  </p>
+                  <textarea
+                    className={`pd-om-address-input ${addressError ? 'error' : ''}`}
+                    placeholder="Enter your full delivery address, city, state, pincode..."
+                    value={shippingAddress}
+                    onChange={e => { setShippingAddress(e.target.value); if (e.target.value.trim()) setAddressError(false); }}
+                  />
+                  {addressError && (
+                    <p className="pd-om-error">⚠ Please enter a shipping address to proceed.</p>
+                  )}
+
+                  {/* Map Preview */}
+                  <div className="pd-om-map-wrap">
+                    {mapLoading && (
+                      <div className="pd-om-map-loading">
+                        <span className="pd-om-map-spinner"/> Locating on map...
+                      </div>
+                    )}
+                    {!mapLoading && mapLocation && (
+                      <>
+                        <p className="pd-om-map-found">📍 {mapLocation.display_name}</p>
+                        <iframe
+                          className="pd-om-map-iframe"
+                          src={`https://www.google.com/maps?q=${mapLocation.lat},${mapLocation.lon}&t=k&z=16&output=embed`}
+                          allowFullScreen
+                          loading="lazy"
+                          title="Shipping Address Satellite Map"
+                        />
+                        <a
+                          href={`https://www.google.com/maps?q=${mapLocation.lat},${mapLocation.lon}&t=k&z=16`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="pd-om-map-link"
+                        >
+                          Open in Google Maps Satellite ↗
+                        </a>
+                      </>
+                    )}
+                    {!mapLoading && !mapLocation && shippingAddress.trim().length >= 8 && (
+                      <p className="pd-om-map-notfound">⚠ Address not found on map. Please be more specific.</p>
+                    )}
+                  </div>
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="pd-om-footer">
+                <button
+                  className="pd-om-confirm-btn"
+                  onClick={confirmAndPay}
+                  disabled={paymentLoading}
+                >
+                  {paymentLoading ? 'Preparing Payment...' : '🔒 Confirm & Proceed to Payment'}
+                </button>
+                <button className="pd-om-cancel-btn" onClick={() => setShowOrderModal(false)}>Cancel</button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Stripe Payment Modal */}
       {showStripeModal && stripeClientSecret && (

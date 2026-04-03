@@ -162,7 +162,7 @@ export default function CartPage() {
       description: 'Order Payment',
       order_id: order.id,
       handler: async function (response) {
-        await fetch('/api/payments/verify', {
+        await fetch('/api/Pages/Payments/RazorPay/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(response),
@@ -680,8 +680,8 @@ export default function CartPage() {
                     onClick={() => setShowPaymentOptions(true)}
                     disabled={loading}
                   >
-                    <ShoppingBag size={16} />
-                    {loading ? 'Processing...' : 'Proceed to Checkout'}
+                    {/* <ShoppingBag size={16} />
+                    {loading ? 'Processing...' : 'Proceed to Checkout'} */}
                   </button>
                 ) : (
                   <div className="ca-payment-options">

@@ -291,6 +291,7 @@ function ProductsContent() {
               <option value="all">All</option>
               <option value="women">Women</option>
               <option value="men">Men</option>
+              <option value="couple">Couple</option>
               <option value="unisex">Unisex</option>
             </select>
             <ChevronDown size={14} className="pr-select-arrow" />

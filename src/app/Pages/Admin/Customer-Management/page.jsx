@@ -376,7 +376,7 @@ export default function CustomerManagementPage() {
                               <button 
                                 className="dropdown-view-btn"
                                 title="Go to Order Details"
-                                onClick={() => router.push(`/Pages/Admin/Order-Management`)}
+                                onClick={() => router.push(`/Pages/Admin/Order-Management?orderId=${order.id}`)}
                               >
                                 <ShoppingCart size={14} />
                               </button>
