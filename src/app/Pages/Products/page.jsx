@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react';
+import PriceDisplay from '@/components/price/PriceDisplay';
 
 
 function ProductsContent() {
@@ -335,7 +336,7 @@ function ProductsContent() {
                   </button>
                 </div>
                 <p className="pr-product-name">{p.name}</p>
-                <p className="pr-product-price">₹{Number(p.price).toLocaleString()}</p>
+                <p className="pr-product-price"><PriceDisplay amountInINR={p.price} /></p>
                 <div className="pr-swatches">
                   {(p.swatches || []).map((s, i) => (
                     <span key={i} className="pr-swatch" style={{ background: s }} />

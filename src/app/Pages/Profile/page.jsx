@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff, Plus, Search, ShoppingBag, Trash2, Star } from 'lucide-react';
+import PriceDisplay from '@/components/price/PriceDisplay';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -841,7 +842,7 @@ export default function ProfilePage() {
                       </div>
                       <div className="orders-column-variant">{order.variant_material || "Standard"}</div>
                       <div className="orders-column-total">
-                        {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(order.item_price)}
+                        <PriceDisplay amountInINR={order.item_price} />
                       </div>
                       <div className="orders-column-payment" style={{ color: order.is_paid ? '#2ecc71' : '#f39c12' }}>
                         {order.is_paid ? 'Success' : 'Pending'}

@@ -9,6 +9,8 @@ import Navbar from '@/components/layout/Navbar';
 import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
 import { Heart, Share2, ShoppingBag, CreditCard, ChevronLeft, ChevronRight, Star, ThumbsUp, ThumbsDown, Plus, ShoppingCart } from 'lucide-react';
+import PriceDisplay from '@/components/price/PriceDisplay';
+import { useCurrency } from '@/context/CurrencyContext';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -78,6 +80,7 @@ export default function ProductDetailsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
+  const { formatPrice } = useCurrency();
 
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
@@ -964,8 +967,8 @@ export default function ProductDetailsPage() {
         <div className="pd-info">
           <h1 className="pd-product-name">{product.name}</h1>
           <div className="pd-price-row">
-            <span className="pd-price">₹ {currentPrice.toLocaleString('en-IN')}</span>
-            <span className="pd-mrp">₹ {(currentPrice * 1.2).toLocaleString('en-IN')}</span>
+            <PriceDisplay amountInINR={currentPrice} className="pd-price" />
+            <PriceDisplay amountInINR={currentPrice * 1.2} className="pd-mrp" style={{ textDecoration: 'line-through', color: '#888', fontSize: '16px' }} />
             <span className="pd-discount-badge">20% OFF</span>
           </div>
           <div className="pd-meta-row">
@@ -974,7 +977,7 @@ export default function ProductDetailsPage() {
             <span>·</span>
             <span>1,238 sold</span>
           </div>
-          <p className="pd-emi-text">EMI Starting at ₹{(currentPrice / 24).toFixed(0).toLocaleString('en-IN')}/month</p>
+          <p className="pd-emi-text">EMI Starting at <PriceDisplay amountInINR={currentPrice / 24} />/month</p>
           <p style={{ fontSize: '14px', color: '#556', marginTop: '16px', lineHeight: '1.6' }}>{product.description}</p>
 
 
@@ -1217,7 +1220,7 @@ export default function ProductDetailsPage() {
                     <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
                       Qty: 1 &nbsp;·&nbsp; {MOCKUP_OPTIONS.carats[selectedCarat]} &nbsp;·&nbsp; {MOCKUP_OPTIONS.diamonds[selectedDiamond]}
                     </p>
-                    <p className="pd-om-product-price">₹{price.toLocaleString('en-IN')}</p>
+                    <p className="pd-om-product-price"><PriceDisplay amountInINR={price} /></p>
                   </div>
                 </div>
 
@@ -1225,21 +1228,21 @@ export default function ProductDetailsPage() {
                 <div className="pd-om-breakdown">
                   <div className="pd-om-breakdown-row">
                     <span>Item Price</span>
-                    <span>₹{price.toLocaleString('en-IN')}</span>
+                    <span>{formatPrice(price)}</span>
                   </div>
                   <div className="pd-om-breakdown-row">
                     <span>GST (3%)</span>
-                    <span>₹{gst.toLocaleString('en-IN')}</span>
+                    <span>{formatPrice(gst)}</span>
                   </div>
                   <div className="pd-om-breakdown-row">
                     <span>Shipping</span>
                     <span style={{ color: shipping === 0 ? '#15803D' : '#000' }}>
-                      {shipping === 0 ? 'Free' : `₹${shipping.toLocaleString('en-IN')}`}
+                      {shipping === 0 ? 'Free' : formatPrice(shipping)}
                     </span>
                   </div>
                   <div className="pd-om-breakdown-row total">
                     <span>Total Payable</span>
-                    <span>₹{total.toLocaleString('en-IN')}</span>
+                    <span>{formatPrice(total)}</span>
                   </div>
                 </div>
 

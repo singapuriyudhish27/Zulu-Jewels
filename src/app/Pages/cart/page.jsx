@@ -10,6 +10,8 @@ import Navbar from '@/components/layout/Navbar';
 import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
 import { Trash2, Minus, Plus, ShoppingBag, Tag } from 'lucide-react';
+import PriceDisplay from '@/components/price/PriceDisplay';
+import { useCurrency } from '@/context/CurrencyContext';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -54,6 +56,7 @@ export default function CartPage() {
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
   const router = useRouter();
+  const { formatPrice } = useCurrency();
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -604,7 +607,7 @@ export default function CartPage() {
                       <p className="ca-item-specs" style={{ whiteSpace: 'pre-line' }}>{item.product?.description}</p>
                     </div>
                   </Link>
-                  <div className="ca-item-price">₹{item.product?.price?.toLocaleString('en-IN')}</div>
+                  <div className="ca-item-price"><PriceDisplay amountInINR={item.product?.price} /></div>
                   <div className="ca-qty-control">
                     <button className="ca-qty-btn" onClick={() => updateQty(item.cart_item_id, item.quantity - 1)}><Minus size={12} /></button>
                     <span className="ca-qty-val">{item.quantity}</span>
@@ -626,28 +629,28 @@ export default function CartPage() {
 
                 <div className="ca-summary-row">
                   <span className="ca-summary-label">Subtotal ({cartItems.reduce((s, i) => s + i.quantity, 0)} items)</span>
-                  <span className="ca-summary-value">₹{subtotal.toLocaleString('en-IN')}</span>
+                  <span className="ca-summary-value">{formatPrice(subtotal)}</span>
                 </div>
                 <div className="ca-summary-row">
                   <span className="ca-summary-label">Shipping</span>
-                  <span className="ca-summary-value">{shipping === 0 ? <span className="green">Free</span> : `₹${shipping}`}</span>
+                  <span className="ca-summary-value">{shipping === 0 ? <span className="green">Free</span> : formatPrice(shipping)}</span>
                 </div>
                 {promoApplied && (
                   <div className="ca-summary-row">
                     <span className="ca-summary-label">Promo Discount</span>
-                    <span className="ca-summary-value green">−₹{discountAmt.toLocaleString('en-IN')}</span>
+                    <span className="ca-summary-value green">−{formatPrice(discountAmt)}</span>
                   </div>
                 )}
                 <div className="ca-summary-row">
                   <span className="ca-summary-label">GST (3%)</span>
-                  <span className="ca-summary-value">₹{tax.toLocaleString('en-IN')}</span>
+                  <span className="ca-summary-value">{formatPrice(tax)}</span>
                 </div>
 
                 <hr className="ca-summary-divider" />
 
                 <div className="ca-summary-total-row">
                   <span className="ca-summary-total-label">Total</span>
-                  <span className="ca-summary-total-val">₹{total.toLocaleString('en-IN')}</span>
+                  <span className="ca-summary-total-val">{formatPrice(total)}</span>
                 </div>
 
                 {/* Promo Code */}
