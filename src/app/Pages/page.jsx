@@ -92,6 +92,7 @@ export default function HomePage() {
           };
 
           const formattedSections = result.data.map(category => ({
+            id: category.id,
             title: mapping[category.name] || category.name,
             products: category.products
           })).filter(section => section.products.length > 0);
@@ -733,7 +734,7 @@ export default function HomePage() {
               <section className="zj-section">
                 <div className="zj-section-header zj-animate">
                   <h2 className="zj-section-title">{section.title}</h2>
-                  <Link href="/Pages/Products" className="zj-view-all">View All</Link>
+                  <Link href={`/Pages/Products?category=${section.id}`} className="zj-view-all">View All</Link>
                 </div>
                 <div className="zj-product-grid">
                   {section.products.map((p, pi) => (

@@ -683,8 +683,8 @@ export default function CartPage() {
                     onClick={() => setShowPaymentOptions(true)}
                     disabled={loading}
                   >
-                    {/* <ShoppingBag size={16} />
-                    {loading ? 'Processing...' : 'Proceed to Checkout'} */}
+                    <ShoppingBag size={16} />
+                    {loading ? 'Processing...' : 'Proceed to Checkout'}
                   </button>
                 ) : (
                   <div className="ca-payment-options">

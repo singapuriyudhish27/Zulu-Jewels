@@ -26,6 +26,7 @@ export async function GET(request) {
                 p.updated_at AS product_updated_at,
 
                 pi.id AS image_id,
+                pi.variant_id,
                 pi.media_url,
                 pi.is_primary
             FROM categories c
@@ -49,7 +50,7 @@ export async function GET(request) {
             queryParams.push(searchTerm, searchTerm);
         }
 
-        query += ` ORDER BY c.name ASC, p.id DESC, pi.is_primary DESC`;
+        query += ` ORDER BY c.name ASC, p.id DESC, pi.variant_id ASC, pi.media_url ASC`;
 
         const [rows] = await connection.execute(query, queryParams);
         console.log("Backend API To Get Products with Filters.");
@@ -95,6 +96,7 @@ export async function GET(request) {
                 if (row.image_id) {
                     product.images.push({
                         id: row.image_id,
+                        variant_id: row.variant_id,
                         image_url: row.media_url,
                         is_primary: row.is_primary
                     });
