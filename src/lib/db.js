@@ -57,6 +57,7 @@ export async function getConnection() {
         material VARCHAR(255),
         gender VARCHAR(100),
         is_active BOOLEAN DEFAULT TRUE,
+        is_deleted BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (category_id) REFERENCES categories(id)
@@ -302,6 +303,17 @@ export async function getConnection() {
 
     // Migration for existing tables: Add variant_id if missing and update unique keys
     const tablesToUpdate = ['user_likes', 'cart_items', 'order_items'];
+
+    // Migration for products: Add is_deleted if missing
+    try {
+        const [prodCols] = await connection.execute(`SHOW COLUMNS FROM products LIKE 'is_deleted'`);
+        if (prodCols.length === 0) {
+            console.log(`Adding is_deleted to products table...`);
+            await connection.execute(`ALTER TABLE products ADD COLUMN is_deleted BOOLEAN DEFAULT FALSE AFTER is_active`);
+        }
+    } catch (err) {
+        console.error(`Error migrating products table:`, err.message);
+    }
     const uniqueKeysV2 = {
         user_likes: 'unique_like_v2',
         cart_items: 'unique_cart_item_v2',

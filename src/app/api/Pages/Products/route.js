@@ -34,7 +34,7 @@ export async function GET(request) {
                 ON c.id = p.category_id
             LEFT JOIN product_images pi 
                 ON p.id = pi.product_id
-            WHERE 1=1
+            WHERE p.is_deleted = FALSE
         `;
 
         const queryParams = [];

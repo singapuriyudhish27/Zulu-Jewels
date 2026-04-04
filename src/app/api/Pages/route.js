@@ -22,7 +22,7 @@ export async function GET() {
             FROM categories c
             LEFT JOIN products p ON c.id = p.category_id
             LEFT JOIN product_images pi ON p.id = pi.product_id
-            WHERE c.id IS NOT NULL
+            WHERE c.id IS NOT NULL AND (p.is_deleted = FALSE OR p.is_deleted IS NULL)
             ORDER BY c.id, p.id DESC, pi.is_primary DESC
         `);
         console.log("Backend API To Get Home Page Data.");

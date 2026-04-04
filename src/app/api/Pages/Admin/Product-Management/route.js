@@ -28,6 +28,7 @@ export async function GET() {
                 c.name AS category_name
             FROM products p
             LEFT JOIN categories c ON p.category_id = c.id
+            WHERE p.is_deleted = FALSE
             ORDER BY p.created_at DESC
         `);
 
@@ -154,25 +155,36 @@ export async function POST(request) {
 export async function PUT(request) {
     try {
         const connection = await getConnection();
-        const formData = await request.formData();
+        const contentType = request.headers.get("content-type") || "";
 
-        const id = formData.get("id");
-        const name = formData.get("name");
-        const category_name = formData.get("category_name");
-        const description = formData.get("description");
-        const price = formData.get("price");
-        const material = formData.get("material");
-        const gender = formData.get("gender");
-        const is_active = formData.get("is_active") === "true";
-        
-        const variantsJson = formData.get("variants");
-        let variants = [];
-        try { if (variantsJson) variants = JSON.parse(variantsJson); } catch (e) {}
+        let id, name, category_name, description, price, material, gender, is_active, variants = [];
+        let isJson = contentType.includes("application/json");
+
+        if (isJson) {
+            // Handle simple JSON updates (like status toggles)
+            const data = await request.json();
+            id = data.id;
+            is_active = data.is_active;
+        } else {
+            // Handle full FormData updates (with images)
+            const formData = await request.formData();
+            id = formData.get("id");
+            name = formData.get("name");
+            category_name = formData.get("category_name");
+            description = formData.get("description");
+            price = formData.get("price");
+            material = formData.get("material");
+            gender = formData.get("gender");
+            is_active = formData.get("is_active") === "true";
+            
+            const variantsJson = formData.get("variants");
+            try { if (variantsJson) variants = JSON.parse(variantsJson); } catch (e) {}
+        }
 
         if (!id) return NextResponse.json({ success: false, message: "Product Id Not Found" }, { status: 400 });
 
         let categoryId = null;
-        if (category_name) {
+        if (!isJson && category_name) {
             const [catRows] = await connection.execute(`SELECT id FROM categories WHERE name = ?`, [category_name]);
             if (catRows.length > 0) categoryId = catRows[0].id;
         }
@@ -182,7 +194,7 @@ export async function PUT(request) {
         const params = [];
         if (categoryId) { updates.push("category_id = ?"); params.push(categoryId); }
         if (name) { updates.push("name = ?"); params.push(name); }
-        if (description !== null) { updates.push("description = ?"); params.push(description); }
+        if (description !== undefined && description !== null) { updates.push("description = ?"); params.push(description); }
         if (price) { updates.push("price = ?"); params.push(price); }
         if (material !== undefined) { updates.push("material = ?"); params.push(material); }
         if (gender !== undefined) { updates.push("gender = ?"); params.push(gender); }
@@ -192,7 +204,12 @@ export async function PUT(request) {
             await connection.execute(`UPDATE products SET ${updates.join(", ")} WHERE id = ?`, [...params, id]);
         }
 
-        // --- Variant Syncing Logic ---
+        // If it's just a simple JSON update, we can return early
+        if (isJson) {
+            return NextResponse.json({ success: true, message: "Product status updated successfully" }, { status: 200 });
+        }
+
+        // --- Variant Syncing Logic (Only for Full FormData Edit) ---
         // 1. Get current variant IDs
         const [currentVariants] = await connection.execute(`SELECT id FROM product_variants WHERE product_id = ?`, [id]);
         const currentVariantIds = currentVariants.map(v => v.id);
@@ -274,8 +291,9 @@ export async function DELETE(request) {
         if (productRows.length === 0) return NextResponse.json({ success: false, message: "Product not found" }, { status: 404 });
         if (productRows[0].is_active) return NextResponse.json({ success: false, message: "Deactivate product first" }, { status: 400 });
 
-        // Cascade delete handles variants and images
-        await connection.execute(`DELETE FROM products WHERE id = ?`, [product_id]);
+        // Use Soft Delete instead of physical delete
+        // This ensures order history is preserved while hiding the product from the store
+        await connection.execute(`UPDATE products SET is_deleted = TRUE WHERE id = ?`, [product_id]);
 
         return NextResponse.json({ success: true, message: "Product Deleted Successfully" }, { status: 200 });
     } catch (error) {
