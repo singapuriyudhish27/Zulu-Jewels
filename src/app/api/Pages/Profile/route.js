@@ -28,7 +28,7 @@ export async function GET() {
         if (email === process.env.ADMIN_EMAIL) {
             const role = "Admin";
             const user = email;            
-            return NextResponse.json({user, role}, {status: 200 });
+            return NextResponse.json({user, role, addresses: []}, {status: 200 });
         }
 
         //Fetch User From Database
@@ -42,10 +42,17 @@ export async function GET() {
             return NextResponse.json({message: "User Not Found"}, {status: 404});
         }
 
+        // Fetch Saved Addresses
+        const [addressRows] = await conn.execute(
+            "SELECT id, address_line, is_default FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at ASC",
+            [userId]
+        );
+
         const role = "User";
         const user = userRows[0];
+        const addresses = addressRows;
 
-        return NextResponse.json({user, role}, {status: 200});
+        return NextResponse.json({user, role, addresses}, {status: 200});
     } catch (error) {
         console.error("Profile API Error:", error);
         return NextResponse.json({message: "Internal Server Error"}, {status: 500});

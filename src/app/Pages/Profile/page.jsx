@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff, Plus, Search, ShoppingBag } from 'lucide-react';
+import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff, Plus, Search, ShoppingBag, Trash2, Star } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
@@ -15,6 +15,10 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [newAddressText, setNewAddressText] = useState('');
+  const [addressLoading, setAddressLoading] = useState(false);
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -45,6 +49,7 @@ export default function ProfilePage() {
         }
 
         setUser(data.user);
+        setSavedAddresses(data.addresses || []);
       } catch (error) {
         console.error("Profile Fetching From API Error:", error);
       } finally {
@@ -53,6 +58,74 @@ export default function ProfilePage() {
     }
     fetchProfile();
   }, [router]);
+
+  // 🔹 Add a new address
+  const handleAddAddress = async () => {
+    if (!newAddressText.trim()) {
+      toast.error('Please enter an address');
+      return;
+    }
+    setAddressLoading(true);
+    try {
+      const isFirst = savedAddresses.length === 0;
+      const res = await fetch('/api/Pages/Profile/Addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ address_line: newAddressText.trim(), is_default: isFirst }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message);
+      setSavedAddresses(prev => [...prev, {
+        id: result.id,
+        address_line: newAddressText.trim(),
+        is_default: isFirst,
+      }]);
+      setNewAddressText('');
+      setShowAddressModal(false);
+      toast.success('Address saved!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save address');
+    } finally {
+      setAddressLoading(false);
+    }
+  };
+
+  // 🔹 Delete an address
+  const handleDeleteAddress = async (id) => {
+    try {
+      const res = await fetch('/api/Pages/Profile/Addresses', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message);
+      setSavedAddresses(prev => prev.filter(a => a.id !== id));
+      toast.success('Address removed');
+    } catch (err) {
+      toast.error(err.message || 'Failed to delete address');
+    }
+  };
+
+  // 🔹 Set an address as default
+  const handleSetDefault = async (id) => {
+    try {
+      const res = await fetch('/api/Pages/Profile/Addresses', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ id }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message);
+      setSavedAddresses(prev => prev.map(a => ({ ...a, is_default: a.id === id })));
+      toast.success('Default address updated');
+    } catch (err) {
+      toast.error(err.message || 'Failed to update default');
+    }
+  };
 
   // 🔹 Fetch Wishlist handler
   const fetchWishlist = async () => {
@@ -892,18 +965,64 @@ export default function ProfilePage() {
                   <input 
                     type="tel" 
                     className="text-field" 
-                    value={user?.contact_no || ''} 
-                    onChange={(e) => setUser({ ...user, contact_no: e.target.value })}
+                    value={user?.phone || ''} 
+                    onChange={(e) => setUser({ ...user, phone: e.target.value })}
                     placeholder="+91 00000 00000"
                   />
                 </div>
 
                 <div className="form-group">
-                  <label className="form-label">Location</label>
-                  <div className="location-box">
-                    {user?.address || '101, Gold Residency Ring Road, Surat Gujarat – 395007 India'}
-                  </div>
-                  <button type="button" className="add-location-btn">
+                  <label className="form-label">Saved Locations</label>
+                  {savedAddresses.length > 0 ? (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                      {savedAddresses.map((addr) => (
+                        <div key={addr.id} style={{
+                          padding: '12px 14px',
+                          background: addr.is_default ? '#fdf8ef' : '#F9F9F9',
+                          border: `1px solid ${addr.is_default ? '#CEA268' : '#E5E5E5'}`,
+                          borderRadius: '4px',
+                          fontSize: '13px',
+                          color: '#333',
+                          display: 'flex',
+                          alignItems: 'flex-start',
+                          justifyContent: 'space-between',
+                          gap: '10px',
+                        }}>
+                          <div style={{ flex: 1 }}>
+                            {addr.is_default && (
+                              <span style={{ fontSize: '10px', fontWeight: 700, color: '#CEA268', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '4px' }}>Default</span>
+                            )}
+                            {addr.address_line}
+                          </div>
+                          <div style={{ display: 'flex', gap: '8px', flexShrink: 0 }}>
+                            {!addr.is_default && (
+                              <button
+                                type="button"
+                                onClick={() => handleSetDefault(addr.id)}
+                                title="Set as default"
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#CEA268', padding: '2px' }}
+                              >
+                                <Star size={15} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteAddress(addr.id)}
+                              title="Remove"
+                              style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '2px' }}
+                            >
+                              <Trash2 size={15} />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="location-box" style={{ color: '#999', fontStyle: 'italic' }}>
+                      No saved addresses yet.
+                    </div>
+                  )}
+                  <button type="button" className="add-location-btn" onClick={() => setShowAddressModal(true)}>
                     <Plus size={16} /> Add Location
                   </button>
                 </div>
@@ -919,6 +1038,62 @@ export default function ProfilePage() {
                   </button>
                 </div>
               </form>
+
+              {/* Add Address Modal */}
+              {showAddressModal && (
+                <div style={{
+                  position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+                  zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+                }}>
+                  <div style={{
+                    background: '#fff', borderRadius: '4px', padding: '32px',
+                    width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+                    animation: 'fadeIn 0.25s ease'
+                  }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#000' }}>Add New Address</h3>
+                      <button type="button" onClick={() => { setShowAddressModal(false); setNewAddressText(''); }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#999', lineHeight: 1 }}>×</button>
+                    </div>
+                    <label className="form-label" style={{ display: 'block', marginBottom: '8px' }}>Full Address</label>
+                    <textarea
+                      value={newAddressText}
+                      onChange={(e) => setNewAddressText(e.target.value)}
+                      placeholder="e.g. 101, Gold Residency, Ring Road, Surat, Gujarat – 395007"
+                      style={{
+                        width: '100%', padding: '12px 14px', border: '1px solid #E5E5E5',
+                        borderRadius: '4px', fontSize: '13px', fontFamily: 'Montserrat, sans-serif',
+                        resize: 'none', height: '100px', outline: 'none', boxSizing: 'border-box',
+                      }}
+                    />
+                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
+                      <button
+                        type="button"
+                        onClick={handleAddAddress}
+                        disabled={addressLoading}
+                        style={{
+                          flex: 1, padding: '13px', background: '#000', color: '#fff',
+                          border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: 700,
+                          textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer',
+                        }}
+                      >
+                        {addressLoading ? 'Saving...' : 'Save Address'}
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => { setShowAddressModal(false); setNewAddressText(''); }}
+                        style={{
+                          flex: 1, padding: '13px', background: '#fff', color: '#000',
+                          border: '1px solid #E5E5E5', borderRadius: '4px', fontSize: '13px',
+                          fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer',
+                        }}
+                      >
+                        Cancel
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
             </div>
           )}
         </div>

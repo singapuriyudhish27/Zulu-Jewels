@@ -288,6 +288,18 @@ export async function getConnection() {
       ) ENGINE=InnoDB;
     `);
 
+    // User Addresses Table (Multiple Shipping Locations)
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS user_addresses (
+        id BIGINT AUTO_INCREMENT PRIMARY KEY,
+        user_id BIGINT UNSIGNED NOT NULL,
+        address_line TEXT NOT NULL,
+        is_default BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+      ) ENGINE=InnoDB;
+    `);
+
     // Migration for existing tables: Add variant_id if missing and update unique keys
     const tablesToUpdate = ['user_likes', 'cart_items', 'order_items'];
     const uniqueKeysV2 = {

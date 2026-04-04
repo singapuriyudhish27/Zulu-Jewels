@@ -98,6 +98,7 @@ export default function ProductDetailsPage() {
   const [addressError, setAddressError] = useState(false);
   const [mapLocation, setMapLocation] = useState(null); // { lat, lon, display_name }
   const [mapLoading, setMapLoading] = useState(false);
+  const [savedAddresses, setSavedAddresses] = useState([]); // User's saved addresses from profile
 
   useEffect(() => {
     const fetchProduct = async () => {
@@ -316,22 +317,27 @@ export default function ProductDetailsPage() {
 
   const handleCheckout = async () => {
     try {
-      // 1. Check authentication
+      // 1. Check authentication & fetch saved addresses
       const authRes = await fetch('/api/Pages/Profile');
       if (authRes.status === 401) {
         router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
         return;
       }
+      const profileData = await authRes.json();
+      setSavedAddresses(profileData.addresses || []);
 
-      // 2. Add to cart if not already present
+      // 2. Pre-fill with default address if one exists
+      const defaultAddr = (profileData.addresses || []).find(a => a.is_default);
+      setShippingAddress(defaultAddr ? defaultAddr.address_line : '');
+
+      // 3. Add to cart if not already present
       const currentVariantId = selectedVariant?.id || null;
       const isThisVariantInCart = inCartVariantIds.includes(currentVariantId);
       if (!isThisVariantInCart) {
         await addToCart();
       }
 
-      // 3. Open Order Review Modal
-      setShippingAddress('');
+      // 4. Open Order Review Modal
       setAddressError(false);
       setShowOrderModal(true);
     } catch (error) {
@@ -1242,6 +1248,38 @@ export default function ProductDetailsPage() {
                   <p className="pd-om-section-label">
                     <span style={{ fontSize: 16 }}>📦</span> Shipping Address
                   </p>
+
+                  {/* Quick Select from Saved Addresses */}
+                  {savedAddresses.length > 0 && (
+                    <div style={{ marginBottom: '12px' }}>
+                      <p style={{ fontSize: '11px', fontWeight: 600, color: '#888', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Saved Addresses</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        {savedAddresses.map((addr) => (
+                          <button
+                            key={addr.id}
+                            type="button"
+                            onClick={() => {
+                              setShippingAddress(addr.address_line);
+                              setAddressError(false);
+                            }}
+                            style={{
+                              textAlign: 'left', padding: '10px 14px', background: shippingAddress === addr.address_line ? '#fdf8ef' : '#F9F9F9',
+                              border: `1px solid ${shippingAddress === addr.address_line ? '#CEA268' : '#EFEFEF'}`,
+                              borderRadius: '4px', fontSize: '12px', color: '#333', cursor: 'pointer',
+                              width: '100%', transition: 'all 0.2s', fontFamily: 'Montserrat, sans-serif',
+                            }}
+                          >
+                            {addr.is_default && (
+                              <span style={{ fontSize: '9px', fontWeight: 700, color: '#CEA268', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '3px' }}>★ Default</span>
+                            )}
+                            {addr.address_line}
+                          </button>
+                        ))}
+                      </div>
+                      <p style={{ fontSize: '11px', color: '#aaa', margin: '10px 0 8px', textAlign: 'center' }}>— or enter a new address below —</p>
+                    </div>
+                  )}
+
                   <textarea
                     className={`pd-om-address-input ${addressError ? 'error' : ''}`}
                     placeholder="Enter your full delivery address, city, state, pincode..."
