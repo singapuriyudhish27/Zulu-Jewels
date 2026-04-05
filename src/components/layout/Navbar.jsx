@@ -80,7 +80,7 @@ export default function Navbar() {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          height: 72px;
+          height: 80px;
           gap: 24px;
         }
         .zj-nav-links {

@@ -531,6 +531,7 @@ export default function HomePage() {
           position: relative;
           background: #F7F7F7; 
           padding: 40px 0;
+          margin-top: 40px;
         }
         .zj-testimonials-inner { 
           max-width: 1400px; 
@@ -541,7 +542,7 @@ export default function HomePage() {
           display: flex;
           gap: 24px;
           overflow-x: auto;
-          padding: 20px 0;
+          padding: 0 40px;
           scroll-behavior: smooth;
           scrollbar-width: none;
           scroll-snap-type: x mandatory;
@@ -818,7 +819,7 @@ export default function HomePage() {
             <div className="zj-testimonials-carousel">
               <div className="zj-testimonials-track">
                 {TESTIMONIALS.map((t, i) => (
-                  <div key={i} className="zj-testimonial-card zj-animate" style={{ transitionDelay: `${i * 100}ms` }}>
+                  <div key={i} className="zj-testimonial-card">
                     <div className="zj-testimonial-stars">{'★'.repeat(t.rating)}</div>
                     <div className="zj-testimonial-header">
                       <span className="zj-testimonial-name">{t.name}</span>

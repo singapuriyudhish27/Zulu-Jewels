@@ -1,13 +1,33 @@
+'use client';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import { Instagram, Twitter, Facebook, Youtube, Linkedin } from 'lucide-react';
 
 export default function Footer() {
+  const router = useRouter();
+
+  const handleTrackOrder = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('/api/Pages/Profile');
+      const data = await response.json();
+
+      if (data.role === "User" || data.role === "Admin") {
+        router.push('/Pages/Profile?tab=orders');
+      } else {
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error("Error checking auth:", error);
+      router.push('/auth/login');
+    }
+  };
   return (
     <>
       <style>{`
         .zj-footer {
-          background: #1a1a1a;
-          color: #ccc;
+          background: #EEEDE9;
+          color: #555;
           font-family: 'Montserrat', sans-serif;
           padding-top: 60px;
         }
@@ -24,7 +44,7 @@ export default function Footer() {
           font-weight: 700;
           letter-spacing: 0.14em;
           text-transform: uppercase;
-          color: #fff;
+          color: #000;
           margin-bottom: 20px;
         }
         .zj-footer-col ul {
@@ -35,13 +55,13 @@ export default function Footer() {
         }
         .zj-footer-col ul li a {
           font-size: 13px;
-          color: #aaa;
+          color: #555;
           text-decoration: none;
           transition: color 0.2s;
           line-height: 1.5;
         }
         .zj-footer-col ul li a:hover {
-          color: #CEA268;
+          color: #000;
         }
         .zj-footer-newsletter {
           display: flex;
@@ -49,34 +69,35 @@ export default function Footer() {
           gap: 12px;
         }
         .zj-footer-newsletter-title {
-          font-size: 13px;
-          color: #fff;
-          line-height: 1.6;
+          font-size: 20px;
+          color: #000;
+          font-weight: 600;
+          line-height: 1.4;
         }
         .zj-footer-newsletter-tagline {
-          font-size: 11px;
-          color: #666;
-          letter-spacing: 0.06em;
-          text-transform: uppercase;
+          font-size: 13px;
+          color: #333;
+          line-height: 1.5;
         }
         .zj-footer-email-row {
           display: flex;
           align-items: center;
-          border-bottom: 1px solid #444;
-          padding-bottom: 8px;
-          margin-top: 4px;
+          background: #fff;
+          padding: 8px 16px;
+          margin-top: 12px;
+          border-radius: 2px;
         }
         .zj-footer-email-input {
           background: transparent;
           border: none;
           outline: none;
-          color: #ccc;
+          color: #000;
           font-size: 13px;
           font-family: 'Montserrat', sans-serif;
           flex: 1;
         }
         .zj-footer-email-input::placeholder {
-          color: #555;
+          color: #999;
         }
         .zj-footer-signup-btn {
           background: none;
@@ -86,7 +107,7 @@ export default function Footer() {
           font-weight: 700;
           letter-spacing: 0.12em;
           text-transform: uppercase;
-          color: #CEA268;
+          color: #000;
           transition: color 0.2s;
           white-space: nowrap;
           padding: 0 0 0 12px;
@@ -100,25 +121,19 @@ export default function Footer() {
           margin-top: 16px;
         }
         .zj-footer-social-icon {
-          width: 34px;
-          height: 34px;
-          border-radius: 50%;
-          border: 1px solid #333;
           display: flex;
           align-items: center;
           justify-content: center;
-          color: #aaa;
+          color: #333;
           transition: all 0.2s;
           cursor: pointer;
         }
         .zj-footer-social-icon:hover {
-          border-color: #CEA268;
-          color: #CEA268;
-          background: rgba(206,162,104,0.08);
+          color: #000;
         }
         .zj-footer-bottom {
-          border-top: 1px solid #2a2a2a;
-          padding: 20px 24px;
+          border-top: 1px solid rgba(0,0,0,0.08);
+          padding: 24px;
           max-width: 1280px;
           margin: 0 auto;
           display: flex;
@@ -129,23 +144,26 @@ export default function Footer() {
         }
         .zj-footer-copy {
           font-size: 11px;
-          color: #555;
+          color: #777;
           letter-spacing: 0.04em;
+          text-transform: uppercase;
         }
         .zj-footer-legal {
           display: flex;
-          gap: 20px;
+          gap: 16px;
           flex-wrap: wrap;
+          align-items: center;
         }
         .zj-footer-legal a {
-          font-size: 11px;
-          color: #555;
+          font-size: 10px;
+          color: #777;
           text-decoration: none;
           transition: color 0.2s;
-          letter-spacing: 0.04em;
+          letter-spacing: 0.06em;
+          text-transform: uppercase;
         }
         .zj-footer-legal a:hover {
-          color: #CEA268;
+          color: #000;
         }
         @media (max-width: 900px) {
           .zj-footer-grid {
@@ -174,10 +192,10 @@ export default function Footer() {
             <h4 className="zj-footer-col-title">Customer Services</h4>
             <ul>
               <li><Link href="/Pages/contact">Contact Us</Link></li>
-              <li><Link href="#">Track your Order</Link></li>
+              <li><Link href="/Pages/Profile" onClick={handleTrackOrder}>Track your Order</Link></li>
               <li><Link href="#">Shipping &amp; Returns</Link></li>
-              <li><Link href="#">FAQ</Link></li>
-              <li><Link href="/Pages/custom">Schedule an Appointment</Link></li>
+              <li><Link href="#">Frequently Asked Questions</Link></li>
+              <li><Link href="/Pages/contact">Schedule an Appointment</Link></li>
             </ul>
           </div>
 
@@ -208,10 +226,10 @@ export default function Footer() {
           <div className="zj-footer-col">
             <h4 className="zj-footer-col-title">Main Locations</h4>
             <ul>
-              <li><Link href="#">Surat, GJ</Link></li>
-              <li><Link href="#">Mumbai, MH</Link></li>
-              <li><Link href="#">Hyderabad, TS</Link></li>
-              <li><Link href="#">New York, USA</Link></li>
+              <li><Link href="/Pages/contact">Surat, GJ</Link></li>
+              <li><Link href="/Pages/contact">Mumbai, MH</Link></li>
+              <li><Link href="/Pages/contact">Hyderabad, TS</Link></li>
+              <li><Link href="/Pages/contact">New York, USA</Link></li>
             </ul>
           </div>
 
@@ -241,13 +259,16 @@ export default function Footer() {
         </div>
 
         {/* Bottom bar */}
-        <div style={{ borderTop: '1px solid #2a2a2a', padding: '0' }}>
+        <div style={{ borderTop: '1px solid rgba(0,0,0,0.05)', padding: '0' }}>
           <div className="zj-footer-bottom">
             <p className="zj-footer-copy">© {new Date().getFullYear()} Zulu Jewellers. All rights reserved.</p>
             <div className="zj-footer-legal">
               <a href="#">Privacy Policy</a>
+              <span style={{ color: '#999', fontSize: '10px' }}>&nbsp;·&nbsp;</span>
               <a href="#">Terms &amp; Conditions</a>
+              <span style={{ color: '#999', fontSize: '10px' }}>&nbsp;·&nbsp;</span>
               <a href="#">Sitemap</a>
+              <span style={{ color: '#999', fontSize: '10px' }}>&nbsp;·&nbsp;</span>
               <a href="#">Cookies</a>
             </div>
           </div>
