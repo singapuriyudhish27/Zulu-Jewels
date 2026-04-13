@@ -260,10 +260,8 @@ export default function ProfilePage() {
     }
   };
 
-  // 🔹 Logout handler
-  const handleLogout = async () => {
-    if (!confirm('Are you sure you want to logout?')) return;
-
+  // 🔹 Actual logout logic (called after toast confirmation)
+  const performLogout = async () => {
     try {
       const res = await fetch('/api/Pages/Profile', {
         method: 'POST',
@@ -279,6 +277,51 @@ export default function ProfilePage() {
       console.error('Logout error:', error);
       toast.error('Something went wrong while logging out.');
     }
+  };
+
+  // 🔹 Logout handler — shows toast confirmation first
+  const handleLogout = () => {
+    toast.custom((t) => (
+      <div style={{
+        background: '#1a1a1a',
+        color: '#fff',
+        padding: '16px 20px',
+        borderRadius: '10px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        minWidth: '280px',
+        opacity: t.visible ? 1 : 0,
+        transition: 'opacity 0.3s ease',
+      }}>
+        <div style={{ fontWeight: 700, fontSize: '14px' }}>
+          Are you sure you want to logout?
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => { toast.dismiss(t.id); performLogout(); }}
+            style={{
+              flex: 1, padding: '9px', background: '#e74c3c', color: '#fff',
+              border: 'none', borderRadius: '6px', fontSize: '13px',
+              fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Yes, Logout
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            style={{
+              flex: 1, padding: '9px', background: '#333', color: '#ccc',
+              border: '1px solid #444', borderRadius: '6px', fontSize: '13px',
+              fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: 8000 });
   };
 
   return (
@@ -705,7 +748,7 @@ export default function ProfilePage() {
 
         .orders-list-header {
           display: grid;
-          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr;
+          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr 1.3fr;
           padding: 20px 10px;
           border-bottom: 2px solid #000;
           font-size: 11px;
@@ -719,7 +762,7 @@ export default function ProfilePage() {
 
         .orders-list-item {
           display: grid;
-          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr;
+          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr 1.3fr;
           padding: 24px 10px;
           border-bottom: 1px solid var(--border-color);
           align-items: center;
@@ -752,6 +795,44 @@ export default function ProfilePage() {
           color: #CEA268;
         }
 
+        .track-order-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 6px;
+          padding: 7px 14px;
+          background: #fff;
+          color: #000;
+          border: 1.5px solid #000;
+          border-radius: 3px;
+          font-family: var(--font-main);
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+          text-decoration: none;
+          transition: background 0.25s ease, color 0.25s ease;
+          white-space: nowrap;
+        }
+
+        .track-order-btn:hover {
+          background: #000;
+          color: #fff;
+        }
+
+        .track-order-btn.disabled {
+          background: #f0f0f0;
+          color: #aaa;
+          border-color: #ddd;
+          cursor: not-allowed;
+          pointer-events: none;
+        }
+
+        .track-order-btn.disabled:hover {
+          background: #f0f0f0;
+          color: #aaa;
+        }
+
         @media (max-width: 768px) {
           .orders-list-header {
             display: none;
@@ -770,6 +851,9 @@ export default function ProfilePage() {
           }
           .orders-column-total {
             text-align: right;
+          }
+          .orders-column-track {
+            grid-column: span 2;
           }
         }
       `}} />
@@ -819,6 +903,7 @@ export default function ProfilePage() {
                   <div>Price</div>
                   <div>Payment</div>
                   <div>Status</div>
+                  <div>Track Order</div>
                 </div>
                 
                 {ordersLoading ? (
@@ -851,6 +936,20 @@ export default function ProfilePage() {
                         color: order.order_status === 'Delivered' ? '#2ecc71' : (order.order_status === 'Processing' ? '#CEA268' : '#3498db') 
                       }}>
                         {order.order_status || 'Ordered'}
+                      </div>
+                      <div className="orders-column-track">
+                        {order.order_status === 'Cancelled' ? (
+                          <span className="track-order-btn disabled">
+                            Track Order
+                          </span>
+                        ) : (
+                          <Link
+                            href={`/Pages/Track-Order?orderId=${order.order_id}`}
+                            className="track-order-btn"
+                          >
+                            Track Order
+                          </Link>
+                        )}
                       </div>
                     </div>
                   ))

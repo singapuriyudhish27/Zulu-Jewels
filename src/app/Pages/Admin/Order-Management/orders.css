@@ -620,6 +620,23 @@ body {
   border: 1px solid var(--border);
 }
 
+.action-btn.danger {
+  background: var(--danger);
+  color: var(--white);
+  border: none;
+  transition: background 0.2s ease, transform 0.1s ease;
+}
+
+.action-btn.danger:hover:not(:disabled) {
+  background: #c0392b;
+  transform: translateY(-1px);
+}
+
+.action-btn.danger:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
 .empty-state {
   padding: 60px 24px;
   text-align: center;

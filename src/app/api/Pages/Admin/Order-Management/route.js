@@ -190,3 +190,64 @@ export async function PUT(request) {
         return NextResponse.json({ message: "Error In Backend API Call" });
     }
 }
+
+// Delete Order (Only Allowed When Status = Cancelled)
+export async function DELETE(request) {
+    try {
+        const connection = await getConnection();
+        const body = await request.json();
+        const { order_id } = body;
+
+        if (!order_id) {
+            return NextResponse.json(
+                { success: false, message: "Order ID is required." },
+                { status: 400 }
+            );
+        }
+
+        // Fetch the order to validate status
+        const [rows] = await connection.execute(
+            `SELECT id, status FROM orders WHERE id = ?`,
+            [order_id]
+        );
+
+        if (rows.length === 0) {
+            return NextResponse.json(
+                { success: false, message: "Order not found." },
+                { status: 404 }
+            );
+        }
+
+        if (rows[0].status !== 'Cancelled') {
+            return NextResponse.json(
+                { success: false, message: "Only Cancelled orders can be deleted." },
+                { status: 403 }
+            );
+        }
+
+        // Delete child order_items first
+        await connection.execute(
+            `DELETE FROM order_items WHERE order_id = ?`,
+            [order_id]
+        );
+
+        // Delete the order
+        await connection.execute(
+            `DELETE FROM orders WHERE id = ?`,
+            [order_id]
+        );
+
+        console.log(`Order #${order_id} (Cancelled) deleted by Admin.`);
+
+        return NextResponse.json({
+            success: true,
+            message: "Order deleted successfully."
+        }, { status: 200 });
+    } catch (error) {
+        console.error("Error Deleting Order:", error);
+        return NextResponse.json(
+            { success: false, message: "Error In Backend API Call" },
+            { status: 500 }
+        );
+    }
+}

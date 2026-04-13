@@ -34,6 +34,7 @@ import {
   User,
   Heart,
   X,
+  Trash2,
   ExternalLink
 } from "lucide-react";
 
@@ -47,6 +48,7 @@ export default function OrderManagementPage() {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [statusToUpdate, setStatusToUpdate] = useState("");
   const [updatingStatus, setUpdatingStatus] = useState(false);
+  const [deletingOrder, setDeletingOrder] = useState(false);
   const searchParams = useSearchParams();
 
   // Dropdown state for multiple items
@@ -288,6 +290,87 @@ export default function OrderManagementPage() {
     }
   };
 
+  // 🔹 Actual deletion logic (called after toast confirmation)
+  const performDeleteOrder = async () => {
+    setDeletingOrder(true);
+    try {
+      const res = await fetch('/api/Pages/Admin/Order-Management', {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ order_id: selectedOrder.rawId }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        setOrdersData(prev => prev.filter(o => o.order_id !== selectedOrder.rawId));
+        setSelectedOrder(null);
+        toast.success('Order deleted successfully.');
+      } else {
+        toast.error(result.message || 'Failed to delete order.');
+      }
+    } catch (error) {
+      console.error('Delete order error:', error);
+      toast.error('Something went wrong while deleting the order.');
+    } finally {
+      setDeletingOrder(false);
+    }
+  };
+
+  // 🔹 Delete Order Handler — shows toast confirmation first
+  const handleDeleteOrder = () => {
+    if (!selectedOrder || selectedOrder.status !== 'Cancelled') return;
+
+    toast.custom((t) => (
+      <div style={{
+        background: '#1a1a1a',
+        color: '#fff',
+        padding: '16px 20px',
+        borderRadius: '10px',
+        boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '12px',
+        minWidth: '300px',
+        opacity: t.visible ? 1 : 0,
+        transition: 'opacity 0.3s ease',
+      }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <Trash2 size={18} color="#e74c3c" />
+          <div>
+            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>
+              Delete {selectedOrder.id}?
+            </div>
+            <div style={{ fontSize: '12px', color: '#aaa' }}>
+              This action cannot be undone.
+            </div>
+          </div>
+        </div>
+        <div style={{ display: 'flex', gap: '8px' }}>
+          <button
+            onClick={() => { toast.dismiss(t.id); performDeleteOrder(); }}
+            style={{
+              flex: 1, padding: '9px', background: '#e74c3c', color: '#fff',
+              border: 'none', borderRadius: '6px', fontSize: '13px',
+              fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            Yes, Delete
+          </button>
+          <button
+            onClick={() => toast.dismiss(t.id)}
+            style={{
+              flex: 1, padding: '9px', background: '#333', color: '#ccc',
+              border: '1px solid #444', borderRadius: '6px', fontSize: '13px',
+              fontWeight: 600, cursor: 'pointer',
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    ), { duration: 8000 });
+  };
+
   return (
     <>
           <h1 className="page-title">Order Management</h1>
@@ -469,6 +552,17 @@ export default function OrderManagementPage() {
                         {showItemDropdown ? <X size={14} /> : <Eye size={14} />} {showItemDropdown ? "Close Items" : "View Details"}
                       </button>
                     </div>
+                    {/* Delete Order — visible only when status is Cancelled */}
+                    {selectedOrder.status === 'Cancelled' && (
+                      <button
+                        className="action-btn danger"
+                        onClick={handleDeleteOrder}
+                        disabled={deletingOrder}
+                        style={{ width: '100%' }}
+                      >
+                        <Trash2 size={14} /> {deletingOrder ? 'Deleting...' : 'Delete Order'}
+                      </button>
+                    )}
                   </div>
 
                   {/* Multiple Items Dropdown */}

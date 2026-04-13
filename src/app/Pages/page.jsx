@@ -131,6 +131,9 @@ export default function HomePage() {
   return (
     <>
       <style>{`
+        html {
+          scroll-behavior: smooth;
+        }
         .zj-page { font-family: 'Montserrat', sans-serif; background: #fff; padding-top: 72px; }
 
         /* General Colors:
@@ -704,7 +707,7 @@ export default function HomePage() {
           <div className="zj-hero-content">
             <h1 className="zj-hero-title">The Autumn Equinox</h1>
             <p className="zj-hero-subtitle">Fall has arrived. Shop for our new releases starting today and find the piece that speaks to your essence.</p>
-            <Link href="/Pages/Products" className="zj-hero-btn">
+            <Link href="#product-sections" className="zj-hero-btn">
               Shop Now →
             </Link>
           </div>
@@ -725,54 +728,56 @@ export default function HomePage() {
         <hr className="zj-divider" />
 
         {/* Product Sections */}
-        {loading ? (
-          <div style={{ textAlign: 'center', padding: '100px 0', fontSize: '18px', color: '#666' }}>
-            Loading stunning collections...
-          </div>
-        ) : (
-          sections.map((section, si) => (
-            <div key={si}>
-              <section className="zj-section">
-                <div className="zj-section-header zj-animate">
-                  <h2 className="zj-section-title">{section.title}</h2>
-                  <Link href={`/Pages/Products?category=${section.id}`} className="zj-view-all">View All</Link>
-                </div>
-                <div className="zj-product-grid">
-                  {section.products.map((p, pi) => (
-                    <div key={pi} className="zj-product-card zj-animate" style={{ transitionDelay: `${pi * 80}ms` }}>
-                      <Link href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                        <div className="zj-product-img-wrap">
-                          {p.images && p.images.length > 0 ? (
-                            <img 
-                              src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
-                              alt={p.name} 
-                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                            />
-                          ) : (
-                            <div className="zj-product-img-placeholder">💍</div>
-                          )}
-                          <button className="zj-product-wishlist" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>♡</button>
-                        </div>
-                        <div className="zj-product-name">{p.name}</div>
-                        <div className="zj-product-price">
-                          {p.price ? `₹${Number(p.price).toLocaleString()}` : "Price on Request"}
-                        </div>
-                        {p.swatches && p.swatches.length > 0 && (
-                          <div className="zj-product-swatches">
-                            {p.swatches.map((s, i) => (
-                              <span key={i} className="zj-swatch" style={{ background: s }} />
-                            ))}
-                          </div>
-                        )}
-                      </Link>
-                    </div>
-                  ))}
-                </div>
-              </section>
-              {si < sections.length - 1 && <hr className="zj-divider" />}
+        <div id="product-sections">
+          {loading ? (
+            <div style={{ textAlign: 'center', padding: '100px 0', fontSize: '18px', color: '#666' }}>
+              Loading stunning collections...
             </div>
-          ))
-        )}
+          ) : (
+            sections.map((section, si) => (
+              <div key={si}>
+                <section className="zj-section">
+                  <div className="zj-section-header zj-animate">
+                    <h2 className="zj-section-title">{section.title}</h2>
+                    <Link href={`/Pages/Products?category=${section.id}`} className="zj-view-all">View All</Link>
+                  </div>
+                  <div className="zj-product-grid">
+                    {section.products.map((p, pi) => (
+                      <div key={pi} className="zj-product-card zj-animate" style={{ transitionDelay: `${pi * 80}ms` }}>
+                        <Link href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                          <div className="zj-product-img-wrap">
+                            {p.images && p.images.length > 0 ? (
+                              <img 
+                                src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
+                                alt={p.name} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                              />
+                            ) : (
+                              <div className="zj-product-img-placeholder">💍</div>
+                            )}
+                            <button className="zj-product-wishlist" onClick={e => { e.preventDefault(); e.stopPropagation(); }}>♡</button>
+                          </div>
+                          <div className="zj-product-name">{p.name}</div>
+                          <div className="zj-product-price">
+                            {p.price ? `₹${Number(p.price).toLocaleString()}` : "Price on Request"}
+                          </div>
+                          {p.swatches && p.swatches.length > 0 && (
+                            <div className="zj-product-swatches">
+                              {p.swatches.map((s, i) => (
+                                <span key={i} className="zj-swatch" style={{ background: s }} />
+                              ))}
+                            </div>
+                          )}
+                        </Link>
+                      </div>
+                    ))}
+                  </div>
+                </section>
+                {si < sections.length - 1 && <hr className="zj-divider" />}
+              </div>
+            ))
+          )}
+        </div>
 
 
         {/* Custom Design CTA */}
