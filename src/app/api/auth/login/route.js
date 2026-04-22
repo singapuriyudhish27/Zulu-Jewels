@@ -22,7 +22,7 @@ export async function POST(req) {
             const response = NextResponse.json({ message: "Admin login successful", user: {email, role: 'admin'} });
             response.cookies.set("zulu_jewels", token, {
                 httpOnly: true,
-                secure: process.env.NODE_ENV === "development",
+                secure: process.env.NODE_ENV !== "development",
                 maxAge: 7 * 24 * 60 * 60, // 7 days,
                 sameSite: 'strict'
             });
@@ -69,7 +69,7 @@ export async function POST(req) {
         });
         response.cookies.set("zulu_jewels", token, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "development",
+            secure: process.env.NODE_ENV !== "development",
             maxAge: 7 * 24 * 60 * 60, // 7 days,
             sameSite: 'strict'
         });

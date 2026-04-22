@@ -3,6 +3,7 @@ import mysql from 'mysql2/promise';
 const { DB_HOST, DB_USER, DB_PASSWORD, DB_NAME, DB_PORT } = process.env;
 
 let connection;
+let isInitialized = false;
 
 export async function getConnection() {
   if (connection) return connection;
@@ -17,6 +18,8 @@ export async function getConnection() {
     });
 
     console.log('✅ MySQL connected successfully');
+    
+    if (isInitialized) return connection;
 
     // Users Table
     await connection.execute(`
@@ -24,6 +27,7 @@ export async function getConnection() {
       id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
       firstName VARCHAR(100) NOT NULL,
       lastName VARCHAR(100) NOT NULL,
+      role VARCHAR(50) DEFAULT 'User',
       email VARCHAR(255) NOT NULL UNIQUE,
       password_hash VARCHAR(255) NOT NULL,
       phone VARCHAR(20),
@@ -314,6 +318,17 @@ export async function getConnection() {
     } catch (err) {
         console.error(`Error migrating products table:`, err.message);
     }
+
+    // Migration for users: Add role if missing
+    try {
+        const [userCols] = await connection.execute(`SHOW COLUMNS FROM users LIKE 'role'`);
+        if (userCols.length === 0) {
+            console.log(`Adding role to users table...`);
+            await connection.execute(`ALTER TABLE users ADD COLUMN role VARCHAR(50) DEFAULT 'User' AFTER lastName`);
+        }
+    } catch (err) {
+        console.error(`Error migrating users table:`, err.message);
+    }
     const uniqueKeysV2 = {
         user_likes: 'unique_like_v2',
         cart_items: 'unique_cart_item_v2',
@@ -358,6 +373,7 @@ export async function getConnection() {
     }
 
     console.log('✅ Tables ensured');
+    isInitialized = true;
 
     return connection;
   } catch (error) {

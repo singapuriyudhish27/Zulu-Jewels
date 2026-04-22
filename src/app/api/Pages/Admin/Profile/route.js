@@ -27,7 +27,6 @@ export async function GET() {
                 const [rows] = await conn.execute(
                     "SELECT id, firstName, lastName, email, phone, role, created_at FROM users WHERE role != 'admin'"
                 );
-                await conn.end();
                 return NextResponse.json({ users: rows });
             }
         } catch (err) {
@@ -86,7 +85,7 @@ export async function PUT(request) {
     try {
         const body = await request.json();
         const role = 'admin';
-        const { firstName, lastName, email, phone, password } = body;
+        const { id, firstName, lastName, email, phone, password } = body;
 
         if (!firstName || !lastName || !email || !phone) {
             return NextResponse.json({ message: "firstName, lastName, email, and phone are required" }, { status: 400 });
@@ -114,7 +113,7 @@ export async function PUT(request) {
         //Build the query dynamically based on whether password is updated
         const query = hashedPassword
             ? "UPDATE users SET firstName = ?, lastName = ?, email = ?, phone = ?, password_hash = ? WHERE id = ?"
-            : "UPDATE users SET firstName = ?, lastName = ?, email = ?, phone = ?, WHERE id = ?";
+            : "UPDATE users SET firstName = ?, lastName = ?, email = ?, phone = ? WHERE id = ?";
 
         const params = hashedPassword
             ? [firstName, lastName, email, phone, hashedPassword, id]

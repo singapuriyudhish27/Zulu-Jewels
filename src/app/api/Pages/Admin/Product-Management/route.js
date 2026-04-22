@@ -107,6 +107,32 @@ export async function POST(request) {
 
         const productId = productResult.insertId;
 
+        // --- Parallel Media Uploads Optimization ---
+        const uploadTasks = [];
+        
+        // Collect variant media
+        variants.forEach((v, i) => {
+            const files = formData.getAll(`media_variant_${i}`);
+            files.forEach((file, j) => {
+                uploadTasks.push((async () => {
+                    const url = await saveFile(file);
+                    return { type: 'variant', variantIndex: i, fileIndex: j, url, file };
+                })());
+            });
+        });
+
+        // Collect generic media
+        const genericFiles = formData.getAll("media");
+        genericFiles.forEach((file, i) => {
+            uploadTasks.push((async () => {
+                const url = await saveFile(file);
+                return { type: 'generic', fileIndex: i, url, file };
+            })());
+        });
+
+        // Run all uploads concurrently
+        const uploadResults = await Promise.all(uploadTasks);
+
         // Process Variants
         for (let i = 0; i < variants.length; i++) {
             const v = variants[i];
@@ -115,32 +141,29 @@ export async function POST(request) {
             `, [productId, v.material, v.description, v.price || price, v.stock || 0]);
             
             const variantId = varResult.insertId;
-
-            // Save variant-specific media
-            const variantFiles = formData.getAll(`media_variant_${i}`);
             const primaryIndex = parseInt(formData.get(`primary_index_variant_${i}`) || "0");
 
-            for (let j = 0; j < variantFiles.length; j++) {
-                const file = variantFiles[j];
-                const mediaUrl = await saveFile(file);
-                if (mediaUrl) {
-                    const mediaType = file.type.startsWith("video/") ? "video" : "image";
+            // Filter uploaded media for this variant
+            const variantMedia = uploadResults.filter(r => r.type === 'variant' && r.variantIndex === i);
+            
+            for (const media of variantMedia) {
+                if (media.url) {
+                    const mediaType = media.file.type.startsWith("video/") ? "video" : "image";
                     await connection.execute(`
                         INSERT INTO product_images (product_id, variant_id, media_url, media_type, is_primary) VALUES (?, ?, ?, ?, ?)
-                    `, [productId, variantId, mediaUrl, mediaType, j === primaryIndex]);
+                    `, [productId, variantId, media.url, mediaType, media.fileIndex === primaryIndex]);
                 }
             }
         }
 
-        // Handle generic product media (if any)
-        const genericFiles = formData.getAll("media");
-        for (let i = 0; i < genericFiles.length; i++) {
-            const mediaUrl = await saveFile(genericFiles[i]);
-            if (mediaUrl) {
-                const mediaType = genericFiles[i].type.startsWith("video/") ? "video" : "image";
+        // Handle generic product media
+        const genericMedia = uploadResults.filter(r => r.type === 'generic');
+        for (const media of genericMedia) {
+            if (media.url) {
+                const mediaType = media.file.type.startsWith("video/") ? "video" : "image";
                 await connection.execute(`
                     INSERT INTO product_images (product_id, variant_id, media_url, media_type, is_primary) VALUES (?, NULL, ?, ?, ?)
-                `, [productId, mediaUrl, mediaType, false]);
+                `, [productId, media.url, mediaType, false]);
             }
         }
 
@@ -158,6 +181,7 @@ export async function PUT(request) {
         const contentType = request.headers.get("content-type") || "";
 
         let id, name, category_name, description, price, material, gender, is_active, variants = [];
+        let formData = null;
         let isJson = contentType.includes("application/json");
 
         if (isJson) {
@@ -167,7 +191,7 @@ export async function PUT(request) {
             is_active = data.is_active;
         } else {
             // Handle full FormData updates (with images)
-            const formData = await request.formData();
+            formData = await request.formData();
             id = formData.get("id");
             name = formData.get("name");
             category_name = formData.get("category_name");
