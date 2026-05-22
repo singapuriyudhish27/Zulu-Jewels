@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { User, Users, MapPin, Settings } from 'lucide-react';
+import { User, Users, MapPin, Settings, RefreshCw, Copy, Wrench } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import { LogOut } from 'lucide-react';
@@ -11,7 +11,93 @@ export default function ProfilePage() {
   const [loggedInUserdata, setLoggedInUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [settingsLoading, setSettingsLoading] = useState(false);
+  const [settingsSaving, setSettingsSaving] = useState(false);
+  const [rotateModalOpen, setRotateModalOpen] = useState(false);
+  const [rotating, setRotating] = useState(false);
+  const [adminPortalUrl, setAdminPortalUrl] = useState('');
+  const [maintenanceEnabled, setMaintenanceEnabled] = useState(false);
+  const [maintenanceMessage, setMaintenanceMessage] = useState('');
+  const [maintenanceStartsAt, setMaintenanceStartsAt] = useState('');
+  const [maintenanceEndsAt, setMaintenanceEndsAt] = useState('');
+  const [maintenanceStatus, setMaintenanceStatus] = useState('inactive');
   const router = useRouter();
+
+  const toDatetimeLocal = (iso) => {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  };
+
+  const fetchAdminSettings = async () => {
+    setSettingsLoading(true);
+    try {
+      const res = await fetch('/api/Pages/Admin/Settings', { credentials: 'include' });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setAdminPortalUrl(data.adminPortal?.url || '');
+      setMaintenanceEnabled(Boolean(data.maintenance?.enabled));
+      setMaintenanceMessage(data.maintenance?.message || '');
+      setMaintenanceStartsAt(toDatetimeLocal(data.maintenance?.startsAt));
+      setMaintenanceEndsAt(toDatetimeLocal(data.maintenance?.endsAt));
+      setMaintenanceStatus(data.maintenance?.status || 'inactive');
+    } catch (err) {
+      toast.error(err.message || 'Failed to load settings');
+    } finally {
+      setSettingsLoading(false);
+    }
+  };
+
+  const handleSaveSettings = async () => {
+    setSettingsSaving(true);
+    try {
+      const res = await fetch('/api/Pages/Admin/Settings', {
+        method: 'PUT',
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          maintenanceEnabled,
+          maintenanceMessage,
+          maintenanceStartsAt: maintenanceEnabled ? new Date(maintenanceStartsAt).toISOString() : null,
+          maintenanceEndsAt: maintenanceEnabled ? new Date(maintenanceEndsAt).toISOString() : null,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setMaintenanceStatus(data.maintenance?.status || 'inactive');
+      toast.success('Settings saved');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save settings');
+    } finally {
+      setSettingsSaving(false);
+    }
+  };
+
+  const handleRotateRoute = async () => {
+    setRotating(true);
+    try {
+      const res = await fetch('/api/Pages/Admin/Settings/rotate-route', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      setAdminPortalUrl(data.adminPortal?.url || '');
+      setRotateModalOpen(false);
+      toast.success('New admin portal URL generated. Save it — old links no longer work.');
+    } catch (err) {
+      toast.error(err.message || 'Failed to rotate route');
+    } finally {
+      setRotating(false);
+    }
+  };
+
+  const copyPortalUrl = () => {
+    if (!adminPortalUrl) return;
+    navigator.clipboard.writeText(adminPortalUrl);
+    toast.success('Admin portal URL copied');
+  };
 
   useEffect(() => {
     //Backend API Call
@@ -34,6 +120,7 @@ export default function ProfilePage() {
       }
     }
     fetchProfile();
+    fetchAdminSettings();
 
     // Tab switching functionality
     const menuItems = document.querySelectorAll('.profile-menu li');
@@ -67,8 +154,17 @@ export default function ProfilePage() {
     setIsLogoutModalOpen(true);
   };
 
-  const confirmLogout = () => {
-    router.push('/auth/login');
+  const confirmLogout = async () => {
+    try {
+      const res = await fetch('/api/Pages/Profile', { method: 'POST', credentials: 'include' });
+      if (res.ok) {
+        const settingsRes = await fetch('/api/Pages/Admin/Settings', { credentials: 'include' });
+        const data = await settingsRes.json();
+        router.push(data.adminPortal?.path || '/auth/login');
+      }
+    } catch {
+      router.push('/auth/login');
+    }
   };
 
   const handleCurrentAdmin = async (e) => {
@@ -1100,55 +1196,118 @@ export default function ProfilePage() {
           {/* Settings Section */}
           <div className="profile-section">
             <div className="section-header">
-              <h1>Account Settings</h1>
-              <p>Manage your preferences and notifications</p>
+              <h1>Site Settings</h1>
+              <p>Maintenance mode and admin portal security</p>
             </div>
 
-            <div className="settings-section">
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>Email Notifications</h3>
-                  <p>Receive updates about your orders and special offers</p>
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" defaultChecked />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
+            {settingsLoading ? (
+              <p style={{ color: '#888', fontSize: '14px' }}>Loading settings...</p>
+            ) : (
+              <div className="settings-section">
+                {/* Maintenance Mode */}
+                <div className="setting-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '16px' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', width: '100%' }}>
+                    <div className="setting-info">
+                      <h3><Wrench size={16} style={{ display: 'inline', marginRight: '6px' }} />Maintenance Mode</h3>
+                      <p>Visitors only see the maintenance page during the scheduled window</p>
+                      <span style={{
+                        display: 'inline-block',
+                        marginTop: '8px',
+                        fontSize: '11px',
+                        fontWeight: 700,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.06em',
+                        color: maintenanceStatus === 'active' ? '#c0392b' : '#CEA268',
+                      }}>
+                        Status: {maintenanceStatus === 'active' ? 'Live now' : maintenanceEnabled ? 'Scheduled / outside window' : 'Inactive'}
+                      </span>
+                    </div>
+                    <label className="toggle-switch">
+                      <input
+                        type="checkbox"
+                        checked={maintenanceEnabled}
+                        onChange={(e) => setMaintenanceEnabled(e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
 
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>SMS Notifications</h3>
-                  <p>Get text messages about order updates</p>
+                  {maintenanceEnabled && (
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', width: '100%' }}>
+                      <div>
+                        <label className="form-label">Start</label>
+                        <input
+                          type="datetime-local"
+                          className="form-input"
+                          value={maintenanceStartsAt}
+                          onChange={(e) => setMaintenanceStartsAt(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label">End</label>
+                        <input
+                          type="datetime-local"
+                          className="form-input"
+                          value={maintenanceEndsAt}
+                          onChange={(e) => setMaintenanceEndsAt(e.target.value)}
+                          required
+                        />
+                      </div>
+                      <div>
+                        <label className="form-label">Message for visitors</label>
+                        <textarea
+                          className="form-input"
+                          rows={3}
+                          value={maintenanceMessage}
+                          onChange={(e) => setMaintenanceMessage(e.target.value)}
+                          placeholder="We are upgrading our store. Please check back soon."
+                          style={{ resize: 'vertical', minHeight: '80px' }}
+                        />
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
 
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>Marketing Communications</h3>
-                  <p>Receive newsletters and promotional content</p>
+                {/* Admin Portal Route */}
+                <div className="setting-item" style={{ flexDirection: 'column', alignItems: 'stretch', gap: '12px' }}>
+                  <div className="setting-info">
+                    <h3>Admin Portal URL</h3>
+                    <p>Only this link allows admin login. Rotate to invalidate old URLs.</p>
+                  </div>
+                  <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap' }}>
+                    <input
+                      type="text"
+                      readOnly
+                      value={adminPortalUrl}
+                      className="form-input"
+                      style={{ flex: 1, minWidth: '200px', background: '#f9f9f9', fontSize: '12px' }}
+                    />
+                    <button type="button" className="save-btn" style={{ flex: 'none', padding: '10px 16px' }} onClick={copyPortalUrl}>
+                      <Copy size={14} style={{ display: 'inline', marginRight: '4px' }} /> Copy
+                    </button>
+                    <button
+                      type="button"
+                      className="save-btn"
+                      style={{ flex: 'none', padding: '10px 16px', background: '#CEA268', borderColor: '#CEA268' }}
+                      onClick={() => setRotateModalOpen(true)}
+                    >
+                      <RefreshCw size={14} style={{ display: 'inline', marginRight: '4px' }} /> Rotate
+                    </button>
+                  </div>
                 </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" defaultChecked />
-                  <span className="toggle-slider"></span>
-                </label>
-              </div>
 
-              <div className="setting-item">
-                <div className="setting-info">
-                  <h3>Two-Factor Authentication</h3>
-                  <p>Add an extra layer of security to your account</p>
-                </div>
-                <label className="toggle-switch">
-                  <input type="checkbox" />
-                  <span className="toggle-slider"></span>
-                </label>
+                <button
+                  type="button"
+                  className="save-btn"
+                  onClick={handleSaveSettings}
+                  disabled={settingsSaving}
+                  style={{ marginTop: '8px', maxWidth: '200px' }}
+                >
+                  {settingsSaving ? 'Saving...' : 'Save Settings'}
+                </button>
               </div>
-            </div>
+            )}
           </div>
         <ConfirmModal 
           isOpen={isLogoutModalOpen}
@@ -1160,6 +1319,17 @@ export default function ProfilePage() {
           cancelText="Stay Logged In"
           type="warning"
           icon={<LogOut size={24} />}
+        />
+        <ConfirmModal
+          isOpen={rotateModalOpen}
+          onClose={() => setRotateModalOpen(false)}
+          onConfirm={handleRotateRoute}
+          title="Rotate Admin Portal URL?"
+          message="This generates a new admin login URL. All old portal links will stop working immediately. Make sure to copy and save the new URL."
+          confirmText={rotating ? 'Rotating...' : 'Rotate URL'}
+          cancelText="Cancel"
+          type="warning"
+          icon={<RefreshCw size={24} />}
         />
         </main>
       </div>

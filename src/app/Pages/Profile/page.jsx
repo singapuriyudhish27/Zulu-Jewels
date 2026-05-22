@@ -7,6 +7,9 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import dynamic from 'next/dynamic';
+
+const LocationMap = dynamic(() => import('@/components/map/LocationMap'), { ssr: false });
 
 export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState(0);
@@ -20,6 +23,11 @@ export default function ProfilePage() {
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [newAddressText, setNewAddressText] = useState('');
   const [addressLoading, setAddressLoading] = useState(false);
+  const [mapCenter, setMapCenter] = useState(null);
+  const [houseNumber, setHouseNumber] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [addressTag, setAddressTag] = useState('Home');
+  const [autoAddress, setAutoAddress] = useState('');
   const router = useRouter();
 
   const searchParams = useSearchParams();
@@ -62,10 +70,18 @@ export default function ProfilePage() {
 
   // 🔹 Add a new address
   const handleAddAddress = async () => {
-    if (!newAddressText.trim()) {
-      toast.error('Please enter an address');
+    if (!autoAddress.trim()) {
+      toast.error('Please select your location on the map');
       return;
     }
+    if (!houseNumber.trim()) {
+      toast.error('Please enter flat, house no., or building name');
+      return;
+    }
+    
+    // Format address similarly to food delivery apps
+    const finalAddress = `${addressTag.toUpperCase()}: ${houseNumber.trim()}, ${autoAddress.trim()}${landmark.trim() ? ` (Landmark: ${landmark.trim()})` : ''}`;
+
     setAddressLoading(true);
     try {
       const isFirst = savedAddresses.length === 0;
@@ -73,16 +89,20 @@ export default function ProfilePage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ address_line: newAddressText.trim(), is_default: isFirst }),
+        body: JSON.stringify({ address_line: finalAddress, is_default: isFirst }),
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
       setSavedAddresses(prev => [...prev, {
         id: result.id,
-        address_line: newAddressText.trim(),
+        address_line: finalAddress,
         is_default: isFirst,
       }]);
-      setNewAddressText('');
+      setHouseNumber('');
+      setLandmark('');
+      setAutoAddress('');
+      setAddressTag('Home');
+      setMapCenter(null);
       setShowAddressModal(false);
       toast.success('Address saved!');
     } catch (err) {
@@ -90,6 +110,25 @@ export default function ProfilePage() {
     } finally {
       setAddressLoading(false);
     }
+  };
+
+  const handleUseCurrentLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setMapCenter({ lat: position.coords.latitude, lng: position.coords.longitude });
+        },
+        (error) => {
+          toast.error("Unable to retrieve your location");
+        }
+      );
+    } else {
+      toast.error("Geolocation is not supported by your browser");
+    }
+  };
+
+  const handleLocationSelect = (location) => {
+    setAutoAddress(location.address);
   };
 
   // 🔹 Delete an address
@@ -1100,9 +1139,9 @@ export default function ProfilePage() {
                                 type="button"
                                 onClick={() => handleSetDefault(addr.id)}
                                 title="Set as default"
-                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#CEA268', padding: '2px' }}
+                                style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#CEA268', padding: '2px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}
                               >
-                                <Star size={15} />
+                                Set As Default
                               </button>
                             )}
                             <button
@@ -1146,50 +1185,201 @@ export default function ProfilePage() {
                   zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
                 }}>
                   <div style={{
-                    background: '#fff', borderRadius: '4px', padding: '32px',
-                    width: '100%', maxWidth: '480px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
-                    animation: 'fadeIn 0.25s ease'
+                    background: '#fff', borderRadius: '8px', padding: '28px',
+                    width: '100%', maxWidth: '780px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+                    animation: 'fadeIn 0.25s ease', maxHeight: '90vh', overflowY: 'auto'
                   }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
-                      <h3 style={{ fontSize: '18px', fontWeight: 600, color: '#000' }}>Add New Address</h3>
-                      <button type="button" onClick={() => { setShowAddressModal(false); setNewAddressText(''); }}
-                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '22px', color: '#999', lineHeight: 1 }}>×</button>
+                    {/* Header */}
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+                      <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#000', fontFamily: 'Montserrat, sans-serif' }}>Select Delivery Location</h3>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setShowAddressModal(false);
+                          setHouseNumber('');
+                          setLandmark('');
+                          setAutoAddress('');
+                          setAddressTag('Home');
+                          setMapCenter(null);
+                        }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px', color: '#999', lineHeight: 1 }}
+                      >
+                        ×
+                      </button>
                     </div>
-                    <label className="form-label" style={{ display: 'block', marginBottom: '8px' }}>Full Address</label>
-                    <textarea
-                      value={newAddressText}
-                      onChange={(e) => setNewAddressText(e.target.value)}
-                      placeholder="e.g. 101, Gold Residency, Ring Road, Surat, Gujarat – 395007"
-                      style={{
-                        width: '100%', padding: '12px 14px', border: '1px solid #E5E5E5',
-                        borderRadius: '4px', fontSize: '13px', fontFamily: 'Montserrat, sans-serif',
-                        resize: 'none', height: '100px', outline: 'none', boxSizing: 'border-box',
-                      }}
-                    />
-                    <div style={{ display: 'flex', gap: '12px', marginTop: '20px' }}>
-                      <button
-                        type="button"
-                        onClick={handleAddAddress}
-                        disabled={addressLoading}
-                        style={{
-                          flex: 1, padding: '13px', background: '#000', color: '#fff',
-                          border: 'none', borderRadius: '4px', fontSize: '13px', fontWeight: 700,
-                          textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer',
-                        }}
-                      >
-                        {addressLoading ? 'Saving...' : 'Save Address'}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => { setShowAddressModal(false); setNewAddressText(''); }}
-                        style={{
-                          flex: 1, padding: '13px', background: '#fff', color: '#000',
-                          border: '1px solid #E5E5E5', borderRadius: '4px', fontSize: '13px',
-                          fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.1em', cursor: 'pointer',
-                        }}
-                      >
-                        Cancel
-                      </button>
+
+                    {/* Responsive Content Columns */}
+                    <div style={{
+                      display: 'flex',
+                      flexWrap: 'wrap',
+                      gap: '24px'
+                    }}>
+                      {/* Left: Map */}
+                      <div style={{ flex: '1 1 340px', minWidth: '280px' }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#CEA268', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                          Move Map to Adjust Location Pin
+                        </div>
+                        <LocationMap 
+                          onLocationSelect={handleLocationSelect} 
+                          mapCenter={mapCenter} 
+                        />
+                      </div>
+
+                      {/* Right: Address Details Form */}
+                      <div style={{ flex: '1 1 280px', minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div>
+                          <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            Save As
+                          </label>
+                          <div style={{ display: 'flex', gap: '8px' }}>
+                            {['Home', 'Work', 'Other'].map((tag) => (
+                              <button
+                                key={tag}
+                                type="button"
+                                onClick={() => setAddressTag(tag)}
+                                style={{
+                                  flex: 1,
+                                  padding: '10px 0',
+                                  borderRadius: '4px',
+                                  border: `1px solid ${addressTag === tag ? '#000' : '#E5E5E5'}`,
+                                  background: addressTag === tag ? '#000' : '#fff',
+                                  color: addressTag === tag ? '#fff' : '#555',
+                                  fontSize: '12px',
+                                  fontWeight: 600,
+                                  cursor: 'pointer',
+                                  fontFamily: 'Montserrat, sans-serif',
+                                  transition: 'all 0.2s'
+                                }}
+                              >
+                                {tag}
+                              </button>
+                            ))}
+                          </div>
+                        </div>
+
+                        <div>
+                          <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            Flat / House No. / Building Name *
+                          </label>
+                          <input
+                            type="text"
+                            required
+                            placeholder="e.g. Flat 302, Royal Enclave"
+                            value={houseNumber}
+                            onChange={(e) => setHouseNumber(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '11px 12px',
+                              border: '1px solid #E5E5E5',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              color: '#333',
+                              fontFamily: 'Montserrat, sans-serif',
+                              boxSizing: 'border-box',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            Locality / Street / Area (Auto-detected)
+                          </label>
+                          <textarea
+                            readOnly
+                            placeholder="Move the map pin to select area"
+                            value={autoAddress}
+                            style={{
+                              width: '100%',
+                              padding: '11px 12px',
+                              border: '1px solid #E5E5E5',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              color: '#666',
+                              background: '#F9F9F9',
+                              fontFamily: 'Montserrat, sans-serif',
+                              boxSizing: 'border-box',
+                              resize: 'none',
+                              height: '55px',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        <div>
+                          <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                            Landmark (Optional)
+                          </label>
+                          <input
+                            type="text"
+                            placeholder="e.g. Opposite Star Mall"
+                            value={landmark}
+                            onChange={(e) => setLandmark(e.target.value)}
+                            style={{
+                              width: '100%',
+                              padding: '11px 12px',
+                              border: '1px solid #E5E5E5',
+                              borderRadius: '4px',
+                              fontSize: '13px',
+                              color: '#333',
+                              fontFamily: 'Montserrat, sans-serif',
+                              boxSizing: 'border-box',
+                              outline: 'none'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                          <button
+                            type="button"
+                            onClick={handleAddAddress}
+                            disabled={addressLoading}
+                            style={{
+                              flex: 1.2,
+                              padding: '12px',
+                              background: '#000',
+                              color: '#fff',
+                              border: 'none',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 700,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.08em',
+                              cursor: 'pointer',
+                              fontFamily: 'Montserrat, sans-serif'
+                            }}
+                          >
+                            {addressLoading ? 'Saving...' : 'Save Location'}
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowAddressModal(false);
+                              setHouseNumber('');
+                              setLandmark('');
+                              setAutoAddress('');
+                              setAddressTag('Home');
+                              setMapCenter(null);
+                            }}
+                            style={{
+                              flex: 0.8,
+                              padding: '12px',
+                              background: '#fff',
+                              color: '#000',
+                              border: '1px solid #E5E5E5',
+                              borderRadius: '4px',
+                              fontSize: '12px',
+                              fontWeight: 600,
+                              textTransform: 'uppercase',
+                              letterSpacing: '0.08em',
+                              cursor: 'pointer',
+                              fontFamily: 'Montserrat, sans-serif'
+                            }}
+                          >
+                            Cancel
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>

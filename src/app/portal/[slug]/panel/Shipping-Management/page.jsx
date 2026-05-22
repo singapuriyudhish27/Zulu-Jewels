@@ -2,6 +2,7 @@
 
 import "./shipping.css";
 import { useRouter } from "next/navigation";
+import { useAdminBase } from "@/hooks/useAdminBase";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
@@ -40,6 +41,7 @@ import {
 import ConfirmModal from "@/components/common/ConfirmModal";
 
 export default function ShippingPaymentPage() {
+    const { path } = useAdminBase();
     const router = useRouter();
     const [activeTab, setActiveTab] = useState("shipping");
     const [loading, setLoading] = useState(true);
@@ -429,7 +431,7 @@ export default function ShippingPaymentPage() {
     };
 
     const handleProfile = () => {
-        router.push("/Pages/Admin/Profile");
+        router.push(path('Profile'));
     };
 
     // Map Shipping Zones

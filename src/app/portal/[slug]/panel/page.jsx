@@ -3,6 +3,7 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAdminBase } from "@/hooks/useAdminBase";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import {
@@ -33,6 +34,7 @@ import {
 
 export default function AdminPage() {
   const router = useRouter();
+  const { path } = useAdminBase();
   const [loggedInUserData, setLoggedInUserData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [dashboardData, setDashboardData] = useState({
@@ -215,22 +217,22 @@ export default function AdminPage() {
 
           {/* Quick Actions */}
           <div className="quick-actions" style={{ marginBottom: 30 }}>
-            <div className="quick-action-card" onClick={() => router.push("/Pages/Admin/Order-Management")}>
+            <div className="quick-action-card" onClick={() => router.push(path('Order-Management'))}>
               <div className="quick-action-icon"><ShoppingBag size={28} /></div>
               <div className="quick-action-title">New Orders</div>
               <div className="quick-action-count">{loading ? "..." : pendingOrdersCount} pending</div>
             </div>
-            <div className="quick-action-card" onClick={() => router.push("/Pages/Admin/Contact-Management")}>
+            <div className="quick-action-card" onClick={() => router.push(path('Contact-Management'))}>
               <div className="quick-action-icon"><MessageSquare size={28} /></div>
               <div className="quick-action-title">Inquiries</div>
               <div className="quick-action-count">{loading ? "..." : unreadInquiries} unread</div>
             </div>
-            <div className="quick-action-card" onClick={() => router.push("/Pages/Admin/Reviews-Management")}>
+            <div className="quick-action-card" onClick={() => router.push(path('Reviews-Management'))}>
               <div className="quick-action-icon"><Star size={28} /></div>
               <div className="quick-action-title">Reviews</div>
               <div className="quick-action-count">{loading ? "..." : pendingReviews} pending</div>
             </div>
-            <div className="quick-action-card" onClick={() => router.push("/Pages/Admin/Product-Management")}>
+            <div className="quick-action-card" onClick={() => router.push(path('Product-Management'))}>
               <div className="quick-action-icon"><AlertCircle size={28} /></div>
               <div className="quick-action-title">Manage Products</div>
               <div className="quick-action-count">{loading ? "..." : dashboardData.products.length} items</div>
@@ -243,7 +245,7 @@ export default function AdminPage() {
             <div className="content-card">
               <div className="content-card-header">
                 <h3 className="content-card-title"><ShoppingCart size={20} /> Recent Orders</h3>
-                <span className="view-all-btn" onClick={() => router.push("/Pages/Admin/Order-Management")}>View All <ArrowUpRight size={14} /></span>
+                <span className="view-all-btn" onClick={() => router.push(path('Order-Management'))}>View All <ArrowUpRight size={14} /></span>
               </div>
               {loading ? (
                 <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading orders...</div>
@@ -296,7 +298,7 @@ export default function AdminPage() {
           <div className="content-card">
             <div className="content-card-header">
               <h3 className="content-card-title"><Crown size={20} /> Top Selling Products</h3>
-              <span className="view-all-btn" onClick={() => router.push("/Pages/Admin/Product-Management")}>View All <ArrowUpRight size={14} /></span>
+              <span className="view-all-btn" onClick={() => router.push(path('Product-Management'))}>View All <ArrowUpRight size={14} /></span>
             </div>
             {loading ? (
               <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading products...</div>

@@ -2,11 +2,12 @@ import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { getConnection } from "@/lib/db";
 import jwt from "jsonwebtoken";
+import { validateAdminSlug } from "@/lib/adminSecurity";
 
 export async function POST(req) {
     try {
         const body = await req.json();
-        const { email, password } = body;
+        const { email, password, portalSlug } = body;
 
         if (!email || !password) {
             return NextResponse.json({ message: "Email and password are required" }, { status: 400 });
@@ -14,6 +15,13 @@ export async function POST(req) {
 
         //If Admin Login
         if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
+            const slugValid = await validateAdminSlug(portalSlug);
+            if (!slugValid) {
+                return NextResponse.json(
+                    { message: "Invalid admin access. Use your current admin portal link." },
+                    { status: 401 }
+                );
+            }
             const token = jwt.sign(
                 { userId: "admin", email: process.env.ADMIN_EMAIL, role: "admin" },
                 process.env.JWT_SECRET,

@@ -3,6 +3,7 @@
 import "./customer.css";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { useAdminBase } from "@/hooks/useAdminBase";
 import Image from "next/image";
 import toast from "react-hot-toast";
 import {
@@ -37,6 +38,7 @@ import {
 } from "lucide-react";
 
 export default function CustomerManagementPage() {
+  const { path } = useAdminBase();
   const router = useRouter();
   const [customersData, setCustomersData] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -376,7 +378,7 @@ export default function CustomerManagementPage() {
                               <button 
                                 className="dropdown-view-btn"
                                 title="Go to Order Details"
-                                onClick={() => router.push(`/Pages/Admin/Order-Management?orderId=${order.id}`)}
+                                onClick={() => router.push(`${path('Order-Management')}?orderId=${order.id}`)}
                               >
                                 <ShoppingCart size={14} />
                               </button>

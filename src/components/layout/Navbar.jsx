@@ -28,8 +28,14 @@ export default function Navbar() {
       const data = await response.json();
       console.log("Navbar Data: ", data);
 
-      if (data.role === "Admin") {
-        router.replace('/Pages/Admin');
+      if (data.role === "Admin" || data.role === "admin") {
+        const settingsRes = await fetch('/api/Pages/Admin/Settings', { credentials: 'include' });
+        if (settingsRes.ok) {
+          const settings = await settingsRes.json();
+          router.replace(settings.adminPortal?.path || '/auth/login');
+        } else {
+          router.replace('/auth/login');
+        }
       } else if (data.role === "User") {
         router.replace(targetPage);
       } else {

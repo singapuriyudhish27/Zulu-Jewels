@@ -33,7 +33,7 @@ export default function LoginPage() {
                 toast.success("Welcome back to Zulu Jewellers!");
 
                 if (data.user.role === "admin") {
-                    router.push("/Pages/Admin");
+                    toast.error("Use your secure admin portal link to sign in.");
                 } else if (callbackUrl) {
                     console.log("CallBack:", callbackUrl);
                     router.push(callbackUrl);

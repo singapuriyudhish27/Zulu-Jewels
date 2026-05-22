@@ -372,6 +372,32 @@ export async function getConnection() {
         }
     }
 
+    // Site-wide settings (maintenance mode)
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS site_settings (
+        id TINYINT PRIMARY KEY DEFAULT 1,
+        maintenance_enabled BOOLEAN DEFAULT FALSE,
+        maintenance_message TEXT,
+        maintenance_starts_at DATETIME NULL,
+        maintenance_ends_at DATETIME NULL,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB;
+    `);
+
+    await connection.execute(`
+      INSERT IGNORE INTO site_settings (id) VALUES (1)
+    `);
+
+    // Rotating admin portal slug
+    await connection.execute(`
+      CREATE TABLE IF NOT EXISTS admin_security (
+        id TINYINT PRIMARY KEY DEFAULT 1,
+        route_slug VARCHAR(64) NOT NULL,
+        rotated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      ) ENGINE=InnoDB;
+    `);
+
     console.log('✅ Tables ensured');
     isInitialized = true;
 
