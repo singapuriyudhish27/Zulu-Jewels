@@ -55,7 +55,7 @@ export default function CustomerManagementPage() {
   useEffect(() => {
     const fetchCustomers = async () => {
       try {
-        const response = await fetch('/api/Pages/Admin/Customer-Management', {
+        const response = await fetch('/api/Admin/Customer-Management', {
           credentials: 'include',
         });
         const result = await response.json();
@@ -176,7 +176,7 @@ export default function CustomerManagementPage() {
 
     setSendingEmail(true);
     try {
-      const response = await fetch('/api/Pages/Admin/Customer-Management/send-email', {
+      const response = await fetch('/api/Admin/Customer-Management/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

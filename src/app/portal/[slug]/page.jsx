@@ -26,6 +26,7 @@ export default function AdminPortalLoginPage() {
       });
 
       const data = await response.json();
+      console.log("Admin Panel:", data);
 
       if (response.ok && data.user?.role === 'admin') {
         toast.success('Welcome to Admin Panel');

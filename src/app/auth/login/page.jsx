@@ -42,6 +42,7 @@ export default function LoginPage() {
                 }
             } else {
                 toast.error(data.message || 'Login failed. Please check your credentials.');
+                router.push("/auth/register");
             }
         } catch (error) {
             console.error("Login error:", error);

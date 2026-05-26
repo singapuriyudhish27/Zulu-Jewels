@@ -98,7 +98,7 @@ export default function ShippingPaymentPage() {
 
     const fetchShippingData = async () => {
         try {
-            const response = await fetch('/api/Pages/Admin/Shipping-Management', {
+            const response = await fetch('/api/Admin/Shipping-Management', {
                 credentials: 'include',
             });
             const result = await response.json();
@@ -152,7 +152,7 @@ export default function ShippingPaymentPage() {
         setSaving(true);
         try {
             const isEdit = editingZone !== null;
-            const url = '/api/Pages/Admin/Shipping-Management/Shipping-Zones';
+            const url = '/api/Admin/Shipping-Management/Shipping-Zones';
             const method = isEdit ? 'PUT' : 'POST';
             const body = isEdit ? { id: editingZone.id, ...zoneForm } : { ...zoneForm };
 
@@ -186,7 +186,7 @@ export default function ShippingPaymentPage() {
             type: "danger",
             onConfirm: async () => {
                 try {
-                    const res = await fetch(`/api/Pages/Admin/Shipping-Management/Shipping-Zones?id=${zoneId}`, {
+                    const res = await fetch(`/api/Admin/Shipping-Management/Shipping-Zones?id=${zoneId}`, {
                         method: 'DELETE',
                         credentials: 'include',
                     });
@@ -237,7 +237,7 @@ export default function ShippingPaymentPage() {
         setSavingPartner(true);
         try {
             const isEdit = editingPartner !== null;
-            const url = '/api/Pages/Admin/Shipping-Management/Shipping-Partner';
+            const url = '/api/Admin/Shipping-Management/Shipping-Partner';
             const method = isEdit ? 'PUT' : 'POST';
             const body = isEdit ? { id: editingPartner.id, ...partnerForm } : { ...partnerForm };
 
@@ -271,7 +271,7 @@ export default function ShippingPaymentPage() {
             type: "danger",
             onConfirm: async () => {
                 try {
-                    const res = await fetch(`/api/Pages/Admin/Shipping-Management/Shipping-Partner?id=${partnerId}`, {
+                    const res = await fetch(`/api/Admin/Shipping-Management/Shipping-Partner?id=${partnerId}`, {
                         method: 'DELETE',
                         credentials: 'include',
                     });
@@ -307,7 +307,7 @@ export default function ShippingPaymentPage() {
         e.preventDefault();
         setSavingPayment(true);
         try {
-            const url = '/api/Pages/Admin/Shipping-Management/Payment-Method';
+            const url = '/api/Admin/Shipping-Management/Payment-Method';
             const method = 'POST';
             const body = { ...paymentForm };
 
@@ -343,7 +343,7 @@ export default function ShippingPaymentPage() {
             type: "danger",
             onConfirm: async () => {
                 try {
-                    const res = await fetch(`/api/Pages/Admin/Shipping-Management/Payment-Method?id=${methodId}`, {
+                    const res = await fetch(`/api/Admin/Shipping-Management/Payment-Method?id=${methodId}`, {
                         method: 'DELETE',
                         credentials: 'include',
                     });
@@ -366,7 +366,7 @@ export default function ShippingPaymentPage() {
     const handleTogglePaymentMethod = async (methodId, currentStatus) => {
         const newStatus = !currentStatus;
         try {
-            const res = await fetch('/api/Pages/Admin/Shipping-Management/Payment-Method', {
+            const res = await fetch('/api/Admin/Shipping-Management/Payment-Method', {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
                 credentials: 'include',
@@ -402,7 +402,7 @@ export default function ShippingPaymentPage() {
             
             const txnId = transaction._raw.id; // Accessing raw ID
             
-            const response = await fetch(`/api/Pages/Admin/Shipping-Management/Transactions?id=${txnId}`, {
+            const response = await fetch(`/api/Admin/Shipping-Management/Transactions?id=${txnId}`, {
                 method: 'GET',
             });
 

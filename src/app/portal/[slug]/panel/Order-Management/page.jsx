@@ -57,7 +57,7 @@ export default function OrderManagementPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('/api/Pages/Admin/Order-Management', {
+        const response = await fetch('/api/Admin/Order-Management', {
           credentials: 'include',
         });
         const result = await response.json();
@@ -243,7 +243,7 @@ export default function OrderManagementPage() {
 
     setUpdatingStatus(true);
     try {
-      const res = await fetch("/api/Pages/Admin/Order-Management", {
+      const res = await fetch("/api/Admin/Order-Management", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -294,7 +294,7 @@ export default function OrderManagementPage() {
   const performDeleteOrder = async () => {
     setDeletingOrder(true);
     try {
-      const res = await fetch('/api/Pages/Admin/Order-Management', {
+      const res = await fetch('/api/Admin/Order-Management', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

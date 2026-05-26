@@ -70,7 +70,7 @@ export default function ContactManagementPage() {
   useEffect(() => {
     const fetchInquiries = async () => {
       try {
-        const response = await fetch('/api/Pages/Admin/Contact-Management', {
+        const response = await fetch('/api/Admin/Contact-Management', {
           credentials: 'include',
         });
         const result = await response.json();
@@ -202,7 +202,7 @@ export default function ContactManagementPage() {
   const handleUpdateStatus = async (id, status) => {
     setProcessingAction(true);
     try {
-      const response = await fetch('/api/Pages/Admin/Contact-Management', {
+      const response = await fetch('/api/Admin/Contact-Management', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ id, status }),
@@ -235,7 +235,7 @@ export default function ContactManagementPage() {
       onConfirm: async () => {
         setProcessingAction(true);
         try {
-          const response = await fetch(`/api/Pages/Admin/Contact-Management?id=${id}`, {
+          const response = await fetch(`/api/Admin/Contact-Management?id=${id}`, {
             method: 'DELETE',
             credentials: 'include',
           });
@@ -268,7 +268,7 @@ export default function ContactManagementPage() {
 
     setSendingEmail(true);
     try {
-      const response = await fetch('/api/Pages/Admin/Customer-Management/send-email', {
+      const response = await fetch('/api/Admin/Customer-Management/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

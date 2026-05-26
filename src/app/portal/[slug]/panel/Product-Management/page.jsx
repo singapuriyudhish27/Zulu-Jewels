@@ -87,7 +87,7 @@ export default function ProductManagementPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/Pages/Admin/Product-Management', {
+        const response = await fetch('/api/Admin/Product-Management', {
           credentials: 'include',
         });
         const result = await response.json();
@@ -212,7 +212,7 @@ export default function ProductManagementPage() {
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch("/api/Pages/Admin/Product-Management", {
+          const res = await fetch("/api/Admin/Product-Management", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ product_id: id }),
@@ -235,7 +235,7 @@ export default function ProductManagementPage() {
 
   const handleToggleActive = async (id, currentStatus) => {
     try {
-      const res = await fetch("/api/Pages/Admin/Product-Management", {
+      const res = await fetch("/api/Admin/Product-Management", {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id, is_active: !currentStatus }),
@@ -256,7 +256,7 @@ export default function ProductManagementPage() {
     e.preventDefault();
     try {
       const isEdit = !!editingCategoryId;
-      const url = "/api/Pages/Admin/Product-Management/Category";
+      const url = "/api/Admin/Product-Management/Category";
       const method = isEdit ? "PUT" : "POST";
       
       const formData = new FormData();
@@ -282,7 +282,7 @@ export default function ProductManagementPage() {
       const data = await res.json();
       if (data.success) {
         // Refresh categories
-        const catRes = await fetch('/api/Pages/Admin/Product-Management', { credentials: 'include' });
+        const catRes = await fetch('/api/Admin/Product-Management', { credentials: 'include' });
         const catData = await catRes.json();
         if (catData.success) {
             setCategoriesData(catData.categories || []);
@@ -320,7 +320,7 @@ export default function ProductManagementPage() {
       type: "danger",
       onConfirm: async () => {
         try {
-          const res = await fetch("/api/Pages/Admin/Product-Management/Category", {
+          const res = await fetch("/api/Admin/Product-Management/Category", {
             method: "DELETE",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ category_id: catId }),
@@ -346,7 +346,7 @@ export default function ProductManagementPage() {
     setLoading(true);
     try {
       const isEdit = !!editingProductId;
-      const url = "/api/Pages/Admin/Product-Management";
+      const url = "/api/Admin/Product-Management";
       const method = isEdit ? "PUT" : "POST";
 
       const formData = new FormData();

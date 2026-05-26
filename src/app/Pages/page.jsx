@@ -68,7 +68,7 @@ const BLOGS = [
   }
 ];
 
-export default function HomePage() {
+export default async function HomePage() {
   const router = useRouter();
   const pathname = usePathname();
   const [sections, setSections] = useState([]);

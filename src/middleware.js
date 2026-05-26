@@ -1,3 +1,16 @@
+// Ok, Now
+// Currently I am Using MYSQL as a Database,
+// But Now I want to Use MongoDB Database Instead Of MYSQL,
+
+// I want to Update The Codebase,
+// Do not change the Logic Of any Backend REST API,
+// I Just Want to Change the Code Of MYSQL To MongoDB.
+
+// How Would You Plan this To Achieve ?
+
+// Do Not Change Anything,
+// Just Share me.
+
 import { NextResponse } from 'next/server';
 
 const STATIC_EXT = /\.(ico|png|jpg|jpeg|gif|svg|webp|css|js|woff2?|ttf|map)$/i;
@@ -16,7 +29,7 @@ function isMaintenanceExempt(pathname) {
   if (pathname.startsWith('/api/maintenance')) return true;
   if (pathname.startsWith('/api/admin-portal')) return true;
   if (pathname.startsWith('/portal/')) return true;
-  if (pathname.startsWith('/api/Pages/Admin')) return true;
+  if (pathname.startsWith('/api/Admin')) return true;
   return false;
 }
 
@@ -24,8 +37,10 @@ function isStorefrontPath(pathname) {
   if (pathname === '/') return true;
   if (pathname.startsWith('/Pages')) return true;
   if (pathname.startsWith('/auth')) return true;
+  if (pathname.startsWith('/portal')) return false;
   if (pathname.startsWith('/api/')) {
-    if (pathname.startsWith('/api/Pages/Admin')) return false;
+    if (pathname.startsWith('/api/auth/login')) return false;
+    if (pathname.startsWith('/api/Admin')) return false;
     if (pathname.startsWith('/api/maintenance')) return false;
     if (pathname.startsWith('/api/admin-portal')) return false;
     return true;
@@ -106,7 +121,7 @@ export async function middleware(request) {
   if (!isMaintenanceExempt(pathname) && isStorefrontPath(pathname)) {
     const active = await fetchMaintenanceActive(request);
     if (active) {
-      if (pathname.startsWith('/api/')) {
+      if (pathname.startsWith('/api/Pages')) {
         return NextResponse.json(
           { success: false, message: 'Site is under maintenance', maintenance: true },
           { status: 503 }

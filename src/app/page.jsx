@@ -1,3 +1,4 @@
+//Admin URL : http://localhost:3000/portal/_Hk9bCNVoB6yvoXKHPndaQ/panel
 'use client';
 
 import { useEffect } from 'react';

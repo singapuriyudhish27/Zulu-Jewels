@@ -53,7 +53,7 @@ export default function ReviewsManagementPage() {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const response = await fetch('/api/Pages/Admin/Reviews-Management', {
+        const response = await fetch('/api/Admin/Reviews-Management', {
           credentials: 'include',
         });
         const result = await response.json();
@@ -155,7 +155,7 @@ export default function ReviewsManagementPage() {
 
     setSendingEmail(true);
     try {
-      const response = await fetch('/api/Pages/Admin/Customer-Management/send-email', {
+      const response = await fetch('/api/Admin/Customer-Management/send-email', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

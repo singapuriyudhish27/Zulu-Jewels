@@ -33,7 +33,7 @@ export default function ProfilePage() {
   const fetchAdminSettings = async () => {
     setSettingsLoading(true);
     try {
-      const res = await fetch('/api/Pages/Admin/Settings', { credentials: 'include' });
+      const res = await fetch('/api/Admin/Settings', { credentials: 'include' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.message);
       setAdminPortalUrl(data.adminPortal?.url || '');
@@ -52,7 +52,7 @@ export default function ProfilePage() {
   const handleSaveSettings = async () => {
     setSettingsSaving(true);
     try {
-      const res = await fetch('/api/Pages/Admin/Settings', {
+      const res = await fetch('/api/Admin/Settings', {
         method: 'PUT',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },
@@ -77,7 +77,7 @@ export default function ProfilePage() {
   const handleRotateRoute = async () => {
     setRotating(true);
     try {
-      const res = await fetch('/api/Pages/Admin/Settings/rotate-route', {
+      const res = await fetch('/api/Admin/Settings/rotate-route', {
         method: 'POST',
         credentials: 'include',
       });
@@ -103,7 +103,7 @@ export default function ProfilePage() {
     //Backend API Call
     const fetchProfile = async () => {
       try {
-        const response = await fetch('/api/Pages/Admin/Profile', {
+        const response = await fetch('/api/Admin/Profile', {
           credentials: 'include',
         });
 
@@ -158,7 +158,7 @@ export default function ProfilePage() {
     try {
       const res = await fetch('/api/Pages/Profile', { method: 'POST', credentials: 'include' });
       if (res.ok) {
-        const settingsRes = await fetch('/api/Pages/Admin/Settings', { credentials: 'include' });
+        const settingsRes = await fetch('/api/Admin/Settings', { credentials: 'include' });
         const data = await settingsRes.json();
         router.push(data.adminPortal?.path || '/auth/login');
       }
@@ -171,7 +171,7 @@ export default function ProfilePage() {
     e.preventDefault();
 
     try {
-      const response = await fetch("/api/Pages/Admin/Profile", {
+      const response = await fetch("/api/Admin/Profile", {
         method: "POST",
         credentials: 'include',
         headers: {

@@ -52,12 +52,12 @@ export default function AdminPage() {
       try {
         setLoading(true);
         // Fetch Profile
-        const profileRes = await fetch('/api/Pages/Admin/Profile', { credentials: 'include' });
+        const profileRes = await fetch('/api/Admin/Profile', { credentials: 'include' });
         const profileData = await profileRes.json();
         if (profileRes.ok) setLoggedInUserData(profileData);
 
         // Fetch Dashboard Data
-        const dashRes = await fetch('/api/Pages/Admin', { credentials: 'include' });
+        const dashRes = await fetch('/api/Admin', { credentials: 'include' });
         const dashResult = await dashRes.json();
         if (dashResult.success) {
           setDashboardData(dashResult.data);

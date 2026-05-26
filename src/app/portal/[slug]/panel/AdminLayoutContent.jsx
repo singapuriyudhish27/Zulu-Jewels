@@ -53,7 +53,7 @@ export default function AdminLayoutContent({ children }) {
       });
 
       if (res.ok) {
-        const settingsRes = await fetch('/api/Pages/Admin/Settings', { credentials: 'include' });
+        const settingsRes = await fetch('/api/Admin/Settings', { credentials: 'include' });
         const settingsData = await settingsRes.json();
         if (settingsRes.ok && settingsData.adminPortal?.path) {
           router.replace(settingsData.adminPortal.path);

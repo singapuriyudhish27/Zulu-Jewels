@@ -96,7 +96,7 @@ export default function MarketingPage() {
     const fetchData = async () => {
         setLoading(true);
         try {
-            const response = await fetch('/api/Pages/Admin/Marketing', {
+            const response = await fetch('/api/Admin/Marketing', {
                 credentials: 'include',
             });
             const result = await response.json();
@@ -122,7 +122,7 @@ export default function MarketingPage() {
             const method = editingCoupon ? 'PUT' : 'POST';
             const body = editingCoupon ? { ...formData, id: editingCoupon.id } : formData;
 
-            const response = await fetch('/api/Pages/Admin/Marketing', {
+            const response = await fetch('/api/Admin/Marketing', {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -150,7 +150,7 @@ export default function MarketingPage() {
             type: "danger",
             onConfirm: async () => {
                 try {
-                    const response = await fetch(`/api/Pages/Admin/Marketing?id=${id}`, {
+                    const response = await fetch(`/api/Admin/Marketing?id=${id}`, {
                         method: 'DELETE',
                         credentials: 'include',
                     });
@@ -204,7 +204,7 @@ export default function MarketingPage() {
             const method = editingBanner ? 'PUT' : 'POST';
             const body = editingBanner ? { ...bannerFormData, id: editingBanner.id } : bannerFormData;
 
-            const response = await fetch('/api/Pages/Admin/Marketing/Banners', {
+            const response = await fetch('/api/Admin/Marketing/Banners', {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -232,7 +232,7 @@ export default function MarketingPage() {
             type: "danger",
             onConfirm: async () => {
                 try {
-                    const response = await fetch(`/api/Pages/Admin/Marketing/Banners?id=${id}`, {
+                    const response = await fetch(`/api/Admin/Marketing/Banners?id=${id}`, {
                         method: 'DELETE',
                         credentials: 'include',
                     });
@@ -278,7 +278,7 @@ export default function MarketingPage() {
             const method = editingContent ? 'PUT' : 'POST';
             const body = editingContent ? { ...contentFormData, id: editingContent.id } : contentFormData;
 
-            const response = await fetch('/api/Pages/Admin/Marketing/Content-Page', {
+            const response = await fetch('/api/Admin/Marketing/Content-Page', {
                 method,
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(body),
@@ -306,7 +306,7 @@ export default function MarketingPage() {
             type: "danger",
             onConfirm: async () => {
                 try {
-                    const response = await fetch(`/api/Pages/Admin/Marketing/Content-Page?id=${id}`, {
+                    const response = await fetch(`/api/Admin/Marketing/Content-Page?id=${id}`, {
                         method: 'DELETE',
                         credentials: 'include',
                     });
