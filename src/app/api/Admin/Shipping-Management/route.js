@@ -1,27 +1,19 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import ShippingZone from "@/lib/models/ShippingZone";
+import ShippingPartner from "@/lib/models/ShippingPartner";
+import PaymentOption from "@/lib/models/PaymentOption";
+import Transaction from "@/lib/models/Transaction";
 
 //Get The Shipping & Payment Data
 export async function GET() {
     try {
-        const connection = await getConnection();
+        await connectDB();
 
-        //Database Tables
-        const [shippingZones] = await connection.execute(`
-            SELECT * FROM shipping_zones ORDER BY zone_name ASC
-        `);
-
-        const [shippingPartners] = await connection.execute(`
-            SELECT * FROM shipping_partners ORDER BY partner_name ASC
-        `);
-
-        const [paymentOptions] = await connection.execute(`
-            SELECT * FROM payment_options ORDER BY category ASC
-        `);
-
-        const [transactions] = await connection.execute(`
-            SELECT * FROM transactions ORDER BY created_at DESC
-        `);
+        const shippingZones = await ShippingZone.find().sort({ zone_name: 1 });
+        const shippingPartners = await ShippingPartner.find().sort({ partner_name: 1 });
+        const paymentOptions = await PaymentOption.find().sort({ category: 1 });
+        const transactions = await Transaction.find().sort({ created_at: -1 });
 
         console.log("Backend API To Get Shipping Zones, Shipping Partners, Payment Options & Transactions.");
         return NextResponse.json({

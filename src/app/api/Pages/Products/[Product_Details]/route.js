@@ -1,5 +1,10 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Product from "@/lib/models/Product";
+import ProductVariant from "@/lib/models/ProductVariant";
+import ProductImage from "@/lib/models/ProductImage";
+import CartItem from "@/lib/models/CartItem";
+import UserLike from "@/lib/models/UserLike";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -18,60 +23,53 @@ async function getUserIdFromCookie() {
 export async function GET(request, { params }) {
     try {
         const { Product_Details: id } = await params;
-        const connection = await getConnection();
+        await connectDB();
 
         const userId = await getUserIdFromCookie();
 
-        const [rows] = await connection.execute(`
-            SELECT 
-                p.id AS product_id,
-                p.category_id,
-                p.name AS product_name,
-                p.description,
-                p.price,
-                p.material,
-                p.gender,
-                p.is_active,
-                p.created_at,
-                p.updated_at,
-                (SELECT GROUP_CONCAT(COALESCE(variant_id, 'base')) FROM cart_items WHERE user_id = ? AND product_id = p.id) AS cart_variants,
-                (SELECT COUNT(*) FROM user_likes WHERE user_id = ? AND product_id = p.id) > 0 AS is_wishlisted
-            FROM products p
-            WHERE p.id = ?
-        `, [userId || 0, userId || 0, id]);
+        const product = await Product.findById(id);
 
-        if (rows.length === 0) {
+        if (!product) {
             return NextResponse.json({ success: false, message: "Product Not Found" }, { status: 404 });
         }
 
-        const [variants] = await connection.execute(`
-            SELECT * FROM product_variants WHERE product_id = ?
-        `, [id]);
+        const variants = await ProductVariant.find({ product_id: id });
+        const images = await ProductImage.find({ product_id: id });
 
-        const [images] = await connection.execute(`
-            SELECT * FROM product_images WHERE product_id = ?
-        `, [id]);
+        // Get cart variants for this user+product
+        let cartVariants = [];
+        if (userId && userId !== 'admin') {
+            const cartItems = await CartItem.find({ user_id: userId, product_id: id });
+            cartVariants = cartItems.map(ci => ci.variant_id ? ci.variant_id.toString() : 'base');
+        }
 
-        const product = {
-            id: rows[0].product_id,
-            category_id: rows[0].category_id,
-            name: rows[0].product_name,
-            description: rows[0].description,
-            price: rows[0].price,
-            material: rows[0].material,
-            gender: rows[0].gender,
-            is_active: rows[0].is_active,
-            created_at: rows[0].created_at,
-            updated_at: rows[0].updated_at,
-            is_wishlisted: Boolean(rows[0].is_wishlisted),
-            cart_variants: rows[0].cart_variants ? rows[0].cart_variants.split(',') : [],
+        // Check if wishlisted
+        let isWishlisted = false;
+        if (userId && userId !== 'admin') {
+            const likeCount = await UserLike.countDocuments({ user_id: userId, product_id: id });
+            isWishlisted = likeCount > 0;
+        }
+
+        const result = {
+            id: product._id,
+            category_id: product.category_id,
+            name: product.name,
+            description: product.description,
+            price: product.price,
+            material: product.material,
+            gender: product.gender,
+            is_active: product.is_active,
+            created_at: product.created_at,
+            updated_at: product.updated_at,
+            is_wishlisted: isWishlisted,
+            cart_variants: cartVariants,
             variants: variants,
             images: images
         }
 
         return NextResponse.json({
             success: true,
-            product
+            product: result
         });
     } catch (error) {
         console.error("Error Getting Product Data:", error);
@@ -102,20 +100,20 @@ export async function POST(request) {
         }
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
 
         // ================= CART =================
         if (action === "cart") {
             //Check If product already exists in cart with this variant
-            const [existing] = await connection.execute(`
-                SELECT id FROM cart_items WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
-            `, [userId, product_id, variant_id || null]);
+            const existing = await CartItem.findOne({
+                user_id: userId,
+                product_id,
+                variant_id: variant_id || null
+            });
 
-            if (existing.length > 0) {
+            if (existing) {
                 // Remove from Cart
-                await connection.execute(`
-                    DELETE FROM cart_items WHERE id = ?
-                `, [existing[0].id]);
+                await CartItem.deleteOne({ _id: existing._id });
 
                 return NextResponse.json({
                     success: true,
@@ -124,9 +122,12 @@ export async function POST(request) {
                 });
             } else {
                 //Insert New Product
-                await connection.execute(`
-                    INSERT INTO cart_items (user_id, product_id, variant_id, quantity) VALUES (?, ?, ?, ?)
-                `, [userId, product_id, variant_id || null, quantity]);
+                await CartItem.create({
+                    user_id: userId,
+                    product_id,
+                    variant_id: variant_id || null,
+                    quantity
+                });
 
                 return NextResponse.json({
                     success: true,
@@ -139,15 +140,15 @@ export async function POST(request) {
         // ================= WISHLIST =================
         if (action === "wishlist") {
             //Check If product already exists in wishlist with this variant
-            const [existing] = await connection.execute(`
-                SELECT id FROM user_likes WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
-            `, [userId, product_id, variant_id || null]);
+            const existing = await UserLike.findOne({
+                user_id: userId,
+                product_id,
+                variant_id: variant_id || null
+            });
 
-            if (existing.length > 0) {
+            if (existing) {
                 // Remove from Wishlist
-                await connection.execute(`
-                    DELETE FROM user_likes WHERE id = ?
-                `, [existing[0].id]);
+                await UserLike.deleteOne({ _id: existing._id });
 
                 return NextResponse.json({
                     success: true,
@@ -156,9 +157,11 @@ export async function POST(request) {
                 });
             } else {
                 //Insert New Product
-                await connection.execute(`
-                    INSERT INTO user_likes (user_id, product_id, variant_id) VALUES (?, ?, ?)
-                `, [userId, product_id, variant_id || null]);
+                await UserLike.create({
+                    user_id: userId,
+                    product_id,
+                    variant_id: variant_id || null
+                });
 
                 return NextResponse.json({
                     success: true,

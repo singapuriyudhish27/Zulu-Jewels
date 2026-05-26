@@ -1,20 +1,23 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import ContentPage from "@/lib/models/ContentPage";
 
 //Add New Content Page
 export async function POST(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { page_name, url, content, status } = await req.json();
 
         if (!page_name || !url) {
             return NextResponse.json({ success: false, message: "Page name and URL are required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `INSERT INTO content_pages (page_name, url, content, status) VALUES (?, ?, ?, ?)`,
-            [page_name, url, content || null, status !== undefined ? status : true]
-        );
+        await ContentPage.create({
+            page_name,
+            url,
+            content: content || null,
+            status: status !== undefined ? status : true
+        });
 
         return NextResponse.json({ success: true, message: "Content page added successfully" }, { status: 201 });
     } catch (error) {
@@ -26,17 +29,19 @@ export async function POST(req) {
 //Edit Content Page
 export async function PUT(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { id, page_name, url, content, status } = await req.json();
 
         if (!id || !page_name || !url) {
             return NextResponse.json({ success: false, message: "ID, Page name and URL are required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `UPDATE content_pages SET page_name = ?, url = ?, content = ?, status = ? WHERE id = ?`,
-            [page_name, url, content || null, status !== undefined ? status : true, id]
-        );
+        await ContentPage.updateOne({ _id: id }, {
+            page_name,
+            url,
+            content: content || null,
+            status: status !== undefined ? status : true
+        });
 
         return NextResponse.json({ success: true, message: "Content page updated successfully" }, { status: 200 });
     } catch (error) {
@@ -48,7 +53,7 @@ export async function PUT(req) {
 //Delete Content Page
 export async function DELETE(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
 
@@ -56,10 +61,7 @@ export async function DELETE(req) {
             return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `DELETE FROM content_pages WHERE id = ?`,
-            [id]
-        );
+        await ContentPage.deleteOne({ _id: id });
 
         return NextResponse.json({ success: true, message: "Content page deleted successfully" }, { status: 200 });
     } catch (error) {

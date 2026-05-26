@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Category from "@/lib/models/Category";
+import Product from "@/lib/models/Product";
+import ProductImage from "@/lib/models/ProductImage";
 
 export async function GET(request) {
     try {
@@ -7,109 +10,65 @@ export async function GET(request) {
         const categoryId = searchParams.get('category');
         const search = searchParams.get('search');
 
-        const connection = await getConnection();
+        await connectDB();
 
-        let query = `
-            SELECT 
-                c.id AS category_id,
-                c.name AS category_name,
-                c.image_url AS category_image,
+        // Build category filter
+        const categoryFilter = categoryId ? { _id: categoryId } : {};
+        const cats = await Category.find(categoryFilter).sort({ name: 1 });
 
-                p.id AS product_id,
-                p.category_id AS product_category_id,
-                p.name AS product_name,
-                p.description,
-                p.price,
-                p.is_active,
-                p.gender,
-                p.created_at AS product_created_at,
-                p.updated_at AS product_updated_at,
-
-                pi.id AS image_id,
-                pi.variant_id,
-                pi.media_url,
-                pi.is_primary
-            FROM categories c
-            LEFT JOIN products p 
-                ON c.id = p.category_id
-            LEFT JOIN product_images pi 
-                ON p.id = pi.product_id
-            WHERE p.is_deleted = FALSE
-        `;
-
-        const queryParams = [];
-
-        if (categoryId) {
-            query += ` AND c.id = ?`;
-            queryParams.push(categoryId);
-        }
-
+        // Build product filter
+        const productFilter = { is_deleted: false };
         if (search) {
-            query += ` AND (p.name LIKE ? OR p.description LIKE ?)`;
-            const searchTerm = `%${search}%`;
-            queryParams.push(searchTerm, searchTerm);
+            const regex = new RegExp(search, 'i');
+            productFilter.$or = [{ name: regex }, { description: regex }];
         }
 
-        query += ` ORDER BY c.name ASC, p.id DESC, pi.variant_id ASC, pi.media_url ASC`;
-
-        const [rows] = await connection.execute(query, queryParams);
         console.log("Backend API To Get Products with Filters.");
 
         //Group The Data
-        const categoriesMap = {};
+        const categoriesResult = [];
 
-        rows.forEach(row => {
-            //Create category
-            if (!categoriesMap[row.category_id]) {
-                categoriesMap[row.category_id] = {
-                    id: row.category_id,
-                    name: row.category_name,
-                    image: row.category_image,
-                    products: []
-                }
+        for (const cat of cats) {
+            const products = await Product.find({ ...productFilter, category_id: cat._id }).sort({ _id: -1 });
+
+            const productsWithImages = [];
+            for (const p of products) {
+                const images = await ProductImage.find({ product_id: p._id }).sort({ variant_id: 1, media_url: 1 });
+
+                productsWithImages.push({
+                    id: p._id,
+                    category_id: cat._id,
+                    name: p.name,
+                    description: p.description,
+                    price: p.price,
+                    is_active: p.is_active,
+                    gender: p.gender,
+                    created_at: p.created_at,
+                    updated_at: p.updated_at,
+                    images: images.map(img => ({
+                        id: img._id,
+                        variant_id: img.variant_id,
+                        image_url: img.media_url,
+                        is_primary: img.is_primary,
+                    })),
+                    swatches: []
+                });
             }
 
-            //Add Products
-            if (row.product_id) {
-                const category = categoriesMap[row.category_id];
-
-                let product = category.products.find(p => p.id === row.product_id);
-
-                if (!product) {
-                    product = {
-                        id: row.product_id,
-                        category_id: row.category_id,
-                        name: row.product_name,
-                        description: row.description,
-                        price: row.price,
-                        is_active: row.is_active,
-                        gender: row.gender,
-                        created_at: row.product_created_at,
-                        updated_at: row.product_updated_at,
-                        images: [],
-                        swatches: []
-                    };
-                    category.products.push(product);
-                }
-
-                // Add image
-                if (row.image_id) {
-                    product.images.push({
-                        id: row.image_id,
-                        variant_id: row.variant_id,
-                        image_url: row.media_url,
-                        is_primary: row.is_primary
-                    });
-                }
+            if (productsWithImages.length > 0 || !search) {
+                categoriesResult.push({
+                    id: cat._id,
+                    name: cat.name,
+                    image: cat.image_url,
+                    products: productsWithImages
+                });
             }
-        });
-
-        const categories = Object.values(categoriesMap);
+        }
 
         return NextResponse.json({
             success: true,
-            count: categories.length,
-            categories
+            count: categoriesResult.length,
+            categories: categoriesResult
         });
     } catch (error) {
         console.error("Error Getting All Products Data:", error);

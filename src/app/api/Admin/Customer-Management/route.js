@@ -1,105 +1,67 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Customer from "@/lib/models/Customer";
+import User from "@/lib/models/User";
+import Order from "@/lib/models/Order";
+import OrderItem from "@/lib/models/OrderItem";
 
 export async function GET() {
     try {
-        const connection = await getConnection();
+        await connectDB();
 
-        //Database Table
-        const [rows] = await connection.execute(`
-            SELECT
-                c.id AS customer_id,
-                c.customer_name,
-                c.location,
-                c.created_at AS customer_created_at,
-                u.id AS user_id,
-                u.firstName,
-                u.lastName,
-                u.email,
-                u.phone,
-                u.is_active,
-                u.is_verified,
-                o.id AS order_id,
-                o.order_date,
-                o.payment_method,
-                o.shipping_address,
-                o.is_paid,
-                o.status AS order_status,
-                o.receipt_url,
-                o.created_at AS order_created_at,
-                oi.id AS order_item_id,
-                oi.product_id,
-                oi.quantity,
-                oi.price AS item_price,
-                oi.created_at AS item_created_at
-            FROM customers c
-            LEFT JOIN users u ON c.user_id = u.id
-            LEFT JOIN orders o ON c.id = o.customer_id
-            LEFT JOIN order_items oi ON o.id = oi.order_id
-            ORDER BY c.id ASC, o.created_at DESC, oi.created_at DESC
-        `);
+        const customers = await Customer.find().sort({ _id: 1 });
         console.log("Backend API To Get Users, Customers, Orders & Order Items.");
 
-        //Group Data
-        const customerMap = {};
+        const data = [];
 
-        for (const row of rows) {
-            if (!customerMap[row.customer_id]) {
-                customerMap[row.customer_id] = {
-                    id: row.customer_id,
-                    customer_name: row.customer_name,
-                    location: row.location,
-                    created_at: row.customer_created_at,
-                    user: row.user_id
-                        ? {
-                            id: row.user_id,
-                            firstName: row.firstName,
-                            lastName: row.lastName,
-                            email: row.email,
-                            phone: row.phone,
-                            is_active: row.is_active,
-                            is_verified: row.is_verified,
-                        }
-                        : null,
-                    orders: [],
-                };
+        for (const c of customers) {
+            const user = c.user_id ? await User.findById(c.user_id).select('firstName lastName email phone is_active is_verified') : null;
+            const orders = await Order.find({ customer_id: c._id }).sort({ created_at: -1 });
+
+            const orderList = [];
+            for (const o of orders) {
+                const items = await OrderItem.find({ order_id: o._id }).sort({ created_at: -1 });
+
+                orderList.push({
+                    id: o._id,
+                    order_date: o.order_date,
+                    payment_method: o.payment_method,
+                    shipping_address: o.shipping_address,
+                    is_paid: o.is_paid,
+                    status: o.status,
+                    receipt_url: o.receipt_url,
+                    created_at: o.created_at,
+                    items: items.map(oi => ({
+                        id: oi._id,
+                        product_id: oi.product_id,
+                        quantity: oi.quantity,
+                        price: oi.price,
+                        created_at: oi.created_at,
+                    })),
+                });
             }
 
-            if (row.order_id) {
-                let order = customerMap[row.customer_id].orders.find(
-                    (o) => o.id === row.order_id
-                );
-
-                if (!order) {
-                    order = {
-                        id: row.order_id,
-                        order_date: row.order_date,
-                        payment_method: row.payment_method,
-                        shipping_address: row.shipping_address,
-                        is_paid: row.is_paid,
-                        status: row.order_status,
-                        receipt_url: row.receipt_url,
-                        created_at: row.order_created_at,
-                        items: [],
-                    };
-                    customerMap[row.customer_id].orders.push(order);
-                }
-
-                if (row.order_item_id) {
-                    order.items.push({
-                        id: row.order_item_id,
-                        product_id: row.product_id,
-                        quantity: row.quantity,
-                        price: row.item_price,
-                        created_at: row.item_created_at,
-                    });
-                }
-            }
+            data.push({
+                id: c._id,
+                customer_name: c.customer_name,
+                location: c.location,
+                created_at: c.created_at,
+                user: user ? {
+                    id: user._id,
+                    firstName: user.firstName,
+                    lastName: user.lastName,
+                    email: user.email,
+                    phone: user.phone,
+                    is_active: user.is_active,
+                    is_verified: user.is_verified,
+                } : null,
+                orders: orderList,
+            });
         }
 
         return NextResponse.json({
             success: true,
-            data: Object.values(customerMap),
+            data,
             adminEmail: process.env.SMTP_USER
         }, { status: 200 });
     } catch (error) {

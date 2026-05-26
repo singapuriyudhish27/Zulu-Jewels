@@ -1,5 +1,7 @@
-import { getConnection } from "@/lib/db";
 import { NextResponse } from "next/server";
+import { connectDB } from "@/lib/db";
+import Category from "@/lib/models/Category";
+import Product from "@/lib/models/Product";
 import { saveFile } from "@/lib/storage";
 
 // Helper removed - now using centralized storage utility
@@ -7,7 +9,7 @@ import { saveFile } from "@/lib/storage";
 //Add New Category
 export async function POST(request) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const formData = await request.formData();
         
         const name = formData.get("name");
@@ -24,11 +26,9 @@ export async function POST(request) {
         const imageUrl = await saveFile(imageFile, "categories");
 
         //Check If Category Exists
-        const [existing] = await connection.execute(`
-            SELECT id FROM categories WHERE name = ?
-        `, [name]);
+        const existing = await Category.findOne({ name });
 
-        if (existing.length > 0) {
+        if (existing) {
             return NextResponse.json({
                 success: false,
                 message: "Category already exists"
@@ -36,15 +36,17 @@ export async function POST(request) {
         }
 
         //Insert Category
-        const [result] = await connection.execute(`
-            INSERT INTO categories (name, image_url, available_materials) VALUES (?, ?, ?)
-        `, [name, imageUrl, JSON.stringify(["Gold", "Silver", "Diamond"])]); // Default materials for compatibility
+        const newCategory = await Category.create({
+            name,
+            image_url: imageUrl,
+            available_materials: ["Gold", "Silver", "Diamond"] // Default materials for compatibility
+        });
 
         return NextResponse.json({
             success: true,
             message: "Category added successfully",
             data: {
-                id: result.insertId,
+                id: newCategory._id,
                 name,
                 image_url: imageUrl,
                 description
@@ -59,7 +61,7 @@ export async function POST(request) {
 //Update Category
 export async function PUT(request) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const formData = await request.formData();
         
         const id = formData.get("id");
@@ -80,11 +82,9 @@ export async function PUT(request) {
         }
 
         // Check if another category with the same name exists (excluding current)
-        const [existing] = await connection.execute(`
-            SELECT id FROM categories WHERE name = ? AND id != ?
-        `, [name, id]);
+        const existing = await Category.findOne({ name, _id: { $ne: id } });
 
-        if (existing.length > 0) {
+        if (existing) {
             return NextResponse.json({
                 success: false,
                 message: "Another category with this name already exists"
@@ -92,9 +92,7 @@ export async function PUT(request) {
         }
 
         // Update Category
-        await connection.execute(`
-            UPDATE categories SET name = ?, image_url = ? WHERE id = ?
-        `, [name, imageUrl, id]);
+        await Category.updateOne({ _id: id }, { name, image_url: imageUrl });
 
         return NextResponse.json({
             success: true,
@@ -111,7 +109,7 @@ export async function PUT(request) {
 //Delete Category
 export async function DELETE(request) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const body = await request.json();
         const { category_id } = body;
 
@@ -123,11 +121,9 @@ export async function DELETE(request) {
         }
 
         //Check Category Exists
-        const [existing] = await connection.execute(`
-            SELECT * FROM categories WHERE id = ?
-        `, [category_id]);
+        const existing = await Category.findById(category_id);
 
-        if (existing.length === 0) {
+        if (!existing) {
             return NextResponse.json({
                 success: false,
                 message: "Category Not Found"
@@ -135,11 +131,9 @@ export async function DELETE(request) {
         }
 
         //Check If Category Is Linked To Any Products
-        const [products] = await connection.execute(`
-            SELECT id FROM products WHERE category_id = ? LIMIT 1
-        `, [category_id]);
+        const productCount = await Product.countDocuments({ category_id });
 
-        if (products.length > 0) {
+        if (productCount > 0) {
             return NextResponse.json({
                 success: false,
                 message: "Cannot delete category. Products are linked to this category"
@@ -147,9 +141,7 @@ export async function DELETE(request) {
         }
 
         //DELETE Category
-        await connection.execute(`
-            DELETE FROM categories WHERE id = ?
-        `, [category_id]);
+        await Category.deleteOne({ _id: category_id });
 
         return NextResponse.json({
             success: true,

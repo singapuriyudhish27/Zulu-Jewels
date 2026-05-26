@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import {getConnection} from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
 
 export async function POST(req) {
     try {
@@ -12,15 +13,14 @@ export async function POST(req) {
         }
 
         //Get Connection
-        const conn = await getConnection();
+        await connectDB();
         
         //User Existence Check
-        const [existingUser] = await conn.execute(
-            "SELECT id FROM users WHERE email = ? OR phone = ?",
-            [email, contact_number]
-        );
+        const existingUser = await User.findOne({
+            $or: [{ email }, { phone: contact_number }]
+        });
 
-        if (existingUser.length > 0) {
+        if (existingUser) {
             return NextResponse.json({ message: "User with this email or contact number already exists" }, { status: 409 });
         }
 
@@ -28,12 +28,15 @@ export async function POST(req) {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         //User Insertion
-        const [result] = await conn.execute(
-            "INSERT INTO users (firstName, lastName, phone, email, password_hash) VALUES (?, ?, ?, ?, ?)",
-            [firstName, lastName, contact_number, email, hashedPassword]
-        );
+        const newUser = await User.create({
+            firstName,
+            lastName,
+            phone: contact_number,
+            email,
+            password_hash: hashedPassword
+        });
 
-        return NextResponse.json({ message: "User registered successfully", userId: result.insertId }, { status: 201 });
+        return NextResponse.json({ message: "User registered successfully", userId: newUser._id }, { status: 201 });
     } catch (error) {
         console.error("Registeration Error:", error);
         return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });

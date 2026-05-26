@@ -1,5 +1,4 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
 
 //GET All Custom Products
 export async function GET() {

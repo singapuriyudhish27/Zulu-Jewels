@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
 import jwt from "jsonwebtoken";
 import { validateAdminSlug } from "@/lib/adminSecurity";
 
@@ -38,18 +39,13 @@ export async function POST(req) {
         }
 
         //Get Connection
-        const conn = await getConnection();
+        await connectDB();
         //User Existence Check
-        const [userRows] = await conn.execute(
-            "SELECT id, firstName, lastName, email, phone, password_hash FROM users WHERE email = ?",
-            [email]
-        );
+        const user = await User.findOne({ email }).select('firstName lastName email phone password_hash role');
 
-        if (userRows.length === 0) {
+        if (!user) {
             return NextResponse.json({ message: "Invalid email or password" }, { status: 401 });
         }
-
-        const user = userRows[0];
 
         //Password Verification
         const isPasswordValid = await bcrypt.compare(password, user.password_hash);
@@ -59,7 +55,7 @@ export async function POST(req) {
 
         //Generate JWT Token
         const token = jwt.sign(
-            { userId: user.id, email: user.email, role: user.role },
+            { userId: user._id, email: user.email, role: user.role },
             process.env.JWT_SECRET,
             { expiresIn: "7d" }
         );
@@ -67,7 +63,7 @@ export async function POST(req) {
         //Set Cookie
         const response = NextResponse.json({message: "Login successful", 
             user: {
-                id: user.id,
+                id: user._id,
                 firstName: user.firstName,
                 lastName: user.lastName,
                 email: user.email,

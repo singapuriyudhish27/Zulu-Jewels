@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Category from "@/lib/models/Category";
 
 export async function GET() {
     try {
-        const connection = await getConnection();
-        const [rows] = await connection.execute("SELECT id, name FROM categories ORDER BY name ASC");
+        await connectDB();
+        const rows = await Category.find().sort({ name: 1 }).select('name');
         
         return NextResponse.json({
             success: true,

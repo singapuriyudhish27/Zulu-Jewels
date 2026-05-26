@@ -1,52 +1,43 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Inquiry from "@/lib/models/Inquiry";
+import User from "@/lib/models/User";
 
 export async function GET() {
     try {
-        const connection = await getConnection();
+        await connectDB();
 
-        //Database Table
-        const [rows] = await connection.execute(`
-            SELECT
-                i.id AS inquiry_id,
-                i.inquiry_category,
-                i.message,
-                i.status AS inquiry_status,
-                i.created_at AS inquiry_created_at,
-                u.id AS user_id,
-                u.firstName,
-                u.lastName,
-                u.email,
-                u.phone,
-                u.is_active,
-                u.is_verified
-            FROM inquiries i
-            LEFT JOIN users u ON i.user_id = u.id
-            ORDER BY i.id DESC;
-        `);
+        const inquiries = await Inquiry.find().sort({ _id: -1 });
         console.log("Backend API To Get Users & Inquiries.");
 
-        //Group Data
-        const inquiries = rows.map(row => ({
-            userId: row.user_id,
-            firstName: row.firstName,
-            lastName: row.lastName,
-            email: row.email,
-            phone: row.phone,
-            is_active: row.is_active,
-            is_verified: row.is_verified,
-            inquiry: {
-                id: row.inquiry_id,
-                category: row.inquiry_category,
-                message: row.message,
-                status: row.inquiry_status,
-                created_at: row.inquiry_created_at,
+        const data = [];
+        for (const i of inquiries) {
+            let user = null;
+            if (i.user_id) {
+                user = await User.findById(i.user_id).select('firstName lastName email phone is_active is_verified');
             }
-        }));
+
+            data.push({
+                userId: user?._id || null,
+                firstName: user?.firstName || null,
+                lastName: user?.lastName || null,
+                email: user?.email || null,
+                phone: user?.phone || null,
+                is_active: user?.is_active ?? null,
+                is_verified: user?.is_verified ?? null,
+                inquiry: {
+                    id: i._id,
+                    category: i.inquiry_category,
+                    message: i.message,
+                    status: i.status,
+                    created_at: i.created_at,
+                }
+            });
+        }
 
         return NextResponse.json({
             success: true,
-            data: inquiries,
+            data,
             adminEmail: process.env.SMTP_USER
         }, { status: 200 });
     } catch (error) {
@@ -57,17 +48,14 @@ export async function GET() {
 
 export async function PUT(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { id, status } = await req.json();
 
         if (!id || !status) {
             return NextResponse.json({ success: false, message: "ID and Status are required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `UPDATE inquiries SET status = ? WHERE id = ?`,
-            [status, id]
-        );
+        await Inquiry.updateOne({ _id: id }, { status });
 
         return NextResponse.json({ success: true, message: "Status updated successfully" }, { status: 200 });
     } catch (error) {
@@ -78,7 +66,7 @@ export async function PUT(req) {
 
 export async function DELETE(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
 
@@ -86,10 +74,7 @@ export async function DELETE(req) {
             return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `DELETE FROM inquiries WHERE id = ?`,
-            [id]
-        );
+        await Inquiry.deleteOne({ _id: id });
 
         return NextResponse.json({ success: true, message: "Inquiry deleted successfully" }, { status: 200 });
     } catch (error) {

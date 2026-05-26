@@ -1,7 +1,9 @@
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
+import UserAddress from "@/lib/models/UserAddress";
 
 //Get The Logged In User
 export async function GET() {
@@ -32,27 +34,31 @@ export async function GET() {
         }
 
         //Fetch User From Database
-        const conn = await getConnection();
-        const [userRows] = await conn.execute(
-            "SELECT id, firstName, lastName, email, phone FROM users WHERE id = ? AND email = ?",
-            [userId, email]
-        );
+        await connectDB();
+        const user = await User.findOne({ _id: userId, email }).select('firstName lastName email phone');
 
-        if (userRows.length === 0) {
+        if (!user) {
             return NextResponse.json({message: "User Not Found"}, {status: 404});
         }
 
         // Fetch Saved Addresses
-        const [addressRows] = await conn.execute(
-            "SELECT id, address_line, is_default FROM user_addresses WHERE user_id = ? ORDER BY is_default DESC, created_at ASC",
-            [userId]
-        );
+        const addresses = await UserAddress.find({ user_id: userId })
+            .sort({ is_default: -1, created_at: 1 })
+            .select('address_line is_default');
 
         const role = "User";
-        const user = userRows[0];
-        const addresses = addressRows;
 
-        return NextResponse.json({user, role, addresses}, {status: 200});
+        return NextResponse.json({
+            user: {
+                id: user._id,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                email: user.email,
+                phone: user.phone,
+            },
+            role,
+            addresses
+        }, {status: 200});
     } catch (error) {
         console.error("Profile API Error:", error);
         return NextResponse.json({message: "Internal Server Error"}, {status: 500});
@@ -81,30 +87,27 @@ export async function PUT(request) {
         const data = await request.json();
 
         //Database Connection
-        const conn = await getConnection();
+        await connectDB();
 
         //Update Password In Database
         if (data.currentPassword && data.newPassword) {
-            const [rows] = await conn.execute(
-                "SELECT password_hash FROM users WHERE id = ? AND email = ?",
-                [userId, email]
-            );
+            const user = await User.findOne({ _id: userId, email }).select('password_hash');
 
-            if (rows.length === 0) {
+            if (!user) {
                 return NextResponse.json({ message: "User Not Found" }, { status: 404 });
             }
 
             const bcrypt = await import("bcryptjs");
-            const isMatch = await bcrypt.compare(data.currentPassword, rows[0].password_hash);
+            const isMatch = await bcrypt.compare(data.currentPassword, user.password_hash);
 
             if (!isMatch) {
                 return NextResponse.json({ message: "Current password is incorrect" }, { status: 400 });
             }
 
             const hashedPassword = await bcrypt.hash(data.newPassword, 10);
-            await conn.execute(
-                "UPDATE users SET password_hash = ? WHERE id = ? AND email = ?",
-                [hashedPassword, userId, email]
+            await User.updateOne(
+                { _id: userId, email },
+                { password_hash: hashedPassword }
             );
 
             return NextResponse.json({ message: "Password updated successfully" }, { status: 200 });
@@ -117,11 +120,11 @@ export async function PUT(request) {
             return NextResponse.json({ message: "Missing required fields" }, { status: 400 });
         }
 
-        const [result] = await conn.execute(
-            "UPDATE users SET firstName = ?, lastName = ?, phone = ? WHERE id = ? AND email = ?",
-            [data.firstName, data.lastName, data.phone, userId, email]
+        const result = await User.updateOne(
+            { _id: userId, email },
+            { firstName: data.firstName, lastName: data.lastName, phone: data.phone }
         );
-        if (result.affectedRows === 0) {
+        if (result.matchedCount === 0) {
             return NextResponse.json({message: "User Not Found or No Changes Made"}, {status: 404});
         }
         return NextResponse.json({message: "Profile Updated Successfully"}, {status: 200});

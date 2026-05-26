@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
 import jwt from "jsonwebtoken";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
@@ -22,11 +23,10 @@ export async function GET() {
                 return NextResponse.json({firstName: "Super", lastName: "Admin", email: process.env.ADMIN_EMAIL});
             } else {
                 //DB Connection
-                const conn = await getConnection();
+                await connectDB();
                 //Fetch Users
-                const [rows] = await conn.execute(
-                    "SELECT id, firstName, lastName, email, phone, role, created_at FROM users WHERE role != 'admin'"
-                );
+                const rows = await User.find({ role: { $ne: 'admin' } })
+                    .select('firstName lastName email phone role created_at');
                 return NextResponse.json({ users: rows });
             }
         } catch (err) {
@@ -51,15 +51,14 @@ export async function POST(request) {
         }
 
         //DB Connection
-        const conn = await getConnection();
+        await connectDB();
 
         //Check if User Already Exists
-        const [existingUser] = await conn.execute(
-            "SELECT id FROM users WHERE email = ? OR phone = ?",
-            [email, phone]
-        );
+        const existingUser = await User.findOne({
+            $or: [{ email }, { phone }]
+        });
 
-        if (existingUser.length > 0) {
+        if (existingUser) {
             return NextResponse.json({ message: "User with this email or contact number already exists" }, { status: 409 });
         }
 
@@ -67,13 +66,16 @@ export async function POST(request) {
         const hashedPassword = await bcrypt.hash(password, 10);
 
         //Insert New User
-        const [result] = await conn.execute(
-            "INSERT INTO users (role, firstName, lastName, email, phone, password_hash) VALUES (?, ?, ?, ?, ?, ?)",
-            [role, firstName, lastName, email, phone, hashedPassword]
-        );
-        await conn.end();
+        const newUser = await User.create({
+            role,
+            firstName,
+            lastName,
+            email,
+            phone,
+            password_hash: hashedPassword
+        });
 
-        return NextResponse.json({ message: "User created successfully", userId: result.insertId }, { status: 201 });
+        return NextResponse.json({ message: "User created successfully", userId: newUser._id }, { status: 201 });
     } catch (error) {
         console.error("Error Creating User:", error);
         return NextResponse.json({ message: "Internal Server Error" }, { status: 500 });
@@ -91,37 +93,26 @@ export async function PUT(request) {
             return NextResponse.json({ message: "firstName, lastName, email, and phone are required" }, { status: 400 });
         }
 
-        const conn = await getConnection();
+        await connectDB();
 
         //Check if email or phone is already used by another user
-        const [existingUser] = await conn.execute(
-            "SELECT id FROM users WHERE email = ? OR phone = ?",
-            [email, phone ]
-        );
+        const existingUser = await User.findOne({
+            $or: [{ email }, { phone }]
+        });
 
-        if (existingUser.length > 0) {
-            await conn.end();
+        if (existingUser) {
             return NextResponse.json({ message: "Email or phone already in use by another user" }, { status: 409 });
         }
 
         //If password is provided, hash it
-        let hashedPassword;
+        const updateFields = { firstName, lastName, email, phone };
         if (password) {
-            hashedPassword = await bcrypt.hash(password, 10);
+            updateFields.password_hash = await bcrypt.hash(password, 10);
         }
 
-        //Build the query dynamically based on whether password is updated
-        const query = hashedPassword
-            ? "UPDATE users SET firstName = ?, lastName = ?, email = ?, phone = ?, password_hash = ? WHERE id = ?"
-            : "UPDATE users SET firstName = ?, lastName = ?, email = ?, phone = ? WHERE id = ?";
+        const result = await User.updateOne({ _id: id }, updateFields);
 
-        const params = hashedPassword
-            ? [firstName, lastName, email, phone, hashedPassword, id]
-            : [firstName, lastName, email, phone, id];
-        const [result] = await conn.execute(query, params);
-        await conn.end();
-
-        if (result.affectedRows === 0) {
+        if (result.matchedCount === 0) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
 
@@ -142,12 +133,11 @@ export async function DELETE(request) {
             return NextResponse.json({ message: "User ID is required" }, { status: 400 });
         }
 
-        const conn = await getConnection();
+        await connectDB();
 
-        const [result] = await conn.execute("DELETE FROM users WHERE id = ?", [id]);
-        await conn.end();
+        const result = await User.deleteOne({ _id: id });
 
-        if (result.affectedRows === 0) {
+        if (result.deletedCount === 0) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
 

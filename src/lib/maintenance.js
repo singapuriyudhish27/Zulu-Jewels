@@ -1,17 +1,9 @@
-import { getConnection } from '@/lib/db';
+import { connectDB } from '@/lib/db';
+import SiteSetting from '@/lib/models/SiteSetting';
 
 function toIso(value) {
   if (!value) return null;
   return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
-}
-
-/** MySQL DATETIME expects 'YYYY-MM-DD HH:MM:SS', not ISO with Z */
-export function toMySQLDatetime(value) {
-  if (!value) return null;
-  const d = value instanceof Date ? value : new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  const pad = (n) => String(n).padStart(2, '0');
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}`;
 }
 
 export function computeMaintenanceActive(settings) {
@@ -26,23 +18,19 @@ export function computeMaintenanceActive(settings) {
 }
 
 export async function getSiteSettings() {
-  const conn = await getConnection();
-  const [rows] = await conn.execute(
-    `SELECT maintenance_enabled, maintenance_message, maintenance_starts_at, maintenance_ends_at, updated_at
-     FROM site_settings WHERE id = 1`
-  );
+  await connectDB();
+  let settings = await SiteSetting.findOne();
 
-  if (rows.length === 0) {
-    await conn.execute('INSERT INTO site_settings (id) VALUES (1)');
-    return {
+  if (!settings) {
+    settings = await SiteSetting.create({
       maintenance_enabled: false,
       maintenance_message: null,
       maintenance_starts_at: null,
       maintenance_ends_at: null,
-    };
+    });
   }
 
-  return rows[0];
+  return settings;
 }
 
 export async function getMaintenanceStatus() {

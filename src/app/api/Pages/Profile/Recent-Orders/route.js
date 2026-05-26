@@ -1,5 +1,11 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Order from "@/lib/models/Order";
+import OrderItem from "@/lib/models/OrderItem";
+import Product from "@/lib/models/Product";
+import ProductVariant from "@/lib/models/ProductVariant";
+import ProductImage from "@/lib/models/ProductImage";
+import Customer from "@/lib/models/Customer";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -30,29 +36,55 @@ export async function GET() {
         const userId = user.userId;
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
 
-        // Fetch Recent Orders with Joined Data
-        const [rows] = await connection.execute(`
-            SELECT 
-                o.id AS order_id,
-                o.order_date,
-                o.is_paid,
-                o.status AS order_status,
-                oi.price AS item_price,
-                oi.quantity,
-                p.name AS product_name,
-                p.id AS product_id,
-                pv.material AS variant_material,
-                (SELECT media_url FROM product_images WHERE product_id = p.id AND (variant_id = oi.variant_id OR variant_id IS NULL OR variant_id = 0) ORDER BY is_primary DESC LIMIT 1) AS image_url
-            FROM orders o
-            JOIN order_items oi ON o.id = oi.order_id
-            JOIN products p ON oi.product_id = p.id
-            LEFT JOIN product_variants pv ON oi.variant_id = pv.id
-            JOIN customers c ON o.customer_id = c.id
-            WHERE c.user_id = ?
-            ORDER BY o.order_date DESC
-        `, [userId]);
+        // Find the customer record for this user
+        const customer = await Customer.findOne({ user_id: userId });
+        if (!customer) {
+            return NextResponse.json({ success: true, data: [] }, { status: 200 });
+        }
+
+        // Fetch orders for this customer
+        const orders = await Order.find({ customer_id: customer._id }).sort({ order_date: -1 });
+
+        const rows = [];
+        for (const order of orders) {
+            const items = await OrderItem.find({ order_id: order._id });
+
+            for (const oi of items) {
+                const product = await Product.findById(oi.product_id);
+                if (!product) continue;
+
+                let variantMaterial = null;
+                if (oi.variant_id) {
+                    const variant = await ProductVariant.findById(oi.variant_id);
+                    if (variant) variantMaterial = variant.material;
+                }
+
+                // Get best image
+                let imageQuery = { product_id: product._id };
+                if (oi.variant_id) {
+                    imageQuery.$or = [
+                        { variant_id: oi.variant_id },
+                        { variant_id: null }
+                    ];
+                }
+                const image = await ProductImage.findOne(imageQuery).sort({ is_primary: -1 });
+
+                rows.push({
+                    order_id: order._id,
+                    order_date: order.order_date,
+                    is_paid: order.is_paid,
+                    order_status: order.status,
+                    item_price: oi.price,
+                    quantity: oi.quantity,
+                    product_name: product.name,
+                    product_id: product._id,
+                    variant_material: variantMaterial,
+                    image_url: image ? image.media_url : null,
+                });
+            }
+        }
 
         return NextResponse.json({
             success: true,

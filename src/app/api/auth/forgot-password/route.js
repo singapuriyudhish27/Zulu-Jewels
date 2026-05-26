@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
 import nodemailer from "nodemailer";
 import bcrypt from "bcryptjs";
 
@@ -34,28 +35,21 @@ export async function POST(req) {
         }
 
         //DB Connection
-        const db = await getConnection();
+        await connectDB();
 
         //Check User Exists Or Not
-        const [users] = await db.execute(
-            `SELECT * FROM users WHERE email = ?`,
-            [email]
-        );
+        const user = await User.findOne({ email });
 
-        if (users.length === 0) {
+        if (!user) {
             return NextResponse.json({message: "No User Found, Register First."}, {status: 401});
         }
-        const user = users[0];
 
         //Generate New Password
         const newPassword = generatePassword();
         const hashedPassword = await bcrypt.hash(newPassword, 12);
 
         //Update the password in DB
-        await db.execute(
-            `UPDATE users SET password_hash = ? WHERE email = ?`,
-            [hashedPassword, email]
-        );
+        await User.updateOne({ email }, { password_hash: hashedPassword });
 
         //Send An Email
         const transporter = nodemailer.createTransport({

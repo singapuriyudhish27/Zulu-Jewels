@@ -1,65 +1,53 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Review from "@/lib/models/Review";
+import User from "@/lib/models/User";
+import OrderItem from "@/lib/models/OrderItem";
+import Product from "@/lib/models/Product";
 
 //Get The Reviews Data
 export async function GET() {
     try {
-        const connection = await getConnection();
+        await connectDB();
 
-        //Database Tbale
-        const [rows] = await connection.execute(`
-            SELECT 
-                r.id AS review_id,
-                r.order_id AS order_id,
-                r.rating,
-                r.review_message AS review_comment,
-                r.created_at AS review_date,
-                u.id AS user_id,
-                u.firstName AS firstName,
-                u.lastName AS lastName,
-                u.email AS email,
-                u.phone AS phone,
-                u.is_active AS is_active,
-                u.is_verified AS is_verified,
-                p.id AS product_id,
-                p.name AS product_name
-            FROM reviews r
-            INNER JOIN users u ON r.user_id = u.id
-            INNER JOIN order_items oi ON r.order_id = oi.order_id
-            INNER JOIN products p ON oi.product_id = p.id
-            INNER JOIN orders o ON oi.order_id = o.id
-            ORDER BY r.created_at DESC
-        `);
+        const reviews = await Review.find().sort({ created_at: -1 });
 
         //Group Reviews Under Each User
         const usersMap = {};
 
-        for (const row of rows) {
-            if (!usersMap[row.user_id]) {
-                usersMap[row.user_id] = {
-                    id: row.user_id,
-                    firstName: row.firstName,
-                    lastName: row.lastName,
-                    email: row.email,
-                    phone: row.phone,
-                    is_active: row.is_active,
-                    is_verified: row.is_verified,
-                    created_at: row.user_created_at,
+        for (const r of reviews) {
+            const userId = r.user_id?.toString();
+            if (!userId) continue;
+
+            if (!usersMap[userId]) {
+                const user = await User.findById(userId).select('firstName lastName email phone is_active is_verified');
+                usersMap[userId] = {
+                    id: user?._id || null,
+                    firstName: user?.firstName || null,
+                    lastName: user?.lastName || null,
+                    email: user?.email || null,
+                    phone: user?.phone || null,
+                    is_active: user?.is_active ?? null,
+                    is_verified: user?.is_verified ?? null,
+                    created_at: null,
                     reviews: [],
                 };
             }
 
-            if (row.review_id) {
-                // Add review
-                usersMap[row.user_id].reviews.push({
-                    id: row.review_id,
-                    order_id: row.order_id,
-                    rating: row.rating,
-                    comment: row.review_comment,
-                    created_at: row.review_date,
+            // Find products linked to this order
+            const orderItems = await OrderItem.find({ order_id: r.order_id });
+            for (const oi of orderItems) {
+                const product = await Product.findById(oi.product_id);
+
+                usersMap[userId].reviews.push({
+                    id: r._id,
+                    order_id: r.order_id,
+                    rating: r.rating,
+                    comment: r.review_message,
+                    created_at: r.created_at,
                     product: {
-                        id: row.product_id,
-                        name: row.product_name,
+                        id: product?._id || null,
+                        name: product?.name || null,
                     },
                 });
             }

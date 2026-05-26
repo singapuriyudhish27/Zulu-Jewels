@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import PaymentOption from "@/lib/models/PaymentOption";
 
 // Add New Payment Method
 export async function POST(request) {
@@ -11,16 +12,16 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: "Category is required" }, { status: 400 });
         }
 
-        const connection = await getConnection();
-        const [result] = await connection.execute(
-            `INSERT INTO payment_options (category, bank_details, option_details, status) VALUES (?, ?, ?, ?)`,
-            [category, bank_details ? JSON.stringify(bank_details) : null, option_details ? JSON.stringify(option_details) : null, status !== undefined ? status : true]
-        );
-
-        const [newMethod] = await connection.execute(`SELECT * FROM payment_options WHERE id = ?`, [result.insertId]);
+        await connectDB();
+        const newMethod = await PaymentOption.create({
+            category,
+            bank_details: bank_details || null,
+            option_details: option_details || null,
+            status: status !== undefined ? status : true
+        });
 
         console.log("✅ New Payment Method Added:", category);
-        return NextResponse.json({ success: true, message: "Payment Method added successfully", data: newMethod[0] }, { status: 201 });
+        return NextResponse.json({ success: true, message: "Payment Method added successfully", data: newMethod }, { status: 201 });
     } catch (error) {
         console.error("Error Adding Payment Method:", error);
         return NextResponse.json({ success: false, message: "Error In Backend API Call" }, { status: 500 });
@@ -37,27 +38,26 @@ export async function PUT(request) {
             return NextResponse.json({ success: false, message: "Payment Method ID is required" }, { status: 400 });
         }
 
-        const connection = await getConnection();
+        await connectDB();
 
         // If only status is provided, just toggle active/inactive
         if (Object.keys(body).length === 2 && status !== undefined) {
-            await connection.execute(
-                `UPDATE payment_options SET status = ? WHERE id = ?`,
-                [status, id]
-            );
+            await PaymentOption.updateOne({ _id: id }, { status });
         } else {
             // Full update
             const { category, bank_details, option_details } = body;
-            await connection.execute(
-                `UPDATE payment_options SET category = ?, bank_details = ?, option_details = ?, status = ? WHERE id = ?`,
-                [category, bank_details ? JSON.stringify(bank_details) : null, option_details ? JSON.stringify(option_details) : null, status !== undefined ? status : true, id]
-            );
+            await PaymentOption.updateOne({ _id: id }, {
+                category,
+                bank_details: bank_details || null,
+                option_details: option_details || null,
+                status: status !== undefined ? status : true
+            });
         }
 
-        const [updatedMethod] = await connection.execute(`SELECT * FROM payment_options WHERE id = ?`, [id]);
+        const updatedMethod = await PaymentOption.findById(id);
 
         console.log("✅ Payment Method Updated, ID:", id);
-        return NextResponse.json({ success: true, message: "Payment Method updated successfully", data: updatedMethod[0] }, { status: 200 });
+        return NextResponse.json({ success: true, message: "Payment Method updated successfully", data: updatedMethod }, { status: 200 });
     } catch (error) {
         console.error("Error Editing Payment Method:", error);
         return NextResponse.json({ success: false, message: "Error In Backend API Call" }, { status: 500 });
@@ -74,8 +74,8 @@ export async function DELETE(request) {
             return NextResponse.json({ success: false, message: "Payment Method ID is required" }, { status: 400 });
         }
 
-        const connection = await getConnection();
-        await connection.execute(`DELETE FROM payment_options WHERE id = ?`, [id]);
+        await connectDB();
+        await PaymentOption.deleteOne({ _id: id });
 
         console.log("✅ Payment Method Deleted, ID:", id);
         return NextResponse.json({ success: true, message: "Payment Method deleted successfully" }, { status: 200 });

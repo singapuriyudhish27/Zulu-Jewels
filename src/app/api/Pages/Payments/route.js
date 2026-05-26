@@ -1,10 +1,11 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import PaymentOption from "@/lib/models/PaymentOption";
 
 export async function GET(request) {
     try {
-        const connection = await getConnection();
-        const [rows] = await connection.execute("SELECT * FROM payment_options");
+        await connectDB();
+        const rows = await PaymentOption.find();
         return NextResponse.json(rows);
     } catch (error) {
         console.error("Error fetching payments:", error);

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import UserLike from "@/lib/models/UserLike";
+import Product from "@/lib/models/Product";
+import ProductVariant from "@/lib/models/ProductVariant";
+import ProductImage from "@/lib/models/ProductImage";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -38,34 +42,57 @@ export async function GET() {
         }
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
         const role = "User";
 
-        const [rows] = await connection.execute(`
-            SELECT 
-                ul.id AS wishlist_id,
-                ul.user_id,
-                ul.product_id,
-                ul.variant_id,
-                ul.created_at,
-                p.name,
-                p.description,
-                COALESCE(pv.price, p.price) AS price,
-                pv.material AS variant_material,
-                (SELECT media_url FROM product_images WHERE product_id = p.id AND (variant_id = ul.variant_id OR variant_id IS NULL OR variant_id = 0) ORDER BY is_primary DESC LIMIT 1) AS image_url
-            FROM user_likes ul
-            JOIN products p ON ul.product_id = p.id
-            LEFT JOIN product_variants pv ON ul.variant_id = pv.id
-            WHERE ul.user_id = ?
-            ORDER BY ul.created_at DESC
-        `, [userId]);
+        const likes = await UserLike.find({ user_id: userId }).sort({ created_at: -1 });
         console.log("Backend API To Get Users & User's Liked Products(Wishlists).");
+
+        const data = [];
+        for (const like of likes) {
+            const product = await Product.findById(like.product_id);
+            if (!product) continue;
+
+            let price = product.price;
+            let variantMaterial = null;
+
+            if (like.variant_id) {
+                const variant = await ProductVariant.findById(like.variant_id);
+                if (variant) {
+                    price = variant.price || product.price;
+                    variantMaterial = variant.material;
+                }
+            }
+
+            // Get best image
+            let imageQuery = { product_id: product._id };
+            if (like.variant_id) {
+                imageQuery.$or = [
+                    { variant_id: like.variant_id },
+                    { variant_id: null }
+                ];
+            }
+            const image = await ProductImage.findOne(imageQuery).sort({ is_primary: -1 });
+
+            data.push({
+                wishlist_id: like._id,
+                user_id: like.user_id,
+                product_id: like.product_id,
+                variant_id: like.variant_id,
+                created_at: like.created_at,
+                name: product.name,
+                description: product.description,
+                price,
+                variant_material: variantMaterial,
+                image_url: image ? image.media_url : null,
+            });
+        }
 
         return NextResponse.json({
             success: true,
             role,
-            count: rows.length,
-            data: rows
+            count: data.length,
+            data
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting WhishList Data:", error);
@@ -95,15 +122,15 @@ export async function POST(req) {
         }
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
 
         const userId = user.userId;
 
-        await connection.execute(`
-            INSERT INTO user_likes (user_id, product_id, variant_id, is_custom)
-            VALUES (?, ?, ?, ?)
-            ON DUPLICATE KEY UPDATE is_custom = VALUES(is_custom)
-        `, [userId, product_id, variant_id || null, is_custom]);
+        await UserLike.findOneAndUpdate(
+            { user_id: userId, product_id, variant_id: variant_id || null },
+            { user_id: userId, product_id, variant_id: variant_id || null, is_custom },
+            { upsert: true, new: true }
+        );
         console.log("Backend API To Add New Products To User's Wishlists.");
 
         return NextResponse.json({
@@ -138,16 +165,18 @@ export async function DELETE(req) {
         }
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
 
         const userId = user.userId;
 
-        const [result] = await connection.execute(`
-            DELETE FROM user_likes WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
-        `, [userId, product_id, variant_id || null]);
+        const result = await UserLike.deleteOne({
+            user_id: userId,
+            product_id,
+            variant_id: variant_id || null
+        });
         console.log("Backend API To Remove Products From User's Wishlists.");
 
-        if (result.affectedRows === 0) {
+        if (result.deletedCount === 0) {
             return NextResponse.json(
                 { success: false, message: "Item not found in wishlist" },
                 { status: 404 }

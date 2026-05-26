@@ -1,26 +1,22 @@
 import crypto from 'crypto';
-import { getConnection } from '@/lib/db';
+import { connectDB } from '@/lib/db';
+import AdminSecurity from '@/lib/models/AdminSecurity';
 
 export function generateAdminSlug() {
   return crypto.randomBytes(16).toString('base64url');
 }
 
 export async function getCurrentAdminSlug() {
-  const conn = await getConnection();
-  const [rows] = await conn.execute(
-    'SELECT route_slug FROM admin_security WHERE id = 1'
-  );
+  await connectDB();
+  let record = await AdminSecurity.findOne();
 
-  if (rows.length === 0) {
+  if (!record) {
     const slug = generateAdminSlug();
-    await conn.execute(
-      'INSERT INTO admin_security (id, route_slug) VALUES (1, ?)',
-      [slug]
-    );
+    record = await AdminSecurity.create({ route_slug: slug });
     return slug;
   }
 
-  return rows[0].route_slug;
+  return record.route_slug;
 }
 
 export async function validateAdminSlug(slug) {
@@ -30,20 +26,18 @@ export async function validateAdminSlug(slug) {
 }
 
 export async function rotateAdminSlug() {
-  const conn = await getConnection();
+  await connectDB();
   const newSlug = generateAdminSlug();
-  const [existing] = await conn.execute('SELECT id FROM admin_security WHERE id = 1');
 
-  if (existing.length === 0) {
-    await conn.execute(
-      'INSERT INTO admin_security (id, route_slug) VALUES (1, ?)',
-      [newSlug]
-    );
+  const existing = await AdminSecurity.findOne();
+
+  if (!existing) {
+    await AdminSecurity.create({ route_slug: newSlug });
   } else {
-    await conn.execute(
-      'UPDATE admin_security SET route_slug = ?, rotated_at = CURRENT_TIMESTAMP WHERE id = 1',
-      [newSlug]
-    );
+    await AdminSecurity.findOneAndUpdate({}, {
+      route_slug: newSlug,
+      rotated_at: new Date()
+    });
   }
 
   return newSlug;

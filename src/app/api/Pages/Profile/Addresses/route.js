@@ -1,7 +1,8 @@
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import UserAddress from "@/lib/models/UserAddress";
 
 // Helper: verify token and return userId
 async function getUser() {
@@ -26,25 +27,26 @@ export async function POST(request) {
             return NextResponse.json({ message: "Address cannot be empty" }, { status: 400 });
         }
 
-        const conn = await getConnection();
+        await connectDB();
 
         // If this address is being set as default, clear any existing default first
         if (is_default) {
-            await conn.execute(
-                "UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?",
-                [decoded.userId]
+            await UserAddress.updateMany(
+                { user_id: decoded.userId },
+                { is_default: false }
             );
         }
 
-        const [result] = await conn.execute(
-            "INSERT INTO user_addresses (user_id, address_line, is_default) VALUES (?, ?, ?)",
-            [decoded.userId, address_line.trim(), is_default ? true : false]
-        );
+        const newAddress = await UserAddress.create({
+            user_id: decoded.userId,
+            address_line: address_line.trim(),
+            is_default: is_default ? true : false
+        });
 
         return NextResponse.json({
             success: true,
             message: "Address saved successfully",
-            id: result.insertId,
+            id: newAddress._id,
         }, { status: 201 });
     } catch (error) {
         console.error("Add Address API Error:", error);
@@ -61,21 +63,21 @@ export async function PATCH(request) {
         const { id } = await request.json();
         if (!id) return NextResponse.json({ message: "Address ID required" }, { status: 400 });
 
-        const conn = await getConnection();
+        await connectDB();
 
         // Clear old default
-        await conn.execute(
-            "UPDATE user_addresses SET is_default = FALSE WHERE user_id = ?",
-            [decoded.userId]
+        await UserAddress.updateMany(
+            { user_id: decoded.userId },
+            { is_default: false }
         );
 
         // Set new default
-        const [result] = await conn.execute(
-            "UPDATE user_addresses SET is_default = TRUE WHERE id = ? AND user_id = ?",
-            [id, decoded.userId]
+        const result = await UserAddress.updateOne(
+            { _id: id, user_id: decoded.userId },
+            { is_default: true }
         );
 
-        if (result.affectedRows === 0) {
+        if (result.matchedCount === 0) {
             return NextResponse.json({ message: "Address not found" }, { status: 404 });
         }
 
@@ -95,13 +97,10 @@ export async function DELETE(request) {
         const { id } = await request.json();
         if (!id) return NextResponse.json({ message: "Address ID required" }, { status: 400 });
 
-        const conn = await getConnection();
-        const [result] = await conn.execute(
-            "DELETE FROM user_addresses WHERE id = ? AND user_id = ?",
-            [id, decoded.userId]
-        );
+        await connectDB();
+        const result = await UserAddress.deleteOne({ _id: id, user_id: decoded.userId });
 
-        if (result.affectedRows === 0) {
+        if (result.deletedCount === 0) {
             return NextResponse.json({ message: "Address not found" }, { status: 404 });
         }
 

@@ -1,5 +1,9 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import CartItem from "@/lib/models/CartItem";
+import Product from "@/lib/models/Product";
+import ProductVariant from "@/lib/models/ProductVariant";
+import ProductImage from "@/lib/models/ProductImage";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -43,78 +47,60 @@ export async function GET() {
         }
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
         const role = "User";
 
-        const [rows] = await connection.execute(`
-            SELECT 
-                ci.id AS cart_item_id,
-                ci.quantity,
-                ci.variant_id,
-                ci.created_at,
-                p.id AS product_id,
-                p.name AS product_name,
-                p.description,
-                COALESCE(pv.price, p.price) AS price,
-                pv.material AS variant_material,
-                p.is_active,
-                (SELECT media_url FROM product_images WHERE product_id = p.id AND (variant_id = ci.variant_id OR variant_id IS NULL OR variant_id = 0) ORDER BY is_primary DESC LIMIT 1) AS media_url
-            FROM cart_items ci
-            JOIN products p ON ci.product_id = p.id
-            LEFT JOIN product_variants pv ON ci.variant_id = pv.id
-            WHERE ci.user_id = ?
-            ORDER BY ci.created_at DESC
-        `, [userId]);
+        const cartItems = await CartItem.find({ user_id: userId }).sort({ created_at: -1 });
         console.log("Backend API To Get Users & Cart Items.");
 
-        //Product Images Grouping
-        const cartMap = new Map();
+        const data = [];
+        for (const ci of cartItems) {
+            const product = await Product.findById(ci.product_id);
+            if (!product) continue;
 
-        for (const row of rows) {
-            const {
-                cart_item_id,
-                quantity,
-                variant_id,
-                created_at,
-                product_id,
-                product_name,
-                description,
-                price,
-                variant_material,
-                is_active,
-                media_url,
-            } = row;
+            let variantMaterial = null;
+            let price = product.price;
 
-            if (!cartMap.has(cart_item_id)) {
-                cartMap.set(cart_item_id, {
-                    cart_item_id,
-                    quantity,
-                    variant_id,
-                    variant_material,
-                    created_at,
-                    product: {
-                        id: product_id,
-                        name: product_name,
-                        description,
-                        price,
-                        is_active,
-                        images: [],
-                    },
-                });
+            if (ci.variant_id) {
+                const variant = await ProductVariant.findById(ci.variant_id);
+                if (variant) {
+                    price = variant.price || product.price;
+                    variantMaterial = variant.material;
+                }
             }
 
-            if (media_url) {
-                cartMap.get(cart_item_id).product.images.push({
-                    media_url
-                });
+            // Get best image for this variant or product
+            let imageQuery = { product_id: product._id };
+            if (ci.variant_id) {
+                imageQuery.$or = [
+                    { variant_id: ci.variant_id },
+                    { variant_id: null }
+                ];
             }
+            const image = await ProductImage.findOne(imageQuery).sort({ is_primary: -1 });
+
+            data.push({
+                cart_item_id: ci._id,
+                quantity: ci.quantity,
+                variant_id: ci.variant_id,
+                variant_material: variantMaterial,
+                created_at: ci.created_at,
+                product: {
+                    id: product._id,
+                    name: product.name,
+                    description: product.description,
+                    price,
+                    is_active: product.is_active,
+                    images: image ? [{ media_url: image.media_url }] : [],
+                },
+            });
         }
 
         return NextResponse.json({
             success: true,
             role,
             message: "Cart items fetched successfully",
-            data: Array.from(cartMap.values())
+            data
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Cart Data:", error);
@@ -146,18 +132,21 @@ export async function POST(request) {
         }
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
 
         //Check If product already exists in cart with this variant
-        const [existing] = await connection.execute(`
-            SELECT id, quantity FROM cart_items WHERE user_id = ? AND product_id = ? AND variant_id <=> ?
-        `, [userId, product_id, variant_id || null]);
+        const existing = await CartItem.findOne({
+            user_id: userId,
+            product_id,
+            variant_id: variant_id || null
+        });
 
-        if (existing.length > 0) {
+        if (existing) {
             //Update Quantity
-            await connection.execute(`
-                UPDATE cart_items SET quantity = quantity + ? WHERE id = ?
-            `, [quantity, existing[0].id]);
+            await CartItem.updateOne(
+                { _id: existing._id },
+                { $inc: { quantity } }
+            );
 
             return NextResponse.json({
                 success: true,
@@ -165,9 +154,12 @@ export async function POST(request) {
             });
         } else {
             //Insert New Product
-            await connection.execute(`
-                INSERT INTO cart_items (user_id, product_id, variant_id, quantity) VALUES (?, ?, ?, ?)
-            `, [userId, product_id, variant_id || null, quantity]);
+            await CartItem.create({
+                user_id: userId,
+                product_id,
+                variant_id: variant_id || null,
+                quantity
+            });
             console.log("Backend API To Add New Cart Item.");
 
             return NextResponse.json({
@@ -205,15 +197,13 @@ export async function PUT(request) {
         }
 
         //Database Connection
-        const connection = await getConnection();
+        await connectDB();
 
         //If Quantity is Zero Then Delete the Product from Cart
         if (quantity === 0) {
-            const [result] = await connection.execute(`
-                DELETE FROM cart_items WHERE id = ? AND user_id = ?
-            `, [cart_item_id, userId]);
+            const result = await CartItem.deleteOne({ _id: cart_item_id, user_id: userId });
 
-            if (result.affectedRows === 0) {
+            if (result.deletedCount === 0) {
                 return NextResponse.json({
                     success: false,
                     message: "Cart item not found or unauthorized",
@@ -226,12 +216,13 @@ export async function PUT(request) {
             }, { status: 200 });
         }
 
-        const [result] = await connection.execute(`
-            UPDATE cart_items SET quantity = ? WHERE id = ? AND user_id = ?
-        `, [quantity, cart_item_id, userId]);
+        const result = await CartItem.updateOne(
+            { _id: cart_item_id, user_id: userId },
+            { quantity }
+        );
         console.log("Backend API To Edit Cart Item.");
 
-        if (result.affectedRows === 0) {
+        if (result.matchedCount === 0) {
             return NextResponse.json({
                 success: false,
                 message: "Cart item not found or unauthorized",

@@ -1,91 +1,48 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Category from "@/lib/models/Category";
+import Product from "@/lib/models/Product";
+import ProductImage from "@/lib/models/ProductImage";
 
 export async function GET() {
     try {
-        const connection = await getConnection();
+        await connectDB();
 
-        const [rows] = await connection.execute(`
-            SELECT 
-                c.id AS category_id,
-                c.name AS category_name,
-                c.image_url AS category_image,
-                p.id AS product_id,
-                p.name AS product_name,
-                p.description,
-                p.price,
-                p.is_active,
-                p.created_at,
-                pi.id AS image_id,
-                pi.media_url AS image_url,
-                pi.is_primary
-            FROM categories c
-            LEFT JOIN products p ON c.id = p.category_id
-            LEFT JOIN product_images pi ON p.id = pi.product_id
-            WHERE c.id IS NOT NULL AND (p.is_deleted = FALSE OR p.is_deleted IS NULL)
-            ORDER BY c.id, p.id DESC, pi.is_primary DESC
-        `);
+        const categories = await Category.find();
         console.log("Backend API To Get Home Page Data.");
 
         //Catgeory Wise Data Grouping
-        const categoriesMap = {};
+        const result = [];
 
-        for (const row of rows) {
-            const {
-                category_id,
-                category_name,
-                category_image,
-                product_id,
-                product_name,
-                description,
-                price,
-                is_active,
-                created_at,
-                image_id,
-                image_url,
-                is_primary,
-            } = row;
+        for (const cat of categories) {
+            const products = await Product.find({ category_id: cat._id, is_deleted: false }).sort({ _id: -1 });
 
-            // Initialize category
-            if (!categoriesMap[category_id]) {
-                categoriesMap[category_id] = {
-                    id: category_id,
-                    name: category_name,
-                    image: category_image,
-                    products: [],
-                };
+            const productsWithImages = [];
+            for (const p of products) {
+                const images = await ProductImage.find({ product_id: p._id }).sort({ is_primary: -1 });
+
+                productsWithImages.push({
+                    id: p._id,
+                    name: p.name,
+                    description: p.description,
+                    price: p.price,
+                    is_active: p.is_active,
+                    created_at: p.created_at,
+                    images: images.map(img => ({
+                        id: img._id,
+                        image_url: img.media_url,
+                        is_primary: Boolean(img.is_primary),
+                    })),
+                });
             }
 
-            // If product exists
-            if (product_id) {
-                let product = categoriesMap[category_id].products.find(
-                    (p) => p.id === product_id
-                );
-
-                if (!product) {
-                    product = {
-                        id: product_id,
-                        name: product_name,
-                        description,
-                        price,
-                        is_active,
-                        created_at,
-                        images: [],
-                    };
-                    categoriesMap[category_id].products.push(product);
-                }
-
-                // Add image if exists
-                if (image_id) {
-                    product.images.push({
-                        id: image_id,
-                        image_url,
-                        is_primary: Boolean(is_primary),
-                    });
-                }
-            }
+            result.push({
+                id: cat._id,
+                name: cat.name,
+                image: cat.image_url,
+                products: productsWithImages,
+            });
         }
-        const result = Object.values(categoriesMap);
 
         return NextResponse.json({
             success: true,

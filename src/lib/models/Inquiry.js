@@ -1,0 +1,10 @@
+import mongoose from 'mongoose';
+
+const InquirySchema = new mongoose.Schema({
+  user_id: { type: mongoose.Schema.Types.ObjectId, ref: 'User', default: null },
+  inquiry_category: { type: String },
+  message: { type: String },
+  status: { type: String, default: 'Unread' },
+}, { timestamps: { createdAt: 'created_at', updatedAt: false } });
+
+export default mongoose.models.Inquiry || mongoose.model('Inquiry', InquirySchema);

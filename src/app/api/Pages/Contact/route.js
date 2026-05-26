@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
+import Inquiry from "@/lib/models/Inquiry";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 
@@ -31,18 +33,15 @@ export async function POST(req) {
 
         // Get User if logged in
         const userId = await getUserIdFromCookie();
-        const connection = await getConnection();
+        await connectDB();
 
         let userData = { name, email, phone };
 
         // If logged in, fetch user details to complement/verify
         if (userId) {
-            const [users] = await connection.execute(`
-                SELECT id, firstName, lastName, email, phone FROM users WHERE id = ?
-            `, [userId]);
+            const user = await User.findById(userId).select('firstName lastName email phone');
 
-            if (users.length > 0) {
-                const user = users[0];
+            if (user) {
                 userData.name = userData.name || `${user.firstName} ${user.lastName}`;
                 userData.email = userData.email || user.email;
                 userData.phone = userData.phone || user.phone;
@@ -50,19 +49,16 @@ export async function POST(req) {
         }
 
         // Inquiry Insert
-        await connection.execute(`
-            INSERT INTO inquiries (user_id, inquiry_category, message) VALUES (?, ?, ?)
-            `, [
-                userId, // Can be NULL for guest inquiries
-                subject, 
-                JSON.stringify({ 
-                    name: userData.name || 'Anonymous', 
-                    email: userData.email || 'N/A', 
-                    phone: userData.phone || 'N/A', 
-                    message 
-                })
-            ]
-        );
+        await Inquiry.create({
+            user_id: userId, // Can be NULL for guest inquiries
+            inquiry_category: subject,
+            message: JSON.stringify({ 
+                name: userData.name || 'Anonymous', 
+                email: userData.email || 'N/A', 
+                phone: userData.phone || 'N/A', 
+                message 
+            })
+        });
         
         console.log("Inquiry stored in database.");
 
@@ -78,4 +74,4 @@ export async function POST(req) {
             error: error.message 
         }, { status: 500 });
     }
-}
+}

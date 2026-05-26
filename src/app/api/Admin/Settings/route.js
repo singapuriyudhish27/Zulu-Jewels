@@ -1,7 +1,8 @@
 import { NextResponse } from 'next/server';
-import { getConnection } from '@/lib/db';
+import { connectDB } from '@/lib/db';
+import SiteSetting from '@/lib/models/SiteSetting';
 import { verifyAdminFromRequest } from '@/lib/adminAuth';
-import { getSiteSettings, getMaintenanceStatus, toMySQLDatetime } from '@/lib/maintenance';
+import { getSiteSettings, getMaintenanceStatus } from '@/lib/maintenance';
 import {
   getCurrentAdminSlug,
   getAdminPortalPath,
@@ -75,20 +76,18 @@ export async function PUT(req) {
       }
     }
 
-    const conn = await getConnection();
-    await conn.execute(
-      `UPDATE site_settings SET
-        maintenance_enabled = ?,
-        maintenance_message = ?,
-        maintenance_starts_at = ?,
-        maintenance_ends_at = ?
-      WHERE id = 1`,
-      [
-        Boolean(maintenanceEnabled),
-        maintenanceMessage || null,
-        maintenanceEnabled ? toMySQLDatetime(maintenanceStartsAt) : null,
-        maintenanceEnabled ? toMySQLDatetime(maintenanceEndsAt) : null,
-      ]
+    await connectDB();
+
+    // Upsert the site settings document
+    await SiteSetting.findOneAndUpdate(
+      {},
+      {
+        maintenance_enabled: Boolean(maintenanceEnabled),
+        maintenance_message: maintenanceMessage || null,
+        maintenance_starts_at: maintenanceEnabled ? new Date(maintenanceStartsAt) : null,
+        maintenance_ends_at: maintenanceEnabled ? new Date(maintenanceEndsAt) : null,
+      },
+      { upsert: true, new: true }
     );
 
     const settings = await getSiteSettings();

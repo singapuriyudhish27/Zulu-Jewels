@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import ShippingZone from "@/lib/models/ShippingZone";
 
 // Add New Shipping Zone
 export async function POST(request) {
@@ -11,17 +12,18 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: "Zone name is required" }, { status: 400 });
         }
 
-        const connection = await getConnection();
-        const [result] = await connection.execute(
-            `INSERT INTO shipping_zones (zone_name, areas, location, shipping_rate, delivery_time, status)
-             VALUES (?, ?, ?, ?, ?, ?)`,
-            [zone_name, areas || '', location || '', shipping_rate || 0, delivery_time || '', status !== undefined ? status : true]
-        );
-
-        const [newZone] = await connection.execute(`SELECT * FROM shipping_zones WHERE id = ?`, [result.insertId]);
+        await connectDB();
+        const newZone = await ShippingZone.create({
+            zone_name,
+            areas: areas || '',
+            location: location || '',
+            shipping_rate: shipping_rate || 0,
+            delivery_time: delivery_time || '',
+            status: status !== undefined ? status : true
+        });
 
         console.log("✅ New Shipping Zone Added:", zone_name);
-        return NextResponse.json({ success: true, message: "Shipping Zone added successfully", data: newZone[0] }, { status: 201 });
+        return NextResponse.json({ success: true, message: "Shipping Zone added successfully", data: newZone }, { status: 201 });
     } catch (error) {
         console.error("Error Adding Shipping Zone:", error);
         return NextResponse.json({ success: false, message: "Error In Backend API Call" }, { status: 500 });
@@ -38,16 +40,18 @@ export async function PUT(request) {
             return NextResponse.json({ success: false, message: "Zone ID is required" }, { status: 400 });
         }
 
-        const connection = await getConnection();
-        await connection.execute(
-            `UPDATE shipping_zones SET zone_name = ?, areas = ?, location = ?, shipping_rate = ?, delivery_time = ?, status = ? WHERE id = ?`,
-            [zone_name, areas || '', location || '', shipping_rate || 0, delivery_time || '', status !== undefined ? status : true, id]
-        );
-
-        const [updatedZone] = await connection.execute(`SELECT * FROM shipping_zones WHERE id = ?`, [id]);
+        await connectDB();
+        const updatedZone = await ShippingZone.findByIdAndUpdate(id, {
+            zone_name,
+            areas: areas || '',
+            location: location || '',
+            shipping_rate: shipping_rate || 0,
+            delivery_time: delivery_time || '',
+            status: status !== undefined ? status : true
+        }, { new: true });
 
         console.log("✅ Shipping Zone Updated:", zone_name);
-        return NextResponse.json({ success: true, message: "Shipping Zone updated successfully", data: updatedZone[0] }, { status: 200 });
+        return NextResponse.json({ success: true, message: "Shipping Zone updated successfully", data: updatedZone }, { status: 200 });
     } catch (error) {
         console.error("Error Editing Shipping Zone:", error);
         return NextResponse.json({ success: false, message: "Error In Backend API Call" }, { status: 500 });
@@ -64,8 +68,8 @@ export async function DELETE(request) {
             return NextResponse.json({ success: false, message: "Zone ID is required" }, { status: 400 });
         }
 
-        const connection = await getConnection();
-        await connection.execute(`DELETE FROM shipping_zones WHERE id = ?`, [id]);
+        await connectDB();
+        await ShippingZone.deleteOne({ _id: id });
 
         console.log("✅ Shipping Zone Deleted, ID:", id);
         return NextResponse.json({ success: true, message: "Shipping Zone deleted successfully" }, { status: 200 });

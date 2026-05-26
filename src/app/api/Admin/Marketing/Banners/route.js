@@ -1,20 +1,22 @@
 import { NextResponse } from "next/server";
-import { getConnection } from "@/lib/db";
+import { connectDB } from "@/lib/db";
+import Banner from "@/lib/models/Banner";
 
 //Add New Banner
 export async function POST(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { title, location, status } = await req.json();
 
         if (!title) {
             return NextResponse.json({ success: false, message: "Title is required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `INSERT INTO banners (title, location, status) VALUES (?, ?, ?)`,
-            [title, location || null, status !== undefined ? status : true]
-        );
+        await Banner.create({
+            title,
+            location: location || null,
+            status: status !== undefined ? status : true
+        });
 
         return NextResponse.json({ success: true, message: "Banner added successfully" }, { status: 201 });
     } catch (error) {
@@ -26,17 +28,18 @@ export async function POST(req) {
 //Edit Banner
 export async function PUT(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { id, title, location, status } = await req.json();
 
         if (!id || !title) {
             return NextResponse.json({ success: false, message: "ID and Title are required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `UPDATE banners SET title = ?, location = ?, status = ? WHERE id = ?`,
-            [title, location || null, status !== undefined ? status : true, id]
-        );
+        await Banner.updateOne({ _id: id }, {
+            title,
+            location: location || null,
+            status: status !== undefined ? status : true
+        });
 
         return NextResponse.json({ success: true, message: "Banner updated successfully" }, { status: 200 });
     } catch (error) {
@@ -48,7 +51,7 @@ export async function PUT(req) {
 //Delete Banner
 export async function DELETE(req) {
     try {
-        const connection = await getConnection();
+        await connectDB();
         const { searchParams } = new URL(req.url);
         const id = searchParams.get('id');
 
@@ -56,10 +59,7 @@ export async function DELETE(req) {
             return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
         }
 
-        await connection.execute(
-            `DELETE FROM banners WHERE id = ?`,
-            [id]
-        );
+        await Banner.deleteOne({ _id: id });
 
         return NextResponse.json({ success: true, message: "Banner deleted successfully" }, { status: 200 });
     } catch (error) {
