@@ -1,6 +1,7 @@
 'use client';
 import { useEffect, useState } from 'react';
 import { useRouter, usePathname, useParams } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
 import { loadStripe } from '@stripe/stripe-js';
@@ -11,6 +12,8 @@ import Footer from '@/components/layout/Footer';
 import { Heart, Share2, ShoppingBag, CreditCard, ChevronLeft, ChevronRight, Star, ThumbsUp, ThumbsDown, Plus, ShoppingCart } from 'lucide-react';
 import PriceDisplay from '@/components/price/PriceDisplay';
 import { useCurrency } from '@/context/CurrencyContext';
+
+const LocationMap = dynamic(() => import('@/components/map/LocationMap'), { ssr: false });
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
 
@@ -31,7 +34,7 @@ function StripeCheckoutForm({ onSuccess, onClose }) {
     if (error) {
       toast.error(error.message);
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      onSuccess();
+      onSuccess(paymentIntent);
     }
     setLoading(false);
   };
@@ -99,15 +102,23 @@ export default function ProductDetailsPage() {
   const [showOrderModal, setShowOrderModal] = useState(false);
   const [shippingAddress, setShippingAddress] = useState('');
   const [addressError, setAddressError] = useState(false);
-  const [mapLocation, setMapLocation] = useState(null); // { lat, lon, display_name }
-  const [mapLoading, setMapLoading] = useState(false);
   const [savedAddresses, setSavedAddresses] = useState([]); // User's saved addresses from profile
+  const [showAddressModal, setShowAddressModal] = useState(false);
+  const [houseNumber, setHouseNumber] = useState('');
+  const [landmark, setLandmark] = useState('');
+  const [autoAddress, setAutoAddress] = useState('');
+  const [addressTag, setAddressTag] = useState('Home');
+  const [addressLoading, setAddressLoading] = useState(false);
+  const [mapCenter, setMapCenter] = useState(null);
+  const [checkoutStep, setCheckoutStep] = useState(1);
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState('stripe');
 
   useEffect(() => {
     const fetchProduct = async () => {
       try {
         const id = params.Product_Details;
         const res = await fetch(`/api/Pages/Products/${id}`);
+        console.log("Response:", res);
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
@@ -115,7 +126,7 @@ export default function ProductDetailsPage() {
         if (data.success) {
           setProduct(data.product);
           if (data.product.is_wishlisted) setIsWishlisted(true);
-          if (data.product.cart_variants) setInCartVariantIds(data.product.cart_variants.map(id => id === 'base' ? null : Number(id)));
+          if (data.product.cart_variants) setInCartVariantIds(data.product.cart_variants.map(id => id === 'base' ? null : id));
           // Auto-select first variant if exists
           if (data.product.variants && data.product.variants.length > 0) {
             setSelectedVariant(data.product.variants[0]);
@@ -132,30 +143,6 @@ export default function ProductDetailsPage() {
     if (params.Product_Details) fetchProduct();
   }, [params.Product_Details]);
 
-  // Geocode address using our server-side proxy (avoids Nominatim User-Agent blocking)
-  useEffect(() => {
-    if (!shippingAddress.trim() || shippingAddress.trim().length < 8) {
-      setMapLocation(null);
-      return;
-    }
-    const timer = setTimeout(async () => {
-      setMapLoading(true);
-      try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(shippingAddress)}`);
-        const data = await res.json();
-        if (data.found) {
-          setMapLocation({ lat: data.lat, lon: data.lon, display_name: data.display_name });
-        } else {
-          setMapLocation(null);
-        }
-      } catch (_) {
-        setMapLocation(null);
-      } finally {
-        setMapLoading(false);
-      }
-    }, 900);
-    return () => clearTimeout(timer);
-  }, [shippingAddress]);
 
   if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
   if (!product) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Product not found</div>;
@@ -164,7 +151,7 @@ export default function ProductDetailsPage() {
   const currentPrice = selectedVariant ? 1 * selectedVariant.price : 1 * product.price;
   const currentDesc = (selectedVariant && selectedVariant.description) ? selectedVariant.description : product.description;
   const currentImages = selectedVariant 
-    ? product.images.filter(img => img.variant_id === selectedVariant.id)
+    ? product.images.filter(img => img.variant_id?.toString() === (selectedVariant._id?.toString() || selectedVariant.id?.toString()))
     : product.images.filter(img => !img.variant_id);
     
   // If a variant has no images, show base images
@@ -183,7 +170,7 @@ export default function ProductDetailsPage() {
       const res = await fetch(`/api/Pages/Products/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: id, variant_id: selectedVariant?.id, action: 'cart', quantity: 1 })
+        body: JSON.stringify({ product_id: id, variant_id: selectedVariant?._id || selectedVariant?.id || null, action: 'cart', quantity: 1 })
       });
       
       if (res.status === 401) {
@@ -198,7 +185,7 @@ export default function ProductDetailsPage() {
 
       const data = await res.json();
       if (data.success) {
-        const currentId = selectedVariant?.id || null;
+        const currentId = selectedVariant?._id || selectedVariant?.id || null;
         if (data.status === "added") {
           setInCartVariantIds(prev => [...prev, currentId]);
         } else {
@@ -220,7 +207,7 @@ export default function ProductDetailsPage() {
       const res = await fetch(`/api/Pages/Products/${id}`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ product_id: id, variant_id: selectedVariant?.id, action: 'wishlist' })
+        body: JSON.stringify({ product_id: id, variant_id: selectedVariant?._id || selectedVariant?.id || null, action: 'wishlist' })
       });
 
       if (res.status === 401) {
@@ -280,6 +267,7 @@ export default function ProductDetailsPage() {
           await fetch('/api/Pages/Payments/RazorPay/verify', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
             body: JSON.stringify({ ...response, specificItem }),
           });
           toast.success('Payment Successful! Thank you for your order.');
@@ -334,17 +322,85 @@ export default function ProductDetailsPage() {
       setShippingAddress(defaultAddr ? defaultAddr.address_line : '');
 
       // 3. Add to cart if not already present
-      const currentVariantId = selectedVariant?.id || null;
+      const currentVariantId = selectedVariant?._id || selectedVariant?.id || null;
       const isThisVariantInCart = inCartVariantIds.includes(currentVariantId);
       if (!isThisVariantInCart) {
         await addToCart();
       }
 
-      // 4. Open Order Review Modal
+      // 4. Pre-detect location to set default payment method
+      try {
+        const geoRes = await fetch('https://ipapi.co/json/');
+        const geoData = await geoRes.json();
+        if (geoData.country_code === 'IN') {
+          setSelectedPaymentMethod('razorpay');
+        } else {
+          setSelectedPaymentMethod('stripe');
+        }
+      } catch (_) {
+        setSelectedPaymentMethod('stripe'); // fallback
+      }
+
+      // 5. Open Order Review Modal and set to step 1
+      setCheckoutStep(1);
       setAddressError(false);
       setShowOrderModal(true);
     } catch (error) {
       router.push(`/auth/login?callbackUrl=${encodeURIComponent(pathname)}`);
+    }
+  };
+
+  const handleLocationSelect = (location) => {
+    setAutoAddress(location.address);
+  };
+
+  const handleAddAddress = async () => {
+    if (!autoAddress.trim()) {
+      toast.error('Please select your location on the map');
+      return;
+    }
+    if (!houseNumber.trim()) {
+      toast.error('Please enter flat, house no., or building name');
+      return;
+    }
+    
+    const finalAddress = `${addressTag.toUpperCase()}: ${houseNumber.trim()}, ${autoAddress.trim()}${landmark.trim() ? ` (Landmark: ${landmark.trim()})` : ''}`;
+
+    setAddressLoading(true);
+    try {
+      const isFirst = savedAddresses.length === 0;
+      const res = await fetch('/api/Pages/Profile/Addresses', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify({ address_line: finalAddress, is_default: isFirst }),
+      });
+      const result = await res.json();
+      if (!res.ok) throw new Error(result.message);
+      
+      const newAddress = {
+        _id: result.id,
+        address_line: finalAddress,
+        is_default: isFirst,
+      };
+      
+      setSavedAddresses(prev => [...prev, newAddress]);
+      setHouseNumber('');
+      setLandmark('');
+      setAutoAddress('');
+      setAddressTag('Home');
+      setMapCenter(null);
+      setShowAddressModal(false);
+      
+      // Auto-select the newly added address
+      setShippingAddress(finalAddress);
+      setAddressError(false);
+      
+      toast.success('Address saved!');
+    } catch (err) {
+      toast.error(err.message || 'Failed to save address');
+    } finally {
+      setAddressLoading(false);
     }
   };
 
@@ -359,24 +415,14 @@ export default function ProductDetailsPage() {
     const price = selectedVariant ? selectedVariant.price : product.price;
     const specificItem = {
       productId: product.id,
-      variantId: selectedVariant?.id || null,
+      variantId: selectedVariant?._id || selectedVariant?.id || null,
       quantity: 1,
       price: price,
       shippingAddress: shippingAddress.trim()
     };
 
-    // Detect user country and route to correct payment gateway
-    let country = 'XX';
-    try {
-      const geoRes = await fetch('https://ipapi.co/json/');
-      const geoData = await geoRes.json();
-      country = geoData.country_code || 'XX';
-    } catch (_) {
-      toast('Could not detect location. Defaulting to international payment.', { icon: '🌐' });
-    }
-
-    if (country === 'IN') {
-      toast('Detected India 🇮🇳 — Opening Razorpay', { icon: '💳' });
+    if (selectedPaymentMethod === 'razorpay') {
+      toast('Opening Razorpay', { icon: '💳' });
       await handleRazorpayPayment(price, specificItem);
     } else {
       toast('Opening Stripe for international payment 🌐', { icon: '💳' });
@@ -413,60 +459,62 @@ export default function ProductDetailsPage() {
         /* Order Review Modal */
         .pd-order-modal {
           background: #ffffff;
-          max-width: 560px;
+          max-width: 500px;
           width: 100%;
           max-height: 90vh;
           overflow-y: auto;
-          border-radius: 4px;
-          box-shadow: 0 24px 80px rgba(0,0,0,0.25);
-          animation: pd-modal-in 0.25s ease;
+          border-radius: 8px;
+          box-shadow: 0 20px 50px rgba(0,0,0,0.06);
+          animation: pd-modal-in 0.3s cubic-bezier(0.16, 1, 0.3, 1);
         }
         @keyframes pd-modal-in {
-          from { opacity: 0; transform: translateY(16px) scale(0.98); }
+          from { opacity: 0; transform: translateY(10px) scale(0.99); }
           to   { opacity: 1; transform: translateY(0) scale(1); }
         }
         .pd-om-header {
           display: flex;
           align-items: center;
           justify-content: space-between;
-          padding: 28px 32px 20px;
-          border-bottom: 1px solid #EFEFEF;
+          padding: 24px 32px 16px;
+          border-bottom: 1px solid #F5F5F5;
         }
         .pd-om-title {
           font-family: 'Cormorant Garamond', serif;
           font-size: 24px;
-          font-weight: 500;
-          color: #000000;
+          font-weight: 400;
+          color: #111111;
+          letter-spacing: -0.01em;
         }
         .pd-om-close {
-          width: 36px; height: 36px;
-          border: 1px solid #EFEFEF;
-          border-radius: 50%;
+          border: none;
           background: transparent;
           cursor: pointer;
-          display: flex; align-items: center; justify-content: center;
-          color: #555;
-          font-size: 18px;
-          transition: all 0.2s;
+          color: #888888;
+          font-size: 16px;
+          transition: color 0.2s;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 4px;
         }
-        .pd-om-close:hover { border-color: #000; color: #000; }
-        .pd-om-body { padding: 28px 32px; }
+        .pd-om-close:hover { color: #000000; }
+        .pd-om-body { padding: 24px 32px; }
 
         /* Product Card inside modal */
         .pd-om-product {
           display: flex;
-          gap: 20px;
-          align-items: flex-start;
-          padding-bottom: 24px;
-          border-bottom: 1px solid #EFEFEF;
-          margin-bottom: 24px;
+          gap: 16px;
+          align-items: center;
+          padding-bottom: 20px;
+          border-bottom: 1px solid #F5F5F5;
+          margin-bottom: 20px;
         }
         .pd-om-img {
-          width: 96px;
-          height: 96px;
+          width: 80px;
+          height: 80px;
           flex-shrink: 0;
-          background: #F9F9F9;
-          border: 1px solid #EFEFEF;
+          background: #FAF9F8;
+          border-radius: 4px;
           display: flex;
           align-items: center;
           justify-content: center;
@@ -475,127 +523,133 @@ export default function ProductDetailsPage() {
         .pd-om-img img { width: 100%; height: 100%; object-fit: cover; }
         .pd-om-product-info { flex: 1; }
         .pd-om-product-name {
-          font-size: 16px;
-          font-weight: 700;
-          color: #000;
-          margin-bottom: 6px;
+          font-size: 14px;
+          font-weight: 500;
+          color: #111111;
+          margin-bottom: 4px;
           line-height: 1.4;
         }
         .pd-om-product-variant {
           font-size: 11px;
-          font-weight: 700;
+          font-weight: 500;
           text-transform: uppercase;
-          letter-spacing: 0.08em;
-          color: #CEA268;
-          margin-bottom: 8px;
+          letter-spacing: 0.05em;
+          color: #888888;
+          margin-bottom: 4px;
         }
         .pd-om-product-price {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 22px;
+          font-family: 'Montserrat', sans-serif;
+          font-size: 15px;
           font-weight: 600;
-          color: #000;
+          color: #111111;
         }
 
         /* Price Breakdown */
-        .pd-om-breakdown { margin-bottom: 24px; }
+        .pd-om-breakdown {
+          margin-bottom: 24px;
+          background: #FAF9F8;
+          padding: 16px 20px;
+          border-radius: 6px;
+        }
         .pd-om-breakdown-row {
           display: flex;
           justify-content: space-between;
           align-items: center;
-          font-size: 13px;
-          color: #555;
-          margin-bottom: 10px;
+          font-size: 12px;
+          color: #666666;
+          margin-bottom: 8px;
         }
         .pd-om-breakdown-row.total {
-          font-size: 15px;
-          font-weight: 700;
-          color: #000;
-          border-top: 1px solid #EFEFEF;
-          padding-top: 14px;
-          margin-top: 4px;
+          font-size: 14px;
+          font-weight: 600;
+          color: #111111;
+          border-top: 1px solid #EAEAEA;
+          padding-top: 12px;
+          margin-top: 8px;
+          margin-bottom: 0;
         }
         .pd-om-breakdown-row.total span:last-child {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: 22px;
-          font-weight: 600;
+          font-family: 'Montserrat', sans-serif;
+          font-size: 16px;
+          font-weight: 700;
         }
 
         /* Address Section */
         .pd-om-section-label {
-          font-size: 11px;
-          letter-spacing: 0.16em;
+          font-size: 10px;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
           font-weight: 700;
-          color: #000;
+          color: #888888;
           margin-bottom: 12px;
           display: flex;
           align-items: center;
-          gap: 8px;
+          gap: 6px;
         }
         .pd-om-address-input {
           width: 100%;
-          padding: 14px 16px;
-          border: 1px solid #EFEFEF;
-          background: #F9F9F9;
-          font-size: 13px;
+          padding: 12px 16px;
+          border: 1px solid #EAEAEA;
+          background: #ffffff;
+          font-size: 12px;
           font-family: 'Montserrat', sans-serif;
-          color: #000;
+          color: #111111;
           outline: none;
           resize: none;
-          height: 90px;
-          border-radius: 2px;
-          transition: border-color 0.2s;
+          height: 80px;
+          border-radius: 4px;
+          transition: all 0.2s ease;
           box-sizing: border-box;
         }
-        .pd-om-address-input:focus { border-color: #000; background: #fff; }
+        .pd-om-address-input:focus { border-color: #111111; }
         .pd-om-address-input.error { border-color: #dc2626; }
         .pd-om-error { color: #dc2626; font-size: 11px; margin-top: 6px; }
 
         /* Footer buttons */
         .pd-om-footer {
-          padding: 20px 32px 28px;
+          padding: 16px 32px 24px;
           display: flex;
           flex-direction: column;
-          gap: 10px;
-          border-top: 1px solid #EFEFEF;
+          gap: 8px;
+          border-top: 1px solid #F5F5F5;
         }
         .pd-om-confirm-btn {
           width: 100%;
-          padding: 17px;
-          background: #000000;
+          padding: 15px;
+          background: #111111;
           color: #ffffff;
           border: none;
           font-size: 11px;
-          letter-spacing: 0.16em;
+          letter-spacing: 0.1em;
           text-transform: uppercase;
-          font-weight: 700;
+          font-weight: 600;
           cursor: pointer;
-          transition: all 0.3s ease;
+          transition: background-color 0.2s ease;
           font-family: 'Montserrat', sans-serif;
           display: flex;
           align-items: center;
           justify-content: center;
-          gap: 10px;
-          border-radius: 2px;
+          gap: 8px;
+          border-radius: 4px;
         }
-        .pd-om-confirm-btn:hover { background: #EAB308; color: #000; }
-        .pd-om-confirm-btn:disabled { background: #EFEFEF; color: #aaa; cursor: not-allowed; }
+        .pd-om-confirm-btn:hover { background: #333333; }
+        .pd-om-confirm-btn:disabled { background: #EFEFEF; color: #aaaaaa; cursor: not-allowed; }
         .pd-om-cancel-btn {
           width: 100%;
-          padding: 14px;
+          padding: 12px;
           background: transparent;
-          color: #000;
-          border: 1px solid #EFEFEF;
+          color: #666666;
+          border: none;
           font-size: 11px;
-          letter-spacing: 0.14em;
+          letter-spacing: 0.05em;
           text-transform: uppercase;
-          font-weight: 600;
+          font-weight: 500;
           cursor: pointer;
-          transition: all 0.2s;
+          transition: color 0.2s ease;
           font-family: 'Montserrat', sans-serif;
-          border-radius: 2px;
+          border-radius: 4px;
         }
-        .pd-om-cancel-btn:hover { border-color: #000; }\n\n        /* Map Preview */\n        .pd-om-map-wrap {\n          margin-top: 14px;\n          border-radius: 4px;\n          overflow: hidden;\n        }\n        .pd-om-map-loading {\n          display: flex;\n          align-items: center;\n          gap: 10px;\n          font-size: 12px;\n          color: #888;\n          padding: 14px;\n          background: #F9F9F9;\n          border: 1px solid #EFEFEF;\n          border-radius: 4px;\n        }\n        @keyframes pd-spin { to { transform: rotate(360deg); } }\n        .pd-om-map-spinner {\n          display: inline-block;\n          width: 14px;\n          height: 14px;\n          border: 2px solid #EFEFEF;\n          border-top-color: #000;\n          border-radius: 50%;\n          animation: pd-spin 0.7s linear infinite;\n          flex-shrink: 0;\n        }\n        .pd-om-map-found {\n          font-size: 11px;\n          color: #555;\n          padding: 8px 2px 10px;\n          line-height: 1.5;\n          white-space: nowrap;\n          overflow: hidden;\n          text-overflow: ellipsis;\n        }\n        .pd-om-map-iframe {\n          width: 100%;\n          height: 220px;\n          border: 1px solid #EFEFEF;\n          border-radius: 4px;\n          display: block;\n        }\n        .pd-om-map-link {\n          display: inline-block;\n          margin-top: 8px;\n          font-size: 11px;\n          color: #555;\n          text-decoration: underline;\n          transition: color 0.2s;\n        }\n        .pd-om-map-link:hover { color: #000; }\n        .pd-om-map-notfound {\n          font-size: 11px;\n          color: #d97706;\n          padding: 10px 12px;\n          background: #FFFBEB;\n          border: 1px solid #FDE68A;\n          border-radius: 4px;\n          margin-top: 8px;\n        }
+        .pd-om-cancel-btn:hover { color: #111111; }\n\n        /* Map Preview */\n        .pd-om-map-wrap {\n          margin-top: 14px;\n          border-radius: 4px;\n          overflow: hidden;\n        }\n        .pd-om-map-loading {\n          display: flex;\n          align-items: center;\n          gap: 10px;\n          font-size: 12px;\n          color: #888;\n          padding: 14px;\n          background: #F9F9F9;\n          border: 1px solid #EFEFEF;\n          border-radius: 4px;\n        }\n        @keyframes pd-spin { to { transform: rotate(360deg); } }\n        .pd-om-map-spinner {\n          display: inline-block;\n          width: 14px;\n          height: 14px;\n          border: 2px solid #EFEFEF;\n          border-top-color: #000;\n          border-radius: 50%;\n          animation: pd-spin 0.7s linear infinite;\n          flex-shrink: 0;\n        }\n        .pd-om-map-found {\n          font-size: 11px;\n          color: #555;\n          padding: 8px 2px 10px;\n          line-height: 1.5;\n          white-space: nowrap;\n          overflow: hidden;\n          text-overflow: ellipsis;\n        }\n        .pd-om-map-iframe {\n          width: 100%;\n          height: 220px;\n          border: 1px solid #EFEFEF;\n          border-radius: 4px;\n          display: block;\n        }\n        .pd-om-map-link {\n          display: inline-block;\n          margin-top: 8px;\n          font-size: 11px;\n          color: #555;\n          text-decoration: underline;\n          transition: color 0.2s;\n        }\n        .pd-om-map-link:hover { color: #000; }\n        .pd-om-map-notfound {\n          font-size: 11px;\n          color: #d97706;\n          padding: 10px 12px;\n          background: #FFFBEB;\n          border: 1px solid #FDE68A;\n          border-radius: 4px;\n          margin-top: 8px;\n        }
         .pd-pay-btn {
           width: 100%;
           padding: 15px;
@@ -988,9 +1042,12 @@ export default function ProductDetailsPage() {
             <div className="pd-option-group">
               <p className="pd-option-label">Metal Type: <span>{selectedVariant?.material || "Select"}</span></p>
               <div className="pd-option-pills">
-                {product.variants.map((v, i) => (
-                  <button key={i} className={`pd-pill ${selectedVariant?.id === v.id ? 'active' : ''}`} onClick={() => { setSelectedVariant(v); setActiveThumb(0); }}>{v.material}</button>
-                ))}
+                {product.variants.map((v, i) => {
+                  const isVActive = (selectedVariant?._id?.toString() || selectedVariant?.id?.toString()) === (v._id?.toString() || v.id?.toString());
+                  return (
+                    <button key={i} className={`pd-pill ${isVActive ? 'active' : ''}`} onClick={() => { setSelectedVariant(v); setActiveThumb(0); }}>{v.material}</button>
+                  );
+                })}
               </div>
             </div>
           )}
@@ -1021,11 +1078,11 @@ export default function ProductDetailsPage() {
           <div className="pd-actions">
             <div className="pd-actions-row">
               <button 
-                className={`pd-btn-primary ${inCartVariantIds.includes(selectedVariant?.id || null) ? 'active' : ''}`} 
+                className={`pd-btn-primary ${inCartVariantIds.includes(selectedVariant?._id || selectedVariant?.id || null) ? 'active' : ''}`} 
                 onClick={addToCart}
               >
-                {inCartVariantIds.includes(selectedVariant?.id || null) ? <ShoppingBag size={18} /> : <Plus size={18} />} 
-                {inCartVariantIds.includes(selectedVariant?.id || null) ? 'In Cart' : 'Add To Cart'}
+                {inCartVariantIds.includes(selectedVariant?._id || selectedVariant?.id || null) ? <ShoppingBag size={18} /> : <Plus size={18} />} 
+                {inCartVariantIds.includes(selectedVariant?._id || selectedVariant?.id || null) ? 'In Cart' : 'Add To Cart'}
               </button>
               <button className="pd-btn-secondary" onClick={handleCheckout} disabled={paymentLoading}>
                 <ShoppingCart size={18} /> {paymentLoading ? 'Processing...' : 'Checkout Now'}
@@ -1189,159 +1246,602 @@ export default function ProductDetailsPage() {
         const gst = Math.round(price * 0.03);
         const shipping = price > 50000 ? 0 : 999;
         const total = price + gst + shipping;
+        const selectedVarId = selectedVariant?._id?.toString() || selectedVariant?.id?.toString();
         const img = selectedVariant
-          ? product.images?.find(img => img.variant_id === selectedVariant.id)?.media_url
+          ? product.images?.find(img => img.variant_id?.toString() === selectedVarId)?.media_url || product.images?.find(img => !img.variant_id)?.media_url
           : product.images?.find(img => !img.variant_id)?.media_url;
         return (
           <div className="pd-modal-overlay" onClick={e => e.target === e.currentTarget && setShowOrderModal(false)}>
             <div className="pd-order-modal">
               {/* Header */}
-              <div className="pd-om-header">
-                <h2 className="pd-om-title">Review Your Order</h2>
+              <div className="pd-om-header" style={{ paddingBottom: '12px' }}>
+                <h2 className="pd-om-title">Review Order</h2>
                 <button className="pd-om-close" onClick={() => setShowOrderModal(false)}>✕</button>
+              </div>
+
+              {/* Step indicator header */}
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 32px', borderBottom: '1px solid #F5F5F5', background: '#FAF9F8' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    background: checkoutStep >= 1 ? '#111111' : '#E5E5E5',
+                    color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '10px', fontWeight: 600, fontFamily: 'Montserrat, sans-serif'
+                  }}>1</div>
+                  <span style={{ fontSize: '11px', fontWeight: checkoutStep === 1 ? '600' : '500', color: checkoutStep === 1 ? '#111111' : '#888888', fontFamily: 'Montserrat, sans-serif' }}>Shipping</span>
+                </div>
+                <div style={{ flex: 1, height: '1px', background: '#E5E5E5', margin: '0 12px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    background: checkoutStep >= 2 ? '#111111' : '#E5E5E5',
+                    color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '10px', fontWeight: 600, fontFamily: 'Montserrat, sans-serif'
+                  }}>2</div>
+                  <span style={{ fontSize: '11px', fontWeight: checkoutStep === 2 ? '600' : '500', color: checkoutStep === 2 ? '#111111' : '#888888', fontFamily: 'Montserrat, sans-serif' }}>Payment</span>
+                </div>
+                <div style={{ flex: 1, height: '1px', background: '#E5E5E5', margin: '0 12px' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                  <div style={{
+                    width: '20px', height: '20px', borderRadius: '50%',
+                    background: checkoutStep >= 3 ? '#111111' : '#E5E5E5',
+                    color: '#ffffff', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    fontSize: '10px', fontWeight: 600, fontFamily: 'Montserrat, sans-serif'
+                  }}>3</div>
+                  <span style={{ fontSize: '11px', fontWeight: checkoutStep === 3 ? '600' : '500', color: checkoutStep === 3 ? '#111111' : '#888888', fontFamily: 'Montserrat, sans-serif' }}>Review</span>
+                </div>
               </div>
 
               {/* Body */}
               <div className="pd-om-body">
 
-                {/* Product Card */}
-                <div className="pd-om-product">
-                  <div className="pd-om-img">
-                    {img
-                      ? <img src={img} alt={product.name} />
-                      : <span style={{ fontSize: 40 }}>💍</span>
-                    }
-                  </div>
-                  <div className="pd-om-product-info">
-                    <p className="pd-om-product-name">{product.name}</p>
-                    {selectedVariant && (
-                      <p className="pd-om-product-variant">Metal: {selectedVariant.material}</p>
-                    )}
-                    <p style={{ fontSize: 12, color: '#888', marginBottom: 8 }}>
-                      Qty: 1 &nbsp;·&nbsp; {MOCKUP_OPTIONS.carats[selectedCarat]} &nbsp;·&nbsp; {MOCKUP_OPTIONS.diamonds[selectedDiamond]}
-                    </p>
-                    <p className="pd-om-product-price"><PriceDisplay amountInINR={price} /></p>
-                  </div>
-                </div>
-
-                {/* Price Breakdown */}
-                <div className="pd-om-breakdown">
-                  <div className="pd-om-breakdown-row">
-                    <span>Item Price</span>
-                    <span>{formatPrice(price)}</span>
-                  </div>
-                  <div className="pd-om-breakdown-row">
-                    <span>GST (3%)</span>
-                    <span>{formatPrice(gst)}</span>
-                  </div>
-                  <div className="pd-om-breakdown-row">
-                    <span>Shipping</span>
-                    <span style={{ color: shipping === 0 ? '#15803D' : '#000' }}>
-                      {shipping === 0 ? 'Free' : formatPrice(shipping)}
-                    </span>
-                  </div>
-                  <div className="pd-om-breakdown-row total">
-                    <span>Total Payable</span>
-                    <span>{formatPrice(total)}</span>
-                  </div>
-                </div>
-
-                {/* Shipping Address */}
-                <div style={{ marginBottom: 4 }}>
-                  <p className="pd-om-section-label">
-                    <span style={{ fontSize: 16 }}>📦</span> Shipping Address
-                  </p>
-
-                  {/* Quick Select from Saved Addresses */}
-                  {savedAddresses.length > 0 && (
-                    <div style={{ marginBottom: '12px' }}>
-                      <p style={{ fontSize: '11px', fontWeight: 600, color: '#888', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: '8px' }}>Saved Addresses</p>
-                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        {savedAddresses.map((addr) => (
-                          <button
-                            key={addr.id}
-                            type="button"
-                            onClick={() => {
-                              setShippingAddress(addr.address_line);
-                              setAddressError(false);
-                            }}
-                            style={{
-                              textAlign: 'left', padding: '10px 14px', background: shippingAddress === addr.address_line ? '#fdf8ef' : '#F9F9F9',
-                              border: `1px solid ${shippingAddress === addr.address_line ? '#CEA268' : '#EFEFEF'}`,
-                              borderRadius: '4px', fontSize: '12px', color: '#333', cursor: 'pointer',
-                              width: '100%', transition: 'all 0.2s', fontFamily: 'Montserrat, sans-serif',
-                            }}
-                          >
-                            {addr.is_default && (
-                              <span style={{ fontSize: '9px', fontWeight: 700, color: '#CEA268', textTransform: 'uppercase', letterSpacing: '0.08em', display: 'block', marginBottom: '3px' }}>★ Default</span>
-                            )}
-                            {addr.address_line}
-                          </button>
-                        ))}
+                {/* STEP 1: Address Selection */}
+                {checkoutStep === 1 && (
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, fontFamily: 'Cormorant Garamond, serif', marginBottom: '16px', color: '#111111' }}>Select Shipping Address</h3>
+                    
+                    {/* Quick Select from Saved Addresses */}
+                    {savedAddresses.length > 0 ? (
+                      <div style={{ marginBottom: '16px' }}>
+                        <p style={{ fontSize: '10px', fontWeight: 700, color: '#888888', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '8px', fontFamily: 'Montserrat, sans-serif' }}>Saved Addresses</p>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', maxHeight: '180px', overflowY: 'auto', paddingRight: '4px' }}>
+                          {savedAddresses.map((addr) => (
+                            <button
+                              key={addr._id || addr.id}
+                              type="button"
+                              onClick={() => {
+                                setShippingAddress(addr.address_line);
+                                setAddressError(false);
+                              }}
+                              style={{
+                                textAlign: 'left',
+                                padding: '12px 16px',
+                                background: shippingAddress === addr.address_line ? '#ffffff' : '#FAF9F8',
+                                border: `1px solid ${shippingAddress === addr.address_line ? '#111111' : '#EAEAEA'}`,
+                                borderRadius: '4px',
+                                fontSize: '12px',
+                                color: '#111111',
+                                cursor: 'pointer',
+                                width: '100%',
+                                transition: 'all 0.2s ease',
+                                fontFamily: 'Montserrat, sans-serif',
+                              }}
+                            >
+                              {addr.is_default && (
+                                <span style={{ fontSize: '9px', fontWeight: 600, color: '#888888', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '2px' }}>Default Address</span>
+                              )}
+                              {addr.address_line}
+                            </button>
+                          ))}
+                        </div>
                       </div>
-                      <p style={{ fontSize: '11px', color: '#aaa', margin: '10px 0 8px', textAlign: 'center' }}>— or enter a new address below —</p>
+                    ) : (
+                      <p style={{ fontSize: '12px', color: '#666666', marginBottom: '16px', fontFamily: 'Montserrat, sans-serif' }}>No saved locations found. Please add a location using the selector below.</p>
+                    )}
+
+                    {/* Add New Address Button */}
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setShowAddressModal(true);
+                        setHouseNumber('');
+                        setLandmark('');
+                        setAutoAddress('');
+                        setAddressTag('Home');
+                        setMapCenter(null);
+                      }}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: '8px',
+                        width: '100%',
+                        padding: '12px 16px',
+                        background: 'transparent',
+                        color: '#111111',
+                        border: '1px dashed #111111',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        marginBottom: '16px',
+                        transition: 'all 0.2s ease',
+                        fontFamily: 'Montserrat, sans-serif',
+                      }}
+                      onMouseEnter={e => { e.currentTarget.style.background = '#F9F9F9'; }}
+                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; }}
+                    >
+                      <Plus size={16} /> Add New Address
+                    </button>
+
+                    {shippingAddress && (
+                      <div style={{
+                        marginTop: '12px',
+                        padding: '12px 16px',
+                        background: '#FAF9F8',
+                        border: '1px solid #EAEAEA',
+                        borderRadius: '4px',
+                        fontSize: '12px',
+                        color: '#111111',
+                        fontFamily: 'Montserrat, sans-serif'
+                      }}>
+                        <span style={{ fontSize: '9px', fontWeight: 600, color: '#888888', textTransform: 'uppercase', letterSpacing: '0.05em', display: 'block', marginBottom: '4px' }}>Selected Shipping Address</span>
+                        {shippingAddress}
+                      </div>
+                    )}
+
+                    {addressError && (
+                      <p className="pd-om-error">⚠ Please select or add a shipping address to proceed.</p>
+                    )}
+                  </div>
+                )}
+
+                {/* STEP 2: Payment Gateway Selection */}
+                {checkoutStep === 2 && (
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, fontFamily: 'Cormorant Garamond, serif', marginBottom: '10px', color: '#111111' }}>Amount &amp; Payment Method</h3>
+                    
+                    {/* Product Card */}
+                    <div className="pd-om-product" style={{ paddingBottom: '10px', marginBottom: '10px', gap: '12px' }}>
+                      <div className="pd-om-img" style={{ width: '56px', height: '56px' }}>
+                        {img
+                          ? <img src={img} alt={product.name} />
+                          : <span style={{ fontSize: 24 }}>💍</span>
+                        }
+                      </div>
+                      <div className="pd-om-product-info">
+                        <p className="pd-om-product-name" style={{ fontSize: '13px', marginBottom: '2px' }}>{product.name}</p>
+                        {selectedVariant && (
+                          <p className="pd-om-product-variant" style={{ fontSize: '10px', marginBottom: '2px' }}>Metal: {selectedVariant.material}</p>
+                        )}
+                        <p style={{ fontSize: 10, color: '#888888', marginBottom: 2, fontFamily: 'Montserrat, sans-serif' }}>
+                          Qty: 1 &nbsp;·&nbsp; {MOCKUP_OPTIONS.carats[selectedCarat]} &nbsp;·&nbsp; {MOCKUP_OPTIONS.diamonds[selectedDiamond]}
+                        </p>
+                        <p className="pd-om-product-price" style={{ fontSize: '13px' }}><PriceDisplay amountInINR={price} /></p>
+                      </div>
                     </div>
-                  )}
 
-                  <textarea
-                    className={`pd-om-address-input ${addressError ? 'error' : ''}`}
-                    placeholder="Enter your full delivery address, city, state, pincode..."
-                    value={shippingAddress}
-                    onChange={e => { setShippingAddress(e.target.value); if (e.target.value.trim()) setAddressError(false); }}
-                  />
-                  {addressError && (
-                    <p className="pd-om-error">⚠ Please enter a shipping address to proceed.</p>
-                  )}
-
-                  {/* Map Preview */}
-                  <div className="pd-om-map-wrap">
-                    {mapLoading && (
-                      <div className="pd-om-map-loading">
-                        <span className="pd-om-map-spinner"/> Locating on map...
+                    {/* Price Breakdown */}
+                    <div className="pd-om-breakdown" style={{ padding: '10px 14px', marginBottom: '12px' }}>
+                      <div className="pd-om-breakdown-row" style={{ marginBottom: '4px', fontSize: '11px' }}>
+                        <span>Item Price</span>
+                        <span>{formatPrice(price)}</span>
                       </div>
-                    )}
-                    {!mapLoading && mapLocation && (
-                      <>
-                        <p className="pd-om-map-found">📍 {mapLocation.display_name}</p>
-                        <iframe
-                          className="pd-om-map-iframe"
-                          src={`https://www.google.com/maps?q=${mapLocation.lat},${mapLocation.lon}&t=k&z=16&output=embed`}
-                          allowFullScreen
-                          loading="lazy"
-                          title="Shipping Address Satellite Map"
-                        />
-                        <a
-                          href={`https://www.google.com/maps?q=${mapLocation.lat},${mapLocation.lon}&t=k&z=16`}
-                          target="_blank"
-                          rel="noopener noreferrer"
-                          className="pd-om-map-link"
+                      <div className="pd-om-breakdown-row" style={{ marginBottom: '4px', fontSize: '11px' }}>
+                        <span>GST (3%)</span>
+                        <span>{formatPrice(gst)}</span>
+                      </div>
+                      <div className="pd-om-breakdown-row" style={{ marginBottom: '4px', fontSize: '11px' }}>
+                        <span>Shipping</span>
+                        <span style={{ color: shipping === 0 ? '#15803D' : '#111111', fontWeight: shipping === 0 ? '600' : 'normal' }}>
+                          {shipping === 0 ? 'Free' : formatPrice(shipping)}
+                        </span>
+                      </div>
+                      <div className="pd-om-breakdown-row total" style={{ borderTop: '1px solid #EAEAEA', paddingTop: '6px', marginTop: '4px', marginBottom: 0, fontSize: '12px' }}>
+                        <span>Total Payable</span>
+                        <span style={{ fontSize: '14px' }}>{formatPrice(total)}</span>
+                      </div>
+                    </div>
+
+                    {/* Select Payment Method */}
+                    <div style={{ marginTop: '12px' }}>
+                      <p style={{ fontSize: '10px', fontWeight: 700, color: '#888888', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px', fontFamily: 'Montserrat, sans-serif' }}>Choose Payment Option</p>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPaymentMethod('razorpay')}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 14px',
+                            background: selectedPaymentMethod === 'razorpay' ? '#ffffff' : '#FAF9F8',
+                            border: `1px solid ${selectedPaymentMethod === 'razorpay' ? '#111111' : '#EAEAEA'}`,
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            width: '100%',
+                            fontFamily: 'Montserrat, sans-serif'
+                          }}
                         >
-                          Open in Google Maps Satellite ↗
-                        </a>
-                      </>
-                    )}
-                    {!mapLoading && !mapLocation && shippingAddress.trim().length >= 8 && (
-                      <p className="pd-om-map-notfound">⚠ Address not found on map. Please be more specific.</p>
-                    )}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '14px', height: '14px', borderRadius: '50%',
+                              border: `2px solid ${selectedPaymentMethod === 'razorpay' ? '#111111' : '#cccccc'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              {selectedPaymentMethod === 'razorpay' && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#111111' }} />}
+                            </div>
+                            <div style={{ textAlign: 'left' }}>
+                              <p style={{ fontSize: '12px', fontWeight: 600, color: '#111111', margin: 0 }}>Razorpay (India)</p>
+                              <p style={{ fontSize: '10px', color: '#666666', margin: '2px 0 0' }}>UPI, Cards, Netbanking, Wallets</p>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '18px' }}>🇮🇳</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => setSelectedPaymentMethod('stripe')}
+                          style={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '10px 14px',
+                            background: selectedPaymentMethod === 'stripe' ? '#ffffff' : '#FAF9F8',
+                            border: `1px solid ${selectedPaymentMethod === 'stripe' ? '#111111' : '#EAEAEA'}`,
+                            borderRadius: '4px',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            width: '100%',
+                            fontFamily: 'Montserrat, sans-serif'
+                          }}
+                        >
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{
+                              width: '14px', height: '14px', borderRadius: '50%',
+                              border: `2px solid ${selectedPaymentMethod === 'stripe' ? '#111111' : '#cccccc'}`,
+                              display: 'flex', alignItems: 'center', justifyContent: 'center'
+                            }}>
+                              {selectedPaymentMethod === 'stripe' && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#111111' }} />}
+                            </div>
+                            <div style={{ textAlign: 'left' }}>
+                              <p style={{ fontSize: '12px', fontWeight: 600, color: '#111111', margin: 0 }}>Stripe (International)</p>
+                              <p style={{ fontSize: '10px', color: '#666666', margin: '2px 0 0' }}>Credit / Debit Cards, Apple Pay</p>
+                            </div>
+                          </div>
+                          <span style={{ fontSize: '18px' }}>🌐</span>
+                        </button>
+                      </div>
+                    </div>
                   </div>
-                </div>
+                )}
+
+                {/* STEP 3: Final Review */}
+                {checkoutStep === 3 && (
+                  <div>
+                    <h3 style={{ fontSize: '16px', fontWeight: 600, fontFamily: 'Cormorant Garamond, serif', marginBottom: '10px', color: '#111111' }}>Final Review</h3>
+                    
+                    {/* Item and Total Payable Summary */}
+                    <div style={{ background: '#FAF9F8', padding: '10px 14px', borderRadius: '6px', marginBottom: '12px', border: '1px solid #EAEAEA' }}>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '6px', fontSize: '11px', color: '#666666', fontFamily: 'Montserrat, sans-serif' }}>
+                        <span>Item: {product.name} {selectedVariant ? `(${selectedVariant.material})` : ''}</span>
+                        <span>Qty: 1</span>
+                      </div>
+                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingTop: '8px', borderTop: '1px solid #EAEAEA' }}>
+                        <span style={{ fontSize: '11px', fontWeight: 700, color: '#111111', textTransform: 'uppercase', letterSpacing: '0.1em', fontFamily: 'Montserrat, sans-serif' }}>Total Payable</span>
+                        <span style={{ fontSize: '16px', fontWeight: 700, color: '#111111', fontFamily: 'Montserrat, sans-serif' }}>{formatPrice(total)}</span>
+                      </div>
+                    </div>
+
+                    {/* Shipping Address Summary */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <p style={{ fontSize: '10px', fontWeight: 700, color: '#888888', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '4px', fontFamily: 'Montserrat, sans-serif' }}>Delivery Address</p>
+                      <div style={{ padding: '10px 14px', background: '#ffffff', border: '1px solid #EAEAEA', borderRadius: '4px', fontSize: '12px', color: '#333333', fontFamily: 'Montserrat, sans-serif', lineHeight: '1.5' }}>
+                        {shippingAddress}
+                      </div>
+                    </div>
+
+                    {/* Payment Method Summary */}
+                    <div style={{ marginBottom: '12px' }}>
+                      <p style={{ fontSize: '10px', fontWeight: 700, color: '#888888', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '4px', fontFamily: 'Montserrat, sans-serif' }}>Selected Payment Option</p>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: '8px', padding: '10px 14px', background: '#ffffff', border: '1px solid #EAEAEA', borderRadius: '4px', fontSize: '12px', fontWeight: 600, color: '#111111', fontFamily: 'Montserrat, sans-serif' }}>
+                        {selectedPaymentMethod === 'razorpay' ? (
+                          <>
+                            <span>🇮🇳</span>
+                            <span>Razorpay (UPI, Domestic Cards, Netbanking)</span>
+                          </>
+                        ) : (
+                          <>
+                            <span>🌐</span>
+                            <span>Stripe (International Credit / Debit Cards)</span>
+                          </>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
               </div>
 
               {/* Footer */}
               <div className="pd-om-footer">
-                <button
-                  className="pd-om-confirm-btn"
-                  onClick={confirmAndPay}
-                  disabled={paymentLoading}
-                >
-                  {paymentLoading ? 'Preparing Payment...' : '🔒 Confirm & Proceed to Payment'}
-                </button>
-                <button className="pd-om-cancel-btn" onClick={() => setShowOrderModal(false)}>Cancel</button>
+                {checkoutStep === 1 && (
+                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                    <button 
+                      className="pd-om-cancel-btn" 
+                      style={{ flex: 1, border: '1px solid #E5E5E5', marginTop: 0 }} 
+                      onClick={() => setShowOrderModal(false)}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className="pd-om-confirm-btn"
+                      style={{ flex: 1.5 }}
+                      onClick={() => {
+                        if (!shippingAddress.trim()) {
+                          setAddressError(true);
+                        } else {
+                          setAddressError(false);
+                          setCheckoutStep(2);
+                        }
+                      }}
+                    >
+                      Continue to Payment
+                    </button>
+                  </div>
+                )}
+
+                {checkoutStep === 2 && (
+                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                    <button 
+                      className="pd-om-cancel-btn" 
+                      style={{ flex: 1, border: '1px solid #E5E5E5', marginTop: 0 }} 
+                      onClick={() => setCheckoutStep(1)}
+                    >
+                      Back
+                    </button>
+                    <button
+                      className="pd-om-confirm-btn"
+                      style={{ flex: 1.5 }}
+                      onClick={() => setCheckoutStep(3)}
+                    >
+                      Continue to Review
+                    </button>
+                  </div>
+                )}
+
+                {checkoutStep === 3 && (
+                  <div style={{ display: 'flex', gap: '10px', width: '100%' }}>
+                    <button 
+                      className="pd-om-cancel-btn" 
+                      style={{ flex: 1, border: '1px solid #E5E5E5', marginTop: 0 }} 
+                      onClick={() => setCheckoutStep(2)}
+                    >
+                      Back
+                    </button>
+                    <button
+                      className="pd-om-confirm-btn"
+                      style={{ flex: 1.5 }}
+                      onClick={confirmAndPay}
+                      disabled={paymentLoading}
+                    >
+                      {paymentLoading ? 'Preparing Gateway...' : 'Confirm & Pay'}
+                    </button>
+                  </div>
+                )}
               </div>
             </div>
           </div>
         );
       })()}
+
+      {/* Add Address Modal */}
+      {showAddressModal && (
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)',
+          zIndex: 3000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px'
+        }}>
+          <div style={{
+            background: '#fff', borderRadius: '8px', padding: '28px',
+            width: '100%', maxWidth: '780px', boxShadow: '0 20px 60px rgba(0,0,0,0.15)',
+            animation: 'fadeIn 0.25s ease', maxHeight: '90vh', overflowY: 'auto'
+          }}>
+            {/* Header */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
+              <h3 style={{ fontSize: '18px', fontWeight: 700, color: '#000', fontFamily: 'Montserrat, sans-serif' }}>Select Delivery Location</h3>
+              <button 
+                type="button" 
+                onClick={() => {
+                  setShowAddressModal(false);
+                  setHouseNumber('');
+                  setLandmark('');
+                  setAutoAddress('');
+                  setAddressTag('Home');
+                  setMapCenter(null);
+                }}
+                style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: '24px', color: '#999', lineHeight: 1 }}
+              >
+                ×
+              </button>
+            </div>
+
+            {/* Responsive Content Columns */}
+            <div style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '24px'
+            }}>
+              {/* Left: Map */}
+              <div style={{ flex: '1 1 340px', minWidth: '280px' }}>
+                <div style={{ fontSize: '11px', fontWeight: 600, color: '#CEA268', textTransform: 'uppercase', marginBottom: '8px', letterSpacing: '0.05em' }}>
+                  Move Map to Adjust Location Pin
+                </div>
+                <LocationMap 
+                  onLocationSelect={handleLocationSelect} 
+                  mapCenter={mapCenter} 
+                />
+              </div>
+
+              {/* Right: Address Details Form */}
+              <div style={{ flex: '1 1 280px', minWidth: '260px', display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Save As
+                  </label>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    {['Home', 'Work', 'Other'].map((tag) => (
+                      <button
+                        key={tag}
+                        type="button"
+                        onClick={() => setAddressTag(tag)}
+                        style={{
+                          flex: 1,
+                          padding: '10px 0',
+                          borderRadius: '4px',
+                          border: `1px solid ${addressTag === tag ? '#000' : '#E5E5E5'}`,
+                          background: addressTag === tag ? '#000' : '#fff',
+                          color: addressTag === tag ? '#fff' : '#555',
+                          fontSize: '12px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                          fontFamily: 'Montserrat, sans-serif',
+                          transition: 'all 0.2s'
+                        }}
+                      >
+                        {tag}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Flat / House No. / Building Name *
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Flat 302, Royal Enclave"
+                    value={houseNumber}
+                    onChange={(e) => setHouseNumber(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '11px 12px',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      color: '#333',
+                      fontFamily: 'Montserrat, sans-serif',
+                      boxSizing: 'border-box',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Locality / Street / Area (Auto-detected)
+                  </label>
+                  <textarea
+                    readOnly
+                    placeholder="Move the map pin to select area"
+                    value={autoAddress}
+                    style={{
+                      width: '100%',
+                      padding: '11px 12px',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      color: '#666',
+                      background: '#F9F9F9',
+                      fontFamily: 'Montserrat, sans-serif',
+                      boxSizing: 'border-box',
+                      resize: 'none',
+                      height: '55px',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div>
+                  <label className="form-label" style={{ display: 'block', fontSize: '11px', fontWeight: 700, color: '#000', textTransform: 'uppercase', marginBottom: '6px' }}>
+                    Landmark (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Opposite Star Mall"
+                    value={landmark}
+                    onChange={(e) => setLandmark(e.target.value)}
+                    style={{
+                      width: '100%',
+                      padding: '11px 12px',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '4px',
+                      fontSize: '13px',
+                      color: '#333',
+                      fontFamily: 'Montserrat, sans-serif',
+                      boxSizing: 'border-box',
+                      outline: 'none'
+                    }}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '10px', marginTop: '8px' }}>
+                  <button
+                    type="button"
+                    onClick={handleAddAddress}
+                    disabled={addressLoading}
+                    style={{
+                      flex: 1.2,
+                      padding: '12px',
+                      background: '#000',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      cursor: 'pointer',
+                      fontFamily: 'Montserrat, sans-serif'
+                    }}
+                  >
+                    {addressLoading ? 'Saving...' : 'Save Location'}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddressModal(false);
+                      setHouseNumber('');
+                      setLandmark('');
+                      setAutoAddress('');
+                      setAddressTag('Home');
+                      setMapCenter(null);
+                    }}
+                    style={{
+                      flex: 0.8,
+                      padding: '12px',
+                      background: '#fff',
+                      color: '#000',
+                      border: '1px solid #E5E5E5',
+                      borderRadius: '4px',
+                      fontSize: '12px',
+                      fontWeight: 600,
+                      textTransform: 'uppercase',
+                      letterSpacing: '0.08em',
+                      cursor: 'pointer',
+                      fontFamily: 'Montserrat, sans-serif'
+                    }}
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Stripe Payment Modal */}
       {showStripeModal && stripeClientSecret && (
@@ -1349,9 +1849,24 @@ export default function ProductDetailsPage() {
           <div className="pd-modal">
             <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
               <StripeCheckoutForm
-                onSuccess={() => {
-                  setShowStripeModal(false);
-                  toast.success('Payment Successful! Thank you for your order.');
+                onSuccess={async (paymentIntent) => {
+                  try {
+                    const verifyRes = await fetch('/api/Pages/Payments/Stripe/verify', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (!verifyRes.ok) {
+                      throw new Error(verifyData.message || 'Verification failed');
+                    }
+                    setShowStripeModal(false);
+                    toast.success('Payment Successful! Thank you for your order.');
+                  } catch (err) {
+                    console.error("Order creation failed:", err);
+                    toast.error(err.message || 'Payment succeeded but order creation failed. Please contact support.');
+                  }
                 }}
                 onClose={() => setShowStripeModal(false)}
               />

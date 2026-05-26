@@ -57,7 +57,6 @@ export default function ProductManagementPage() {
     category_name: "",
     gender: "Unisex",
     material: [], // Legacy field (merged from variants for display)
-    gender: "Unisex",
     price: "",
     stock: "",
     description: "",
@@ -163,8 +162,9 @@ export default function ProductManagementPage() {
   const categories = categoriesData.map(cat => {
     const catProducts = products.filter(p => p.category === cat.name);
     return {
-      id: cat.id,
+      id: cat._id?.toString() || cat.id,
       name: cat.name,
+      image_url: cat.image_url,
       products: catProducts.length,
       gold: catProducts.filter(p => p.material === "Gold").length,
       silver: catProducts.filter(p => p.material === "Silver").length,
@@ -269,8 +269,8 @@ export default function ProductManagementPage() {
         formData.append("id", editingCategoryId);
         // If editing and no new image, we might need to send the old URL or some signal
         if (!categoryForm.image) {
-            const rawCat = categoriesData.find(c => c.id === editingCategoryId);
-            formData.append("image_url", rawCat.image_url || "");
+            const rawCat = categoriesData.find(c => (c._id?.toString() || c.id) === editingCategoryId);
+            formData.append("image_url", rawCat ? rawCat.image_url || "" : "");
         }
       }
 
@@ -301,15 +301,19 @@ export default function ProductManagementPage() {
   };
 
   const handleEditCategory = (cat) => {
-    const rawCat = categoriesData.find(c => c.id === cat.id);
-    setCategoryForm({
-      name: rawCat.name,
-      image: null,
-      imagePreview: rawCat.image_url || "",
-      description: rawCat.description || ""
-    });
-    setEditingCategoryId(cat.id);
-    setShowAddCategory(true);
+    const rawCat = categoriesData.find(c => (c._id?.toString() || c.id) === cat.id);
+    if (rawCat) {
+      setCategoryForm({
+        name: rawCat.name,
+        image: null,
+        imagePreview: rawCat.image_url || "",
+        description: rawCat.description || ""
+      });
+      setEditingCategoryId(cat.id);
+      setShowAddCategory(true);
+    } else {
+      toast.error("Category details could not be loaded.");
+    }
   };
 
   const handleDeleteCategory = async (catId) => {
@@ -349,48 +353,136 @@ export default function ProductManagementPage() {
       const url = "/api/Admin/Product-Management";
       const method = isEdit ? "PUT" : "POST";
 
-      const formData = new FormData();
-      formData.append("name", productForm.name);
-      formData.append("category_name", productForm.category_name);
-      formData.append("gender", productForm.gender);
-      formData.append("material", productForm.material.join(", "));
-      formData.append("price", productForm.price);
-      formData.append("stock", productForm.stock);
-      formData.append("description", productForm.description);
-      formData.append("is_active", productForm.is_active);
-      if (isEdit) formData.append("id", editingProductId);
+      const compressImageOrToBase64 = file => new Promise((resolve, reject) => {
+        if (!file.type.startsWith("image/")) {
+          // Keep videos or other non-image formats as standard Base64
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = error => reject(error);
+          return;
+        }
 
-      // Package Variants
-      const variantsData = productForm.variants.map((v, idx) => {
-          // Add new files to formData with specific keys
-          const newFiles = v.media.filter(m => m.file).map(m => m.file);
-          newFiles.forEach(file => formData.append(`media_variant_${idx}`, file));
-          
-          // Primary index within this variant's media
-          const primaryIdx = v.media.findIndex(m => m.is_primary);
-          formData.append(`primary_index_variant_${idx}`, primaryIdx >= 0 ? primaryIdx : 0);
+        const img = window.Image ? new window.Image() : new Image();
+        img.src = URL.createObjectURL(file);
+        img.onload = () => {
+          URL.revokeObjectURL(img.src);
+          const canvas = document.createElement("canvas");
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          let width = img.width;
+          let height = img.height;
 
-          return {
-              id: v.id,
-              material: v.material,
-              price: v.price,
-              stock: v.stock,
-              description: v.description,
-              existing_media: v.media.filter(m => !m.file) 
-          };
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height = Math.round((height * MAX_WIDTH) / width);
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width = Math.round((width * MAX_HEIGHT) / height);
+              height = MAX_HEIGHT;
+            }
+          }
+
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Get compressed Base64 JPEG
+          const base64 = canvas.toDataURL("image/jpeg", 0.7);
+          resolve(base64);
+        };
+        img.onerror = () => {
+          // Fallback to normal Base64 if canvas drawing fails
+          const reader = new FileReader();
+          reader.readAsDataURL(file);
+          reader.onload = () => resolve(reader.result);
+          reader.onerror = err => reject(err);
+        };
       });
-      formData.append("variants", JSON.stringify(variantsData));
 
       // Package Generic Media
-      const genericFiles = productForm.media.filter(m => m.file).map(m => m.file);
-      genericFiles.forEach(file => formData.append("media", file));
-      formData.append("existing_media", JSON.stringify(productForm.media.filter(m => !m.file)));
+      const mappedMedia = [];
+      for (const m of productForm.media) {
+        if (m.file) {
+          const base64 = await compressImageOrToBase64(m.file);
+          mappedMedia.push({
+            fileData: base64,
+            fileName: m.file.name,
+            fileType: m.file.type,
+            is_primary: Boolean(m.is_primary)
+          });
+        } else {
+          mappedMedia.push({
+            id: m._id || m.id,
+            media_url: m.media_url || m.preview || m.url,
+            media_type: m.media_type || "image",
+            is_primary: Boolean(m.is_primary)
+          });
+        }
+      }
+
+      // Package Variants & Variant Media
+      const mappedVariants = [];
+      for (const v of productForm.variants) {
+        const variantMedia = [];
+        if (v.media) {
+          for (const m of v.media) {
+            if (m.file) {
+              const base64 = await compressImageOrToBase64(m.file);
+              variantMedia.push({
+                fileData: base64,
+                fileName: m.file.name,
+                fileType: m.file.type,
+                is_primary: Boolean(m.is_primary)
+              });
+            } else {
+              variantMedia.push({
+                id: m._id || m.id,
+                media_url: m.media_url || m.preview || m.url,
+                media_type: m.media_type || "image",
+                is_primary: Boolean(m.is_primary)
+              });
+            }
+          }
+        }
+        mappedVariants.push({
+          id: v._id || v.id,
+          material: v.material,
+          price: v.price,
+          stock: v.stock,
+          description: v.description,
+          media: variantMedia
+        });
+      }
+
+      const finalMaterial = mappedVariants.length > 0
+        ? [...new Set(mappedVariants.map(v => v.material).filter(m => m))].join(", ")
+        : (typeof productForm.material === 'string' ? productForm.material : productForm.material.join(", "));
 
       const res = await fetch(url, {
         method: method,
-        body: formData,
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          id: editingProductId,
+          name: productForm.name,
+          category_name: productForm.category_name,
+          gender: productForm.gender,
+          material: finalMaterial,
+          price: productForm.price,
+          stock: productForm.stock,
+          description: productForm.description,
+          is_active: productForm.is_active,
+          variants: mappedVariants,
+          media: mappedMedia
+        }),
         credentials: "include",
       });
+
       const data = await res.json();
 
       if (data.success) {
@@ -667,13 +759,17 @@ export default function ProductManagementPage() {
                                 stock: product.stock,
                                 description: productsData.find(p => p.id === product.rawId)?.description || "", 
                                 is_active: product.status === "Active",
-                                variants: product.variants.map(v => ({
-                                  ...v,
-                                  media: product.allMedia.filter(m => m.variant_id === v.id).map(m => ({
-                                    ...m,
-                                    preview: m.media_url
-                                  }))
-                                })),
+                                variants: product.variants.map(v => {
+                                  const vId = v._id?.toString() || v.id?.toString();
+                                  return {
+                                    ...v,
+                                    id: vId,
+                                    media: product.allMedia.filter(m => m.variant_id?.toString() === vId).map(m => ({
+                                      ...m,
+                                      preview: m.media_url
+                                    }))
+                                  };
+                                }),
                                 media: product.allMedia.filter(m => !m.variant_id).map(m => ({ ...m, preview: m.media_url }))
                               });
                               setShowAddProduct(true);
@@ -830,7 +926,7 @@ export default function ProductManagementPage() {
                     <label className="form-label">Base Category *</label>
                     <select className="form-select" value={productForm.category_name} onChange={(e) => setProductForm({ ...productForm, category_name: e.target.value })} required>
                       <option value="">Select Category</option>
-                      {categoriesData.map(c => <option key={c.id} value={c.name}>{c.name}</option>)}
+                      {categoriesData.map(c => <option key={c._id?.toString() || c.id} value={c.name}>{c.name}</option>)}
                     </select>
                   </div>
                   <div className="form-group">

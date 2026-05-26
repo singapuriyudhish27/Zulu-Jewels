@@ -14,8 +14,14 @@ cloudinary.config({
  * @returns {Promise<string>} - The secure URL of the uploaded image
  */
 async function uploadToCloudinary(file, folder) {
-  const bytes = await file.arrayBuffer();
-  const buffer = Buffer.from(bytes);
+  let buffer;
+  if (typeof file === 'string' && file.startsWith('data:')) {
+    const base64Data = file.split(',')[1];
+    buffer = Buffer.from(base64Data, 'base64');
+  } else {
+    const bytes = await file.arrayBuffer();
+    buffer = Buffer.from(bytes);
+  }
   
   return new Promise((resolve, reject) => {
     const uploadStream = cloudinary.uploader.upload_stream({
@@ -36,13 +42,20 @@ async function uploadToCloudinary(file, folder) {
 
 /**
  * Unified file saving utility.
- * @param {File|string} file - The file object or existing URL
+ * @param {File|string} file - The file object, base64 string, or existing URL
  * @param {string} folder - The folder name (e.g., 'products', 'categories')
  * @returns {Promise<string>} - The saved file URL
  */
 export async function saveFile(file, folder = "products") {
   // If it's already a URL (string) or empty, return it as is
-  if (!file || typeof file === 'string') return file;
+  if (!file) return "";
+  
+  if (typeof file === 'string') {
+    if (file.startsWith('data:')) {
+      return await uploadToCloudinary(file, folder);
+    }
+    return file;
+  }
   
   // Choose storage - Now always using Cloudinary for both dev and prod
   return await uploadToCloudinary(file, folder);

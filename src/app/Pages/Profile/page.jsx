@@ -142,7 +142,7 @@ export default function ProfilePage() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
-      setSavedAddresses(prev => prev.filter(a => a.id !== id));
+      setSavedAddresses(prev => prev.filter(a => (a._id || a.id) !== id));
       toast.success('Address removed');
     } catch (err) {
       toast.error(err.message || 'Failed to delete address');
@@ -160,7 +160,7 @@ export default function ProfilePage() {
       });
       const result = await res.json();
       if (!res.ok) throw new Error(result.message);
-      setSavedAddresses(prev => prev.map(a => ({ ...a, is_default: a.id === id })));
+      setSavedAddresses(prev => prev.map(a => ({ ...a, is_default: (a._id || a.id) === id })));
       toast.success('Default address updated');
     } catch (err) {
       toast.error(err.message || 'Failed to update default');
@@ -1115,7 +1115,7 @@ export default function ProfilePage() {
                   {savedAddresses.length > 0 ? (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
                       {savedAddresses.map((addr) => (
-                        <div key={addr.id} style={{
+                        <div key={addr._id || addr.id} style={{
                           padding: '12px 14px',
                           background: addr.is_default ? '#fdf8ef' : '#F9F9F9',
                           border: `1px solid ${addr.is_default ? '#CEA268' : '#E5E5E5'}`,
@@ -1137,7 +1137,7 @@ export default function ProfilePage() {
                             {!addr.is_default && (
                               <button
                                 type="button"
-                                onClick={() => handleSetDefault(addr.id)}
+                                onClick={() => handleSetDefault(addr._id || addr.id)}
                                 title="Set as default"
                                 style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#CEA268', padding: '2px', fontSize: '11px', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.05em' }}
                               >
@@ -1146,7 +1146,7 @@ export default function ProfilePage() {
                             )}
                             <button
                               type="button"
-                              onClick={() => handleDeleteAddress(addr.id)}
+                              onClick={() => handleDeleteAddress(addr._id || addr.id)}
                               title="Remove"
                               style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#999', padding: '2px' }}
                             >

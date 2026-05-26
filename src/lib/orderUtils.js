@@ -8,6 +8,7 @@ import CartItem from './models/CartItem';
 import ProductVariant from './models/ProductVariant';
 import Product from './models/Product';
 import Transaction from './models/Transaction';
+import UserAddress from './models/UserAddress';
 
 /**
  * Handles the database transaction for creating an order after a successful payment.
@@ -16,14 +17,45 @@ import Transaction from './models/Transaction';
  */
 export async function processOrderSuccess(userId, details) {
     const { payment_method, receipt_url, specificItem = null } = details;
-    const shipping_address = specificItem?.shippingAddress || details.shipping_address || "N/A";
+    let shipping_address = specificItem?.shippingAddress || details.shipping_address;
     await connectDB();
 
-    const session = await mongoose.startSession();
-    session.startTransaction();
+    let session = null;
+    try {
+        const hello = await mongoose.connection.db.command({ hello: 1 });
+        const supportsTransactions = !!(hello.setName || hello.isreplicaset);
+        if (supportsTransactions) {
+            session = await mongoose.startSession();
+            session.startTransaction();
+        } else {
+            console.warn("⚠️ MongoDB is running as a standalone instance (no replica set). Proceeding without transactions.");
+        }
+    } catch (e) {
+        console.warn("⚠️ Failed to check replica set capabilities. Proceeding without transactions:", e.message);
+        session = null;
+    }
 
     let finalAmount = 0;
     try {
+        // Resolve shipping address if not provided or N/A
+        if (!shipping_address || shipping_address === "N/A") {
+            const defaultAddr = await UserAddress.findOne({ user_id: userId, is_default: true }).session(session);
+            if (defaultAddr) {
+                shipping_address = defaultAddr.address_line;
+            } else {
+                const anyAddr = await UserAddress.findOne({ user_id: userId }).session(session);
+                shipping_address = anyAddr ? anyAddr.address_line : "N/A";
+            }
+        }
+
+        // Prevent duplicate order creation for the same payment receipt URL
+        const existingOrder = await Order.findOne({ receipt_url }).session(session);
+        if (existingOrder) {
+            console.log(`⚠️ Order already processed for receipt/payment identifier: ${receipt_url}`);
+            if (session) await session.commitTransaction();
+            return { success: true, orderId: existingOrder._id };
+        }
+
         // 1. Get or Create Customer ID link
         let customer = await Customer.findOne({ user_id: userId }).session(session);
 
@@ -115,13 +147,13 @@ export async function processOrderSuccess(userId, details) {
             status: "Success"
         }], { session });
 
-        await session.commitTransaction();
+        if (session) await session.commitTransaction();
         return { success: true, orderId };
     } catch (error) {
-        await session.abortTransaction();
+        if (session) await session.abortTransaction();
         console.error("Critical: Order Processing Transaction Failed:", error);
         throw error;
     } finally {
-        session.endSession();
+        if (session) session.endSession();
     }
 }

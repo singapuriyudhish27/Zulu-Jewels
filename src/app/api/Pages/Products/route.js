@@ -13,7 +13,14 @@ export async function GET(request) {
         await connectDB();
 
         // Build category filter
-        const categoryFilter = categoryId ? { _id: categoryId } : {};
+        let categoryFilter = {};
+        if (categoryId) {
+            if (typeof categoryId === 'string' && /^[0-9a-fA-F]{24}$/.test(categoryId)) {
+                categoryFilter = { _id: categoryId };
+            } else {
+                categoryFilter = { _id: null }; // Invalid ObjectId format shouldn't match anything
+            }
+        }
         const cats = await Category.find(categoryFilter).sort({ name: 1 });
 
         // Build product filter

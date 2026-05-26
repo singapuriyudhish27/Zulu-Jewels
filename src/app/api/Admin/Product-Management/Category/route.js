@@ -39,6 +39,7 @@ export async function POST(request) {
         const newCategory = await Category.create({
             name,
             image_url: imageUrl,
+            description,
             available_materials: ["Gold", "Silver", "Diamond"] // Default materials for compatibility
         });
 
@@ -92,7 +93,7 @@ export async function PUT(request) {
         }
 
         // Update Category
-        await Category.updateOne({ _id: id }, { name, image_url: imageUrl });
+        await Category.updateOne({ _id: id }, { name, image_url: imageUrl, description });
 
         return NextResponse.json({
             success: true,

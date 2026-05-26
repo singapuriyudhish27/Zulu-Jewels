@@ -62,19 +62,19 @@ export async function GET() {
 export async function POST(request) {
     try {
         await connectDB();
-        const formData = await request.formData();
-
-        const name = formData.get("name");
-        const category_name = formData.get("category_name");
-        const description = formData.get("description");
-        const price = formData.get("price");
-        const material = formData.get("material");
-        const gender = formData.get("gender");
-        const is_active = formData.get("is_active") === "true";
+        const data = await request.json();
         
-        const variantsJson = formData.get("variants");
-        let variants = [];
-        try { if (variantsJson) variants = JSON.parse(variantsJson); } catch (e) {}
+        const {
+            name,
+            category_name,
+            description,
+            price,
+            material,
+            gender,
+            is_active,
+            variants = [],
+            media = []
+        } = data;
 
         if (!category_name || !name || !price) {
             return NextResponse.json({ success: false, message: "Category, Name & Price Required." }, { status: 400 });
@@ -84,86 +84,67 @@ export async function POST(request) {
         if (!category) return NextResponse.json({ success: false, message: "Category Not Found" }, { status: 400 });
         const categoryId = category._id;
 
+        let finalMaterial = material;
+        if (variants && variants.length > 0) {
+            finalMaterial = [...new Set(variants.map(v => v.material).filter(m => m))].join(", ");
+        }
+
         const newProduct = await Product.create({
             category_id: categoryId,
             name,
             description,
-            price,
-            material,
+            price: Number(price),
+            material: finalMaterial,
             gender,
             is_active
         });
 
         const productId = newProduct._id;
 
-        // --- Parallel Media Uploads Optimization ---
-        const uploadTasks = [];
-        
-        // Collect variant media
-        variants.forEach((v, i) => {
-            const files = formData.getAll(`media_variant_${i}`);
-            files.forEach((file, j) => {
-                uploadTasks.push((async () => {
-                    const url = await saveFile(file);
-                    return { type: 'variant', variantIndex: i, fileIndex: j, url, file };
-                })());
-            });
-        });
-
-        // Collect generic media
-        const genericFiles = formData.getAll("media");
-        genericFiles.forEach((file, i) => {
-            uploadTasks.push((async () => {
-                const url = await saveFile(file);
-                return { type: 'generic', fileIndex: i, url, file };
-            })());
-        });
-
-        // Run all uploads concurrently
-        const uploadResults = await Promise.all(uploadTasks);
-
-        // Process Variants
+        // Process Variants & Variant Media
         for (let i = 0; i < variants.length; i++) {
             const v = variants[i];
             const newVariant = await ProductVariant.create({
                 product_id: productId,
                 material: v.material,
                 description: v.description,
-                price: v.price || price,
-                stock: v.stock || 0
+                price: Number(v.price) || Number(price),
+                stock: Number(v.stock) || 0
             });
             
             const variantId = newVariant._id;
-            const primaryIndex = parseInt(formData.get(`primary_index_variant_${i}`) || "0");
-
-            // Filter uploaded media for this variant
-            const variantMedia = uploadResults.filter(r => r.type === 'variant' && r.variantIndex === i);
+            const variantMediaList = v.media || [];
             
-            for (const media of variantMedia) {
-                if (media.url) {
-                    const mediaType = media.file.type.startsWith("video/") ? "video" : "image";
+            for (let j = 0; j < variantMediaList.length; j++) {
+                const vm = variantMediaList[j];
+                const input = vm.fileData || vm.media_url || vm.url;
+                if (input) {
+                    const uploadedUrl = await saveFile(input);
+                    const mediaType = (vm.fileType && vm.fileType.startsWith("video/")) || (vm.media_type === "video") ? "video" : "image";
                     await ProductImage.create({
                         product_id: productId,
                         variant_id: variantId,
-                        media_url: media.url,
+                        media_url: uploadedUrl,
                         media_type: mediaType,
-                        is_primary: media.fileIndex === primaryIndex
+                        is_primary: Boolean(vm.is_primary)
                     });
                 }
             }
         }
 
-        // Handle generic product media
-        const genericMedia = uploadResults.filter(r => r.type === 'generic');
-        for (const media of genericMedia) {
-            if (media.url) {
-                const mediaType = media.file.type.startsWith("video/") ? "video" : "image";
+        // Process Generic Product Media
+        for (let i = 0; i < media.length; i++) {
+            const gm = media[i];
+            const input = gm.fileData || gm.media_url || gm.url;
+            if (input) {
+                const uploadedUrl = await saveFile(input);
+                const mediaType = (gm.fileType && gm.fileType.startsWith("video/")) || (gm.media_type === "video") ? "video" : "image";
                 await ProductImage.create({
                     product_id: productId,
                     variant_id: null,
-                    media_url: media.url,
+                    media_url: uploadedUrl,
                     media_type: mediaType,
-                    is_primary: false
+                    is_primary: Boolean(gm.is_primary)
                 });
             }
         }
@@ -179,37 +160,28 @@ export async function POST(request) {
 export async function PUT(request) {
     try {
         await connectDB();
-        const contentType = request.headers.get("content-type") || "";
-
-        let id, name, category_name, description, price, material, gender, is_active, variants = [];
-        let formData = null;
-        let isJson = contentType.includes("application/json");
-
-        if (isJson) {
-            // Handle simple JSON updates (like status toggles)
-            const data = await request.json();
-            id = data.id;
-            is_active = data.is_active;
-        } else {
-            // Handle full FormData updates (with images)
-            formData = await request.formData();
-            id = formData.get("id");
-            name = formData.get("name");
-            category_name = formData.get("category_name");
-            description = formData.get("description");
-            price = formData.get("price");
-            material = formData.get("material");
-            gender = formData.get("gender");
-            is_active = formData.get("is_active") === "true";
-            
-            const variantsJson = formData.get("variants");
-            try { if (variantsJson) variants = JSON.parse(variantsJson); } catch (e) {}
-        }
+        const data = await request.json();
+        
+        const {
+            id,
+            name,
+            category_name,
+            description,
+            price,
+            material,
+            gender,
+            is_active,
+            variants = [],
+            media = []
+        } = data;
 
         if (!id) return NextResponse.json({ success: false, message: "Product Id Not Found" }, { status: 400 });
 
+        // If it's a simple status toggle JSON update (only id and is_active are passed, others are missing), we do the update and return early
+        const isStatusToggleOnly = !name && !category_name && !price;
+
         let categoryId = null;
-        if (!isJson && category_name) {
+        if (category_name) {
             const category = await Category.findOne({ name: category_name });
             if (category) categoryId = category._id;
         }
@@ -219,8 +191,13 @@ export async function PUT(request) {
         if (categoryId) updateFields.category_id = categoryId;
         if (name) updateFields.name = name;
         if (description !== undefined && description !== null) updateFields.description = description;
-        if (price) updateFields.price = price;
-        if (material !== undefined) updateFields.material = material;
+        if (price) updateFields.price = Number(price);
+        
+        let finalMaterial = material;
+        if (variants && variants.length > 0) {
+            finalMaterial = [...new Set(variants.map(v => v.material).filter(m => m))].join(", ");
+        }
+        if (finalMaterial !== undefined) updateFields.material = finalMaterial;
         if (gender !== undefined) updateFields.gender = gender;
         if (is_active !== undefined) updateFields.is_active = is_active;
 
@@ -228,16 +205,15 @@ export async function PUT(request) {
             await Product.updateOne({ _id: id }, updateFields);
         }
 
-        // If it's just a simple JSON update, we can return early
-        if (isJson) {
+        if (isStatusToggleOnly) {
             return NextResponse.json({ success: true, message: "Product status updated successfully" }, { status: 200 });
         }
 
-        // --- Variant Syncing Logic (Only for Full FormData Edit) ---
+        // --- Variant Syncing Logic ---
         // 1. Get current variant IDs
         const currentVariants = await ProductVariant.find({ product_id: id });
         const currentVariantIds = currentVariants.map(v => v._id.toString());
-        const incomingVariantIds = variants.map(v => v.id).filter(vId => vId && typeof vId === 'string' && vId.length > 5);
+        const incomingVariantIds = variants.map(v => v.id || v._id).filter(vId => vId && typeof vId === 'string' && vId.length > 5);
 
         // 2. Delete variants not in incoming list
         const toDelete = currentVariantIds.filter(vId => !incomingVariantIds.includes(vId));
@@ -249,15 +225,15 @@ export async function PUT(request) {
         // 3. Update or Insert Variants
         for (let i = 0; i < variants.length; i++) {
             const v = variants[i];
-            let variantId = v.id;
+            let variantId = v.id || v._id;
 
             if (variantId && typeof variantId === 'string' && variantId.length > 5) {
                 // Update
                 await ProductVariant.updateOne({ _id: variantId }, {
                     material: v.material,
                     description: v.description,
-                    price: v.price || price,
-                    stock: v.stock || 0
+                    price: Number(v.price) || Number(price),
+                    stock: Number(v.stock) || 0
                 });
             } else {
                 // Insert
@@ -265,46 +241,50 @@ export async function PUT(request) {
                     product_id: id,
                     material: v.material,
                     description: v.description,
-                    price: v.price || price,
-                    stock: v.stock || 0
+                    price: Number(v.price) || Number(price),
+                    stock: Number(v.stock) || 0
                 });
                 variantId = newVariant._id.toString();
             }
 
             // 4. Media Management for this Variant
-            const existingMedia = v.existing_media || [];
-            const newFiles = formData.getAll(`media_variant_${i}`);
-            const primaryIndex = parseInt(formData.get(`primary_index_variant_${i}`) || "0");
-
-            // Clear existing variant images to re-sync (simpler)
+            const variantMediaList = v.media || [];
+            
+            // Clear existing variant images to re-sync
             await ProductImage.deleteMany({ variant_id: variantId });
 
-            let currentIndex = 0;
-            // Re-insert kept media
-            for (const media of existingMedia) {
-                await ProductImage.create({
-                    product_id: id,
-                    variant_id: variantId,
-                    media_url: media.media_url,
-                    media_type: media.media_type,
-                    is_primary: currentIndex === primaryIndex
-                });
-                currentIndex++;
-            }
-            // Insert new media
-            for (const file of newFiles) {
-                const mediaUrl = await saveFile(file);
-                if (mediaUrl) {
-                    const mediaType = file.type.startsWith("video/") ? "video" : "image";
+            for (let j = 0; j < variantMediaList.length; j++) {
+                const vm = variantMediaList[j];
+                const input = vm.fileData || vm.media_url || vm.url;
+                if (input) {
+                    const uploadedUrl = await saveFile(input);
+                    const mediaType = (vm.fileType && vm.fileType.startsWith("video/")) || (vm.media_type === "video") ? "video" : "image";
                     await ProductImage.create({
                         product_id: id,
                         variant_id: variantId,
-                        media_url: mediaUrl,
+                        media_url: uploadedUrl,
                         media_type: mediaType,
-                        is_primary: currentIndex === primaryIndex
+                        is_primary: Boolean(vm.is_primary)
                     });
-                    currentIndex++;
                 }
+            }
+        }
+
+        // Handle generic product media
+        await ProductImage.deleteMany({ product_id: id, variant_id: null });
+        for (let i = 0; i < media.length; i++) {
+            const gm = media[i];
+            const input = gm.fileData || gm.media_url || gm.url;
+            if (input) {
+                const uploadedUrl = await saveFile(input);
+                const mediaType = (gm.fileType && gm.fileType.startsWith("video/")) || (gm.media_type === "video") ? "video" : "image";
+                await ProductImage.create({
+                    product_id: id,
+                    variant_id: null,
+                    media_url: uploadedUrl,
+                    media_type: mediaType,
+                    is_primary: Boolean(gm.is_primary)
+                });
             }
         }
 

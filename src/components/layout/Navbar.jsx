@@ -333,8 +333,8 @@ export default function Navbar() {
                 <div className="zj-nav-dropdown">
                   {categories.map(cat => (
                     <Link 
-                      key={cat.id} 
-                      href={`/Pages/Products?category=${cat.id}`} 
+                      key={cat._id || cat.id} 
+                      href={`/Pages/Products?category=${cat._id || cat.id}`} 
                       className="zj-dropdown-link"
                     >
                       {cat.name}

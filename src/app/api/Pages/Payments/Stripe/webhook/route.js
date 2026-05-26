@@ -36,7 +36,7 @@ export async function POST(req) {
             }
 
             // Create Order in Database
-            await processOrderSuccess(Number(userId), {
+            await processOrderSuccess(userId, {
                 payment_method: "Stripe",
                 receipt_url: paymentIntent.charges?.data?.[0]?.receipt_url || `https://dashboard.stripe.com/payments/${paymentIntent.id}`,
                 specificItem

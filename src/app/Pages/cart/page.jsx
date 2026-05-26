@@ -32,7 +32,7 @@ function StripeCheckoutForm({ onSuccess, onClose }) {
     if (error) {
       toast.error(error.message);
     } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      onSuccess();
+      onSuccess(paymentIntent);
     }
     setLoading(false);
   };
@@ -168,6 +168,7 @@ export default function CartPage() {
         await fetch('/api/Pages/Payments/RazorPay/verify', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
           body: JSON.stringify(response),
         });
         toast.success('Payment Successful! Thank you for your order.');
@@ -711,9 +712,24 @@ export default function CartPage() {
             <div className="ca-modal">
               <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
                 <StripeCheckoutForm
-                  onSuccess={() => {
-                    setShowStripeModal(false);
-                    toast.success('Payment Successful! Thank you for your order.');
+                  onSuccess={async (paymentIntent) => {
+                    try {
+                      const verifyRes = await fetch('/api/Pages/Payments/Stripe/verify', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+                      });
+                      const verifyData = await verifyRes.json();
+                      if (!verifyRes.ok) {
+                        throw new Error(verifyData.message || 'Verification failed');
+                      }
+                      setShowStripeModal(false);
+                      toast.success('Payment Successful! Thank you for your order.');
+                    } catch (err) {
+                      console.error("Order creation failed:", err);
+                      toast.error(err.message || 'Payment succeeded but order creation failed. Please contact support.');
+                    }
                   }}
                   onClose={() => setShowStripeModal(false)}
                 />
