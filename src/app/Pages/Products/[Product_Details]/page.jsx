@@ -127,9 +127,19 @@ export default function ProductDetailsPage() {
           setProduct(data.product);
           if (data.product.is_wishlisted) setIsWishlisted(true);
           if (data.product.cart_variants) setInCartVariantIds(data.product.cart_variants.map(id => id === 'base' ? null : id));
-          // Auto-select first variant if exists
+          
+          // Parse variantId from query parameters to support auto-selection
+          let urlVariantId = null;
+          if (typeof window !== 'undefined') {
+            const urlParams = new URLSearchParams(window.location.search);
+            urlVariantId = urlParams.get('variantId');
+          }
+
           if (data.product.variants && data.product.variants.length > 0) {
-            setSelectedVariant(data.product.variants[0]);
+            const matchedVariant = urlVariantId
+              ? data.product.variants.find(v => (v._id?.toString() || v.id?.toString()) === urlVariantId)
+              : null;
+            setSelectedVariant(matchedVariant || data.product.variants[0]);
           }
         } else {
           toast.error(data.message || "Product not found");

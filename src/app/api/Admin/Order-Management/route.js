@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Order from "@/lib/models/Order";
@@ -6,6 +8,7 @@ import Customer from "@/lib/models/Customer";
 import User from "@/lib/models/User";
 import Product from "@/lib/models/Product";
 import Category from "@/lib/models/Category";
+import ProductVariant from "@/lib/models/ProductVariant";
 
 //Get The Orders Data
 export async function GET() {
@@ -32,6 +35,12 @@ export async function GET() {
                     category = cat ? { id: cat._id, name: cat.name } : null;
                 }
 
+                let variant_material = null;
+                if (oi.variant_id) {
+                    const variant = await ProductVariant.findById(oi.variant_id);
+                    variant_material = variant ? variant.material : null;
+                }
+
                 orderItems.push({
                     order_item_id: oi._id,
                     product_id: product?._id || null,
@@ -40,6 +49,8 @@ export async function GET() {
                     quantity: oi.quantity,
                     item_price: oi.price,
                     category,
+                    variant_id: oi.variant_id || null,
+                    variant_material,
                 });
             }
 

@@ -57,8 +57,9 @@ export default function OrderManagementPage() {
   useEffect(() => {
     const fetchOrders = async () => {
       try {
-        const response = await fetch('/api/Admin/Order-Management', {
+        const response = await fetch(`/api/Admin/Order-Management?t=${Date.now()}`, {
           credentials: 'include',
+          cache: 'no-store'
         });
         const result = await response.json();
         if (result.success) {
@@ -121,7 +122,9 @@ export default function OrderManagementPage() {
       name: orderItem.product_name,
       category: orderItem.category?.name || "Other",
       qty: orderItem.quantity,
-      price: formatCurrency(orderItem.item_price)
+      price: formatCurrency(orderItem.item_price),
+      variant: orderItem.variant_material || null,
+      variantId: orderItem.variant_id || null
     }));
 
     const totalSpentValue = item.items.reduce((acc, orderItem) => {
@@ -281,7 +284,8 @@ export default function OrderManagementPage() {
 
     if (selectedOrder.items.length === 1) {
       // Direct redirect if only 1 product
-      router.push(`/Pages/Products/${selectedOrder.items[0].productId}`);
+      const item = selectedOrder.items[0];
+      router.push(`/Pages/Products/${item.productId}${item.variantId ? `?variantId=${item.variantId}` : ''}`);
     } else if (selectedOrder.items.length > 1) {
       // Toggle dropdown if multiple products
       setShowItemDropdown(!showItemDropdown);
@@ -474,7 +478,7 @@ export default function OrderManagementPage() {
                         }}>
                           <td><span className="order-id">{order.id}</span>{order.isCustom && <span className="custom-badge">CUSTOM</span>}</td>
                           <td>{order.customer}</td>
-                          <td>{order.items.map(i => i.category).join(", ")}</td>
+                          <td>{order.items.map(i => i.variant ? `${i.category} (${i.variant})` : i.category).join(", ")}</td>
                           <td><strong>{order.total}</strong></td>
                           <td><span className={`gender-badge ${order.gender.toLowerCase()}`}>{order.gender}</span></td>
                           <td><span className="status-badge" style={{ background: statusStyle.bg, color: statusStyle.color }}>{statusStyle.icon} {order.status}</span></td>
@@ -507,7 +511,28 @@ export default function OrderManagementPage() {
                       <div className="detail-section-title">Order Items</div>
                       {selectedOrder.items.map((item, idx) => (
                         <div className="order-item" key={idx}>
-                          <div><div className="order-item-name">{item.name}</div><div className="order-item-cat">{item.category} • Qty: {item.qty}</div></div>
+                          <div>
+                            <div className="order-item-name">
+                              {item.name}
+                              {item.variant && (
+                                <span style={{
+                                  marginLeft: '8px',
+                                  fontSize: '10px',
+                                  fontWeight: 700,
+                                  background: '#FAF9F8',
+                                  border: '1px solid #CEA268',
+                                  color: '#CEA268',
+                                  padding: '2px 6px',
+                                  borderRadius: '3px',
+                                  textTransform: 'uppercase',
+                                  letterSpacing: '0.05em'
+                                }}>
+                                  {item.variant}
+                                </span>
+                              )}
+                            </div>
+                            <div className="order-item-cat">{item.category}{item.variant && ` • Variant: ${item.variant}`} • Qty: {item.qty}</div>
+                          </div>
                           <div className="order-item-price">{item.price}</div>
                         </div>
                       ))}
@@ -575,15 +600,32 @@ export default function OrderManagementPage() {
                         {selectedOrder.items.map((item, idx) => (
                           <div key={idx} className="dropdown-item">
                             <div className="dropdown-item-info">
-                              <div className="dropdown-item-name">{item.name}</div>
+                              <div className="dropdown-item-name">
+                                {item.name}
+                                {item.variant && (
+                                  <span style={{
+                                    marginLeft: '6px',
+                                    fontSize: '9px',
+                                    fontWeight: 700,
+                                    background: '#FAF9F8',
+                                    border: '1px solid #CEA268',
+                                    color: '#CEA268',
+                                    padding: '1px 4px',
+                                    borderRadius: '2px',
+                                    textTransform: 'uppercase'
+                                  }}>
+                                    {item.variant}
+                                  </span>
+                                )}
+                              </div>
                               <div className="dropdown-item-meta">
-                                {item.category} • Qty: {item.qty} • {item.price}
+                                {item.category} {item.variant && `• Variant: ${item.variant}`} • Qty: {item.qty} • {item.price}
                               </div>
                             </div>
                             <button 
                               className="dropdown-view-btn"
                               title="View Product"
-                              onClick={() => router.push(`/Pages/Products/${item.productId}`)}
+                              onClick={() => router.push(`/Pages/Products/${item.productId}${item.variantId ? `?variantId=${item.variantId}` : ''}`)}
                             >
                               <Eye size={16} />
                             </button>
