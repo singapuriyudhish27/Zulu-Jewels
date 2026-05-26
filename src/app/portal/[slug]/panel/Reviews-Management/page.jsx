@@ -74,22 +74,25 @@ export default function ReviewsManagementPage() {
 
 
   // Flatten and map reviews data
-  const reviews = reviewsData.flatMap(user =>
-    (user.reviews || []).map(review => ({
-      id: review.id,
-      customer: `${user.firstName} ${user.lastName}`,
-      email: user.email,
-      product: review.product.name,
-      productId: `PRD-${review.product.id.toString().padStart(3, '0')}`,
-      rating: review.rating,
-      title: review.comment.split(' ').slice(0, 5).join(' ') + (review.comment.split(' ').length > 5 ? '...' : ''),
-      review: review.comment,
-      date: new Date(review.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-      status: "Published", // API doesn't return status yet, assuming published for now
-      verified: user.is_verified,
-      helpful: Math.floor(Math.random() * 20), // Simulated
-      images: 0
-    }))
+  const reviews = (reviewsData || []).flatMap(user =>
+    (user.reviews || []).map(review => {
+      const prdIdStr = (review.product?.id || review.product?._id || "").toString();
+      return {
+        id: review.id,
+        customer: `${user.firstName || ''} ${user.lastName || ''}`.trim() || "Guest",
+        email: user.email || "N/A",
+        product: review.product?.name || "Deleted Product",
+        productId: prdIdStr ? `PRD-${prdIdStr.slice(-4).toUpperCase()}` : "PRD-0000",
+        rating: review.rating,
+        title: (review.comment || "").split(' ').slice(0, 5).join(' ') + ((review.comment || "").split(' ').length > 5 ? '...' : ''),
+        review: review.comment || "",
+        date: new Date(review.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+        status: "Published", // API doesn't return status yet, assuming published for now
+        verified: user.is_verified,
+        helpful: Math.floor(Math.random() * 20), // Simulated
+        images: 0
+      };
+    })
   ).sort((a, b) => new Date(b.date) - new Date(a.date));
 
   // Dynamic dashboard stats

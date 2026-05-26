@@ -435,8 +435,8 @@ export default function ShippingPaymentPage() {
     };
 
     // Map Shipping Zones
-    const shippingZones = data.shipping_zones.map(zone => ({
-        id: zone.id,
+    const shippingZones = (data.shipping_zones || []).map(zone => ({
+        id: zone._id?.toString() || zone.id,
         zone: zone.zone_name,
         cities: zone.areas,
         rate: zone.shipping_rate === 0 ? "Free" : `₹${zone.shipping_rate}`,
@@ -446,7 +446,7 @@ export default function ShippingPaymentPage() {
     }));
 
     // Map Payment Methods
-    const paymentMethods = data.payment_options.map(method => {
+    const paymentMethods = (data.payment_options || []).map(method => {
         const name = method.category || "Default Method";
         const nameLower = name.toLowerCase();
 
@@ -461,7 +461,7 @@ export default function ShippingPaymentPage() {
         }
 
         return {
-            id: method.id,
+            id: method._id?.toString() || method.id,
             name: name,
             type: method.category || "Payment",
             description: method.description || "Secure payment method",
@@ -473,20 +473,23 @@ export default function ShippingPaymentPage() {
     });
 
     // Map Transactions
-    const recentTransactions = data.transactions.map(txn => ({
-        id: `TXN${txn.id.toString().padStart(3, '0')}`,
-        orderId: `ORD-${new Date(txn.created_at).getFullYear()}-${txn.order_id}`,
-        customer: txn.customer_name || "Unknown Customer",
-        amount: `₹${parseFloat(txn.amount).toLocaleString('en-IN')}`,
-        method: txn.payment_method,
-        status: txn.status,
-        date: new Date(txn.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
-        _raw: txn // Store raw transaction data for actions
-    }));
+    const recentTransactions = (data.transactions || []).map(txn => {
+        const txnIdStr = (txn._id || txn.id || "").toString();
+        return {
+            id: txnIdStr ? `TXN-${txnIdStr.slice(-4).toUpperCase()}` : "TXN-0000",
+            orderId: `ORD-${new Date(txn.created_at).getFullYear()}-${txn.order_id}`,
+            customer: txn.customer_name || "Unknown Customer",
+            amount: `₹${parseFloat(txn.amount).toLocaleString('en-IN')}`,
+            method: txn.payment_method,
+            status: txn.status,
+            date: new Date(txn.created_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }),
+            _raw: txn // Store raw transaction data for actions
+        };
+    });
 
     // Map Shipping Partners
-    const shippingPartnersData = data.shipping_partners.map(partner => ({
-        id: partner.id,
+    const shippingPartnersData = (data.shipping_partners || []).map(partner => ({
+        id: partner._id?.toString() || partner.id,
         name: partner.partner_name,
         type: partner.type || "Courier",
         tracking: partner.tracking_url || "N/A",

@@ -83,9 +83,10 @@ export default function AdminPage() {
   };
 
   // Map Recent Orders
-  const recentOrders = dashboardData.orders.slice(0, 5).map(order => {
+  const recentOrders = (dashboardData.orders || []).slice(0, 5).map(order => {
+    const orderIdStr = (order._id || order.id || "").toString();
     // Find matching items from order_items
-    const items = dashboardData.order_items.filter(item => item.order_id === order.id);
+    const items = (dashboardData.order_items || []).filter(item => item.order_id === orderIdStr);
     const productName = items.length > 0 ? items[0].product_name : "Jewelry Item";
     const extraItems = items.length > 1 ? ` + ${items.length - 1} more` : "";
 
@@ -94,7 +95,7 @@ export default function AdminPage() {
     const displayAmount = order.total_amount || orderTotal || 0;
 
     return {
-      id: `ORD-${order.id.toString().padStart(4, '0')}`,
+      id: orderIdStr ? `ORD-${orderIdStr.slice(-4).toUpperCase()}` : "ORD-0000",
       customer: order.customer_name || "Guest Customer",
       product: `${productName}${extraItems}`,
       amount: `₹${parseFloat(displayAmount).toLocaleString('en-IN')}`,
@@ -104,7 +105,7 @@ export default function AdminPage() {
   });
 
   // Map Top Products
-  const topProducts = dashboardData.products.slice(0, 5).map(p => {
+  const topProducts = (dashboardData.products || []).slice(0, 5).map(p => {
     const sold = p.order_count || 0;
     const price = parseFloat(p.price || 0);
     const revenue = (sold * price) / 100000;
@@ -118,21 +119,24 @@ export default function AdminPage() {
 
   // Create Unified Activity Feed
   const activities = [
-    ...dashboardData.orders.slice(0, 3).map(o => ({
-      icon: <ShoppingCart size={16} />,
-      text: `New order #ORD-${o.id.toString().padStart(4, '0')} received`,
-      time: getTimeAgo(o.created_at),
-      type: "order",
-      timestamp: new Date(o.created_at).getTime()
-    })),
-    ...dashboardData.reviews.slice(0, 2).map(r => ({
+    ...(dashboardData.orders || []).slice(0, 3).map(o => {
+      const oIdStr = (o._id || o.id || "").toString();
+      return {
+        icon: <ShoppingCart size={16} />,
+        text: `New order #ORD-${oIdStr.slice(-4).toUpperCase()} received`,
+        time: getTimeAgo(o.created_at),
+        type: "order",
+        timestamp: new Date(o.created_at).getTime()
+      };
+    }),
+    ...(dashboardData.reviews || []).slice(0, 2).map(r => ({
       icon: <Star size={16} />,
       text: `New ${r.rating}-star review on ${r.product_name || "Product"}`,
       time: getTimeAgo(r.created_at),
       type: "review",
       timestamp: new Date(r.created_at).getTime()
     })),
-    ...dashboardData.inquiries.slice(0, 2).map(i => ({
+    ...(dashboardData.inquiries || []).slice(0, 2).map(i => ({
       icon: <MessageSquare size={16} />,
       text: `New inquiry from ${i.name || "Customer"}`,
       time: i.created_at ? getTimeAgo(i.created_at) : "Recent",
