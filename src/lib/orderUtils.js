@@ -9,6 +9,48 @@ import ProductVariant from './models/ProductVariant';
 import Product from './models/Product';
 import Transaction from './models/Transaction';
 import UserAddress from './models/UserAddress';
+import { sendOrderEmail } from './emailService';
+
+/**
+ * Builds the full enriched data object needed by email templates & the PDF invoice.
+ * @param {string|object} orderId
+ * @returns {Promise<object|null>}
+ */
+export async function buildOrderEmailData(orderId) {
+    try {
+        const order = await Order.findById(orderId);
+        if (!order) return null;
+
+        const customer = order.customer_id ? await Customer.findById(order.customer_id) : null;
+        const user = customer?.user_id
+            ? await User.findById(customer.user_id).select('firstName lastName email phone')
+            : null;
+
+        const rawItems = await OrderItem.find({ order_id: orderId }).sort({ _id: 1 });
+        const items = [];
+        for (const oi of rawItems) {
+            const product = await Product.findById(oi.product_id);
+            let variant_material = null;
+            if (oi.variant_id) {
+                const variant = await ProductVariant.findById(oi.variant_id);
+                variant_material = variant?.material || null;
+            }
+            items.push({
+                product_name:     product?.name || 'Product',
+                quantity:         oi.quantity,
+                price:            oi.price,
+                variant_material,
+            });
+        }
+
+        const transaction = await Transaction.findOne({ order_id: orderId });
+
+        return { order, customer, user, items, transaction };
+    } catch (err) {
+        console.error('[EmailService] buildOrderEmailData error:', err.message);
+        return null;
+    }
+}
 
 /**
  * Handles the database transaction for creating an order after a successful payment.
@@ -148,6 +190,16 @@ export async function processOrderSuccess(userId, details) {
         }], { session });
 
         if (session) await session.commitTransaction();
+
+        // ── Fire Order Placed Email (non-blocking) ────────────────────────────
+        buildOrderEmailData(orderId).then((emailData) => {
+            if (emailData) {
+                return sendOrderEmail('order_placed', emailData);
+            }
+        }).catch((err) => {
+            console.error('[EmailService] Order placed email failed (non-critical):', err.message);
+        });
+
         return { success: true, orderId };
     } catch (error) {
         if (session) await session.abortTransaction();

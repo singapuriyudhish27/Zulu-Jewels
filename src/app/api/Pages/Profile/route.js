@@ -149,6 +149,5 @@ export async function POST() {
         path: "/",
         expires: new Date(0), //Imidiately expire the cookie
     });
-    console.log("Response Cookies After Deletion:", response.cookies.getAll());
     return response;
 }

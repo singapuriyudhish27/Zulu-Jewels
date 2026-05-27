@@ -9,6 +9,15 @@ import User from "@/lib/models/User";
 import Product from "@/lib/models/Product";
 import Category from "@/lib/models/Category";
 import ProductVariant from "@/lib/models/ProductVariant";
+import { sendOrderEmail } from "@/lib/emailService";
+import { buildOrderEmailData } from "@/lib/orderUtils";
+
+// Maps order status values to email event types
+const STATUS_EMAIL_MAP = {
+    Shipped:   'order_shipped',
+    Delivered: 'order_delivered',
+    Cancelled: 'order_cancelled',
+};
 
 //Get The Orders Data
 export async function GET() {
@@ -142,6 +151,16 @@ export async function PUT(request) {
 
         // Fetch updated order
         const updatedOrder = await Order.findById(order_id);
+
+        // ── Fire Status Email (non-blocking) ─────────────────────────────
+        const emailType = STATUS_EMAIL_MAP[status];
+        if (emailType) {
+            buildOrderEmailData(order_id).then((emailData) => {
+                if (emailData) return sendOrderEmail(emailType, emailData);
+            }).catch((err) => {
+                console.error(`[EmailService] ${emailType} email failed (non-critical):`, err.message);
+            });
+        }
 
         return NextResponse.json({
             success: true,

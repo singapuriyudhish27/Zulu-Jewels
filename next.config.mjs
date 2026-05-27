@@ -15,6 +15,8 @@ const nextConfig = {
   experimental: {
     proxyClientMaxBodySize: "500mb",
   },
+  // Prevent bundling of server-only packages that use Node.js internals
+  serverExternalPackages: ["@react-pdf/renderer"],
 };
 
 export default nextConfig;
