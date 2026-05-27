@@ -6,7 +6,7 @@ import ShippingPartner from "@/lib/models/ShippingPartner";
 export async function POST(request) {
     try {
         const body = await request.json();
-        const { partner_name, type, tracking_url, status } = body;
+        const { partner_name, type, tracking_url, delivery_days, status } = body;
 
         if (!partner_name) {
             return NextResponse.json({ success: false, message: "Partner name is required" }, { status: 400 });
@@ -17,6 +17,7 @@ export async function POST(request) {
             partner_name,
             type: type || '',
             tracking_url: tracking_url || '',
+            delivery_days: delivery_days !== undefined ? Number(delivery_days) : 7,
             status: status !== undefined ? status : true
         });
 
@@ -32,7 +33,7 @@ export async function POST(request) {
 export async function PUT(request) {
     try {
         const body = await request.json();
-        const { id, partner_name, type, tracking_url, status } = body;
+        const { id, partner_name, type, tracking_url, delivery_days, status } = body;
 
         if (!id) {
             return NextResponse.json({ success: false, message: "Partner ID is required" }, { status: 400 });
@@ -43,6 +44,7 @@ export async function PUT(request) {
             partner_name,
             type: type || '',
             tracking_url: tracking_url || '',
+            delivery_days: delivery_days !== undefined ? Number(delivery_days) : 7,
             status: status !== undefined ? status : true
         }, { new: true });
 

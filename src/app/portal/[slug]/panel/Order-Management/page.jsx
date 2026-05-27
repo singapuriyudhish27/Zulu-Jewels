@@ -51,6 +51,26 @@ export default function OrderManagementPage() {
   const [deletingOrder, setDeletingOrder] = useState(false);
   const searchParams = useSearchParams();
 
+  // Shipping & Tracking State
+  const [shippingZones, setShippingZones] = useState([]);
+  const [shippingPartners, setShippingPartners] = useState([]);
+  const [selectedPartnerId, setSelectedPartnerId] = useState("");
+  const [trackingUrl, setTrackingUrl] = useState("");
+  const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
+
+  const addBusinessDays = (date, days) => {
+    const result = new Date(date);
+    let count = 0;
+    while (count < days) {
+      result.setDate(result.getDate() + 1);
+      const day = result.getDay();
+      if (day !== 0 && day !== 6) { // 0 = Sunday, 6 = Saturday
+        count++;
+      }
+    }
+    return result;
+  };
+
   // Dropdown state for multiple items
   const [showItemDropdown, setShowItemDropdown] = useState(false);
 
@@ -73,12 +93,32 @@ export default function OrderManagementPage() {
         setLoading(false);
       }
     };
+
+    const fetchShippingData = async () => {
+      try {
+        const response = await fetch('/api/Admin/Shipping-Management', {
+          credentials: 'include',
+        });
+        const result = await response.json();
+        if (result.success) {
+          setShippingZones(result.data.shipping_zones || []);
+          setShippingPartners(result.data.shipping_partners || []);
+        }
+      } catch (error) {
+        console.error("Error fetching shipping data:", error);
+      }
+    };
+
     fetchOrders();
+    fetchShippingData();
   }, []);
 
   useEffect(() => {
     if (selectedOrder) {
       setStatusToUpdate(selectedOrder.status);
+      setSelectedPartnerId("");
+      setTrackingUrl("");
+      setExpectedDeliveryDate("");
     }
   }, [selectedOrder]);
 
@@ -154,7 +194,16 @@ export default function OrderManagementPage() {
       status: item.order_status || "Pending",
       payment: item.payment_method || "Other",
       address: item.shipping_address || "N/A",
-      isCustom: isCustom
+      isCustom: isCustom,
+      shipping_partner: item.shipping_partner,
+      tracking_url: item.tracking_url,
+      expected_delivery_date: item.expected_delivery_date,
+      delivery_received: item.delivery_received,
+      delivery_remarks: item.delivery_remarks,
+      delivery_feedback: item.delivery_feedback,
+      delivery_confirmed_at: item.delivery_confirmed_at,
+      isPaid: Boolean(item.is_paid),
+      isRefunded: Boolean(item.is_refunded),
     };
   });
 
@@ -237,12 +286,63 @@ export default function OrderManagementPage() {
 
   // 🔹 Logout handler
 
+  const getEligiblePartners = () => {
+    if (!selectedOrder || !selectedOrder.address) return [];
+    const addressLower = selectedOrder.address.toLowerCase();
+    
+    // Find matching zones
+    const matchingZones = shippingZones.filter(zone => {
+      if (!zone.status) return false;
+      const zoneNameMatch = zone.zone_name && addressLower.includes(zone.zone_name.toLowerCase());
+      const locationMatch = zone.location && addressLower.includes(zone.location.toLowerCase());
+      
+      let areaMatch = false;
+      if (zone.areas) {
+        const areaList = zone.areas.split(',').map(a => a.trim().toLowerCase()).filter(Boolean);
+        areaMatch = areaList.some(area => addressLower.includes(area));
+      }
+      
+      return zoneNameMatch || locationMatch || areaMatch;
+    });
+    
+    // Get unique partner IDs from matching zones
+    const partnerIds = [...new Set(matchingZones.map(z => z.partner_id?.toString()).filter(Boolean))];
+    
+    // Map to partner objects
+    let eligible = shippingPartners.filter(p => p.status && partnerIds.includes(p._id?.toString()));
+    
+    // Fallback to all active partners if none matched
+    if (eligible.length === 0) {
+      eligible = shippingPartners.filter(p => p.status);
+    }
+    
+    return eligible;
+  };
+
   const handleUpdateStatus = async () => {
     if (!selectedOrder || !statusToUpdate) return;
     if (statusToUpdate === selectedOrder.status) {
       toast.error("Please select a different status to update.");
       return;
     }
+
+    if (statusToUpdate === 'Shipped') {
+      if (!selectedPartnerId) {
+        toast.error("Please select a shipping partner.");
+        return;
+      }
+      if (!trackingUrl) {
+        toast.error("Please enter a tracking URL.");
+        return;
+      }
+      if (!expectedDeliveryDate) {
+        toast.error("Please select an expected delivery date.");
+        return;
+      }
+    }
+
+    const partnerObj = shippingPartners.find(p => (p._id || p.id) === selectedPartnerId);
+    const partnerName = partnerObj ? partnerObj.partner_name : "";
 
     setUpdatingStatus(true);
     try {
@@ -251,7 +351,12 @@ export default function OrderManagementPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           order_id: selectedOrder.rawId,
-          status: statusToUpdate
+          status: statusToUpdate,
+          ...(statusToUpdate === 'Shipped' ? {
+            shipping_partner: partnerName,
+            tracking_url: trackingUrl,
+            expected_delivery_date: expectedDeliveryDate
+          } : {})
         }),
         credentials: "include",
       });
@@ -260,11 +365,27 @@ export default function OrderManagementPage() {
       if (result.success) {
         // Update local orders Data
         setOrdersData(prev => prev.map(o =>
-          o.order_id === selectedOrder.rawId ? { ...o, order_status: statusToUpdate } : o
+          o.order_id === selectedOrder.rawId ? { 
+            ...o, 
+            order_status: statusToUpdate,
+            ...(statusToUpdate === 'Shipped' ? {
+              shipping_partner: partnerName,
+              tracking_url: trackingUrl,
+              expected_delivery_date: expectedDeliveryDate
+            } : {})
+          } : o
         ));
 
         // Update selected order view
-        setSelectedOrder(prev => ({ ...prev, status: statusToUpdate }));
+        setSelectedOrder(prev => ({ 
+          ...prev, 
+          status: statusToUpdate,
+          ...(statusToUpdate === 'Shipped' ? {
+            shipping_partner: partnerName,
+            tracking_url: trackingUrl,
+            expected_delivery_date: expectedDeliveryDate
+          } : {})
+        }));
 
         toast.success("Order status updated successfully!");
       } else {
@@ -291,6 +412,43 @@ export default function OrderManagementPage() {
       setShowItemDropdown(!showItemDropdown);
     } else {
       toast.error("No items details found for this order.");
+    }
+  };
+
+  const handleRefundOrder = async () => {
+    if (!selectedOrder) return;
+    
+    setUpdatingStatus(true);
+    try {
+      const res = await fetch("/api/Admin/Order-Management", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          order_id: selectedOrder.rawId,
+          is_refunded: true
+        }),
+        credentials: "include",
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        // Update local orders Data
+        setOrdersData(prev => prev.map(o =>
+          o.order_id === selectedOrder.rawId ? { ...o, is_refunded: true } : o
+        ));
+
+        // Update selected order view
+        setSelectedOrder(prev => ({ ...prev, isRefunded: true }));
+
+        toast.success("Refund processed successfully! Confirmation email sent.");
+      } else {
+        toast.error(result.message || "Failed to process refund");
+      }
+    } catch (error) {
+      console.error("Refund processing error:", error);
+      toast.error("Something went wrong while processing refund.");
+    } finally {
+      setUpdatingStatus(false);
     }
   };
 
@@ -545,6 +703,76 @@ export default function OrderManagementPage() {
                       <div className="detail-row"><span><CreditCard size={14} /> Payment</span><span>{selectedOrder.payment}</span></div>
                       <div className="detail-row"><span><MapPin size={14} /> Shipping</span><span>{selectedOrder.address}</span></div>
                     </div>
+
+                    {selectedOrder.shipping_partner && (
+                      <div className="detail-section">
+                        <div className="detail-section-title">Shipping & Tracking</div>
+                        <div className="detail-row">
+                          <span>Partner</span>
+                          <strong>{selectedOrder.shipping_partner}</strong>
+                        </div>
+                        {selectedOrder.expected_delivery_date && (
+                          <div className="detail-row">
+                            <span>Expected Delivery</span>
+                            <span>{formatDate(selectedOrder.expected_delivery_date)}</span>
+                          </div>
+                        )}
+                        {selectedOrder.tracking_url && (
+                          <div className="detail-row">
+                            <span>Tracking URL</span>
+                            <a 
+                              href={selectedOrder.tracking_url} 
+                              target="_blank" 
+                              rel="noopener noreferrer"
+                              style={{ color: '#C9A84C', display: 'inline-flex', alignItems: 'center', gap: '3px', textDecoration: 'underline' }}
+                            >
+                              Track Shipment <ExternalLink size={12} />
+                            </a>
+                          </div>
+                        )}
+                      </div>
+                    )}
+
+                    {selectedOrder.delivery_received !== undefined && selectedOrder.delivery_received !== null && (
+                      <div className="detail-section" style={{ background: '#FAFAF8', padding: '12px', border: '1px solid #F0EBE3', borderRadius: '4px' }}>
+                        <div className="detail-section-title" style={{ color: '#C9A84C', fontSize: '11px', letterSpacing: '2px', textTransform: 'uppercase', marginBottom: '10px' }}>Customer Delivery Feedback</div>
+                        <div className="detail-row">
+                          <span>Received Order?</span>
+                          <span style={{ 
+                            background: selectedOrder.delivery_received ? 'rgba(74, 140, 92, 0.1)' : 'rgba(176, 80, 80, 0.1)', 
+                            color: selectedOrder.delivery_received ? '#4A8C5C' : '#B05050',
+                            padding: '2px 8px',
+                            borderRadius: '3px',
+                            fontWeight: 'bold',
+                            fontSize: '11px'
+                          }}>
+                            {selectedOrder.delivery_received ? 'YES' : 'NO'}
+                          </span>
+                        </div>
+                        {selectedOrder.delivery_confirmed_at && (
+                          <div className="detail-row">
+                            <span>Confirmed Date</span>
+                            <span>{formatDate(selectedOrder.delivery_confirmed_at)}</span>
+                          </div>
+                        )}
+                        {selectedOrder.delivery_remarks && (
+                          <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px' }}>
+                            <span style={{ fontSize: '11px', color: '#9B8B6E' }}>Customer Remarks</span>
+                            <span style={{ fontSize: '12px', background: '#FFF', padding: '6px 8px', border: '1px solid #F0EBE3', borderRadius: '3px', width: '100%', wordBreak: 'break-all' }}>
+                              {selectedOrder.delivery_remarks}
+                            </span>
+                          </div>
+                        )}
+                        {selectedOrder.delivery_feedback && (
+                          <div className="detail-row" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '4px', marginTop: '6px' }}>
+                            <span style={{ fontSize: '11px', color: '#9B8B6E' }}>Feedback & Rating</span>
+                            <span style={{ fontSize: '12px', background: '#FFF', padding: '6px 8px', border: '1px solid #F0EBE3', borderRadius: '3px', width: '100%', wordBreak: 'break-all' }}>
+                              {selectedOrder.delivery_feedback}
+                            </span>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                   <div className="action-btns" style={{ flexDirection: 'column', gap: '10px' }}>
                     <select
@@ -560,6 +788,90 @@ export default function OrderManagementPage() {
                       <option value="Delivered">Delivered</option>
                       <option value="Cancelled">Cancelled</option>
                     </select>
+
+                    {statusToUpdate === 'Shipped' && (
+                      <div className="shipping-input-group" style={{ 
+                        display: 'flex', 
+                        flexDirection: 'column', 
+                        gap: '8px', 
+                        padding: '12px', 
+                        background: '#FAFAF8', 
+                        border: '1px solid #F0EBE3', 
+                        borderRadius: '4px',
+                        marginBottom: '10px'
+                      }}>
+                        <div style={{ fontSize: '11px', fontWeight: 600, color: '#C9A84C', letterSpacing: '1px', textTransform: 'uppercase' }}>
+                          Shipping Information
+                        </div>
+                        
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '10px', color: '#9B8B6E', fontWeight: 600 }}>Select Shipping Partner</label>
+                          <select
+                            className="filter-select"
+                            value={selectedPartnerId}
+                            onChange={(e) => {
+                              const pId = e.target.value;
+                              setSelectedPartnerId(pId);
+                              const partner = shippingPartners.find(p => (p._id || p.id) === pId);
+                              if (partner) {
+                                setTrackingUrl(partner.tracking_url || "");
+                                const days = partner.delivery_days || 7;
+                                const expected = addBusinessDays(new Date(), days);
+                                setExpectedDeliveryDate(expected.toISOString().split('T')[0]);
+                              } else {
+                                setTrackingUrl("");
+                                setExpectedDeliveryDate("");
+                              }
+                            }}
+                            style={{ width: '100%', padding: '6px 8px', fontSize: '12px' }}
+                          >
+                            <option value="">-- Choose Partner --</option>
+                            {getEligiblePartners().map(partner => (
+                              <option key={partner._id || partner.id} value={partner._id || partner.id}>
+                                {partner.partner_name} ({partner.delivery_days || 7} days)
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '10px', color: '#9B8B6E', fontWeight: 600 }}>Tracking URL / Details</label>
+                          <input
+                            type="text"
+                            placeholder="Tracking URL"
+                            value={trackingUrl}
+                            onChange={(e) => setTrackingUrl(e.target.value)}
+                            style={{ 
+                              width: '100%', 
+                              padding: '6px 8px', 
+                              fontSize: '12px',
+                              border: '1px solid #F0EBE3',
+                              borderRadius: '3px',
+                              outline: 'none',
+                              color: '#2c2c2c'
+                            }}
+                          />
+                        </div>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '3px' }}>
+                          <label style={{ fontSize: '10px', color: '#9B8B6E', fontWeight: 600 }}>Expected Delivery Date</label>
+                          <input
+                            type="date"
+                            value={expectedDeliveryDate}
+                            onChange={(e) => setExpectedDeliveryDate(e.target.value)}
+                            style={{ 
+                              width: '100%', 
+                              padding: '6px 8px', 
+                              fontSize: '12px',
+                              border: '1px solid #F0EBE3',
+                              borderRadius: '3px',
+                              outline: 'none',
+                              color: '#2c2c2c'
+                            }}
+                          />
+                        </div>
+                      </div>
+                    )}
                     <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
                       <button
                         className="action-btn primary"
@@ -587,6 +899,49 @@ export default function OrderManagementPage() {
                       >
                         <Trash2 size={14} /> {deletingOrder ? 'Deleting...' : 'Delete Order'}
                       </button>
+                    )}
+
+                    {/* Refund Button — visible only when status is Cancelled, payment is made, and not yet refunded */}
+                    {selectedOrder.status === 'Cancelled' && selectedOrder.isPaid && !selectedOrder.isRefunded && (
+                      <button
+                        className="action-btn"
+                        onClick={handleRefundOrder}
+                        disabled={updatingStatus}
+                        style={{ 
+                          width: '100%', 
+                          background: '#4A8C5C', 
+                          color: '#FFF', 
+                          border: 'none', 
+                          borderRadius: '6px', 
+                          padding: '10px', 
+                          fontSize: '13px', 
+                          fontWeight: 700, 
+                          cursor: 'pointer',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          gap: '6px',
+                          marginTop: '5px'
+                        }}
+                      >
+                        <IndianRupee size={14} /> Process Refund
+                      </button>
+                    )}
+                    {selectedOrder.status === 'Cancelled' && selectedOrder.isRefunded && (
+                      <div style={{
+                        width: '100%',
+                        background: 'rgba(74, 140, 92, 0.1)',
+                        color: '#4A8C5C',
+                        border: '1px solid #4A8C5C',
+                        borderRadius: '6px',
+                        padding: '10px',
+                        fontSize: '13px',
+                        fontWeight: 700,
+                        textAlign: 'center',
+                        marginTop: '5px'
+                      }}>
+                        ✓ Refund Processed Successfully
+                      </div>
                     )}
                   </div>
 

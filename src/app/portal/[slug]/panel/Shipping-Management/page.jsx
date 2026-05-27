@@ -75,9 +75,10 @@ export default function ShippingPaymentPage() {
         partner_name: '',
         type: '',
         tracking_url: '',
+        delivery_days: 7,
         status: true
     });
-    const defaultPartnerForm = { partner_name: '', type: '', tracking_url: '', status: true };
+    const defaultPartnerForm = { partner_name: '', type: '', tracking_url: '', delivery_days: 7, status: true };
 
     // ── Payment Method Modal State ──
     const [showPaymentModal, setShowPaymentModal] = useState(false);
@@ -219,6 +220,7 @@ export default function ShippingPaymentPage() {
             partner_name: partner.partner_name || '',
             type: partner.type || '',
             tracking_url: partner.tracking_url || '',
+            delivery_days: partner.delivery_days !== undefined ? Number(partner.delivery_days) : 7,
             status: partner.status !== undefined ? Boolean(partner.status) : true
         });
         setShowPartnerModal(true);
@@ -1177,6 +1179,19 @@ export default function ShippingPaymentPage() {
                                             placeholder="e.g. https://track.partner.com"
                                             value={partnerForm.tracking_url}
                                             onChange={(e) => setPartnerForm({ ...partnerForm, tracking_url: e.target.value })}
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label className="form-label">Expected Delivery Days (Business Days) <span className="required">*</span></label>
+                                        <input
+                                            className="form-input"
+                                            type="number"
+                                            min="1"
+                                            max="30"
+                                            placeholder="e.g. 7"
+                                            value={partnerForm.delivery_days}
+                                            onChange={(e) => setPartnerForm({ ...partnerForm, delivery_days: e.target.value })}
+                                            required
                                         />
                                     </div>
                                     <div className="form-group">

@@ -72,6 +72,14 @@ export async function GET() {
                 receipt_url: o.receipt_url,
                 order_status: o.status,
                 order_created_at: o.created_at,
+                shipping_partner: o.shipping_partner || null,
+                tracking_url: o.tracking_url || null,
+                expected_delivery_date: o.expected_delivery_date || null,
+                delivery_received: o.delivery_received !== undefined ? o.delivery_received : null,
+                delivery_remarks: o.delivery_remarks || null,
+                delivery_feedback: o.delivery_feedback || null,
+                delivery_confirmed_at: o.delivery_confirmed_at || null,
+                is_refunded: Boolean(o.is_refunded),
                 customer: customer ? {
                     id: customer._id,
                     customer_name: customer.customer_name,
@@ -113,7 +121,11 @@ export async function PUT(request) {
             is_paid,
             shipping_address,
             receipt_url,
-            payment_method
+            payment_method,
+            shipping_partner,
+            tracking_url,
+            expected_delivery_date,
+            is_refunded
         } = body;
 
         //Basic Validation Check
@@ -131,6 +143,10 @@ export async function PUT(request) {
         if (shipping_address !== undefined) updateFields.shipping_address = shipping_address;
         if (receipt_url !== undefined) updateFields.receipt_url = receipt_url;
         if (payment_method !== undefined) updateFields.payment_method = payment_method;
+        if (shipping_partner !== undefined) updateFields.shipping_partner = shipping_partner;
+        if (tracking_url !== undefined) updateFields.tracking_url = tracking_url;
+        if (expected_delivery_date !== undefined) updateFields.expected_delivery_date = expected_delivery_date;
+        if (is_refunded !== undefined) updateFields.is_refunded = is_refunded;
 
         if (Object.keys(updateFields).length === 0) {
             return NextResponse.json(
@@ -159,6 +175,15 @@ export async function PUT(request) {
                 if (emailData) return sendOrderEmail(emailType, emailData);
             }).catch((err) => {
                 console.error(`[EmailService] ${emailType} email failed (non-critical):`, err.message);
+            });
+        }
+
+        // ── Fire Refund Email (non-blocking) ─────────────────────────────
+        if (is_refunded === true) {
+            buildOrderEmailData(order_id).then((emailData) => {
+                if (emailData) return sendOrderEmail('order_refunded', emailData);
+            }).catch((err) => {
+                console.error(`[EmailService] order_refunded email failed (non-critical):`, err.message);
             });
         }
 

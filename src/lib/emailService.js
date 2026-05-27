@@ -9,12 +9,14 @@ import { getOrderPlacedTemplate }    from './email/templates/orderPlaced';
 import { getOrderShippedTemplate }   from './email/templates/orderShipped';
 import { getOrderDeliveredTemplate } from './email/templates/orderDelivered';
 import { getOrderCancelledTemplate } from './email/templates/orderCancelled';
+import { getOrderRefundedTemplate }  from './email/templates/orderRefunded';
 
 const EMAIL_TYPES = {
     order_placed:    getOrderPlacedTemplate,
     order_shipped:   getOrderShippedTemplate,
     order_delivered: getOrderDeliveredTemplate,
     order_cancelled: getOrderCancelledTemplate,
+    order_refunded:  getOrderRefundedTemplate,
 };
 
 /**

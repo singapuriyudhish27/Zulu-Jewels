@@ -12,11 +12,18 @@ export function getOrderDeliveredTemplate({ order, customer, user, items, transa
         ? `₹${Number(transaction.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
         : 'N/A';
     const firstName = user?.firstName || customer?.customer_name || 'Valued Customer';
+    
+    const partnerName = order.shipping_partner || 'our courier partner';
 
-    const itemRows = items.map(item => `
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const itemRows = items.map(item => {
+        const productUrl = `${baseUrl}/Pages/Products/${item.product_id}${item.variant_id ? `?variantId=${item.variant_id}` : ''}`;
+        return `
         <tr>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; font-size:14px; color:#2C2C2C; line-height:1.5;">
-                ${item.product_name || 'Product'}
+                <a href="${productUrl}" style="color:#C9A84C; font-weight:600; text-decoration:underline;">
+                    ${item.product_name || 'Product'}
+                </a>
                 ${item.variant_material ? `<br><span style="font-size:12px; color:#9B8B6E;">${item.variant_material}</span>` : ''}
             </td>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; text-align:center; font-size:14px; color:#6B5B45;">${item.quantity}</td>
@@ -24,9 +31,11 @@ export function getOrderDeliveredTemplate({ order, customer, user, items, transa
                 ₹${(Number(item.price) * Number(item.quantity)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 
     const subject = `Your Zulu Jewels Order #${orderId} Has Been Delivered`;
+    const confirmationUrl = `${process.env.BASE_URL || 'http://localhost:3000'}/Pages/delivery-confirmation/${order._id}`;
 
     const html = `
 <!DOCTYPE html>
@@ -56,8 +65,8 @@ export function getOrderDeliveredTemplate({ order, customer, user, items, transa
             <h1 style="margin:0; font-size:24px; font-weight:300; color:#1A1A1A; letter-spacing:1px;">
                 Your Order Has Arrived
             </h1>
-            <p style="margin:10px 0 0; font-size:14px; color:#9B8B6E;">
-                We hope you love it, ${firstName}. Enjoy your new jewellery.
+            <p style="margin:10px 0 0; font-size:14px; color:#9B8B6E; line-height:1.6;">
+                We hope you love it, ${firstName}. As per our shipping partner <strong>${partnerName}</strong>, your order has been successfully delivered.
             </p>
         </td>
     </tr>
@@ -116,28 +125,18 @@ export function getOrderDeliveredTemplate({ order, customer, user, items, transa
         </td>
     </tr>
 
-    <!-- REVIEW CTA -->
+    <!-- REVIEW / CONFIRMATION CTA -->
     <tr>
         <td style="padding:32px 48px; text-align:center; border-bottom:1px solid #F0EBE3; background-color:#FAFAF8;">
             <p style="margin:0 0 20px; font-size:14px; color:#6B5B45; line-height:1.7;">
-                We'd love to hear what you think.<br/>
-                Share your experience and help others discover Zulu Jewels.
+                Please take a moment to let us know if you received your package safely and share your thoughts.
             </p>
-            <a href="${process.env.BASE_URL || 'http://localhost:3000'}/Pages/Products"
+            <a href="${confirmationUrl}"
                style="display:inline-block; background-color:#C9A84C; color:#FFFFFF; font-size:12px;
                       font-weight:600; letter-spacing:2px; text-transform:uppercase; text-decoration:none;
-                      padding:12px 32px; border-radius:2px;">
-                Leave a Review
+                      padding:14px 36px; border-radius:2px;">
+                Confirm Delivery & Feedback
             </a>
-        </td>
-    </tr>
-
-    <!-- INVOICE NOTE -->
-    <tr>
-        <td style="padding:16px 48px; border-bottom:1px solid #F0EBE3;">
-            <p style="margin:0; font-size:13px; color:#9B8B6E; text-align:center; line-height:1.6;">
-                Your invoice is attached to this email as a PDF.
-            </p>
         </td>
     </tr>
 

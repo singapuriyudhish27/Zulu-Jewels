@@ -66,6 +66,9 @@ export default function ProductManagementPage() {
   });
   const [editingProductId, setEditingProductId] = useState(null);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
+  const [showVariantModal, setShowVariantModal] = useState(false);
+  const [editingVariantIdx, setEditingVariantIdx] = useState(null);
+  const [variantDraft, setVariantDraft] = useState({ material: "", price: "", stock: "0", description: "", media: [] });
 
   // Form states for Category
   const [categoryForm, setCategoryForm] = useState({
@@ -345,8 +348,7 @@ export default function ProductManagementPage() {
     });
   };
 
-  const handleSaveProduct = async (e) => {
-    e.preventDefault();
+  const doSaveProduct = async (formData) => {
     setLoading(true);
     try {
       const isEdit = !!editingProductId;
@@ -355,14 +357,12 @@ export default function ProductManagementPage() {
 
       const compressImageOrToBase64 = file => new Promise((resolve, reject) => {
         if (!file.type.startsWith("image/")) {
-          // Keep videos or other non-image formats as standard Base64
           const reader = new FileReader();
           reader.readAsDataURL(file);
           reader.onload = () => resolve(reader.result);
           reader.onerror = error => reject(error);
           return;
         }
-
         const img = window.Image ? new window.Image() : new Image();
         img.src = URL.createObjectURL(file);
         img.onload = () => {
@@ -372,30 +372,17 @@ export default function ProductManagementPage() {
           const MAX_HEIGHT = 1200;
           let width = img.width;
           let height = img.height;
-
           if (width > height) {
-            if (width > MAX_WIDTH) {
-              height = Math.round((height * MAX_WIDTH) / width);
-              width = MAX_WIDTH;
-            }
+            if (width > MAX_WIDTH) { height = Math.round((height * MAX_WIDTH) / width); width = MAX_WIDTH; }
           } else {
-            if (height > MAX_HEIGHT) {
-              width = Math.round((width * MAX_HEIGHT) / height);
-              height = MAX_HEIGHT;
-            }
+            if (height > MAX_HEIGHT) { width = Math.round((width * MAX_HEIGHT) / height); height = MAX_HEIGHT; }
           }
-
-          canvas.width = width;
-          canvas.height = height;
+          canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext("2d");
           ctx.drawImage(img, 0, 0, width, height);
-
-          // Get compressed Base64 JPEG
-          const base64 = canvas.toDataURL("image/jpeg", 0.7);
-          resolve(base64);
+          resolve(canvas.toDataURL("image/jpeg", 0.7));
         };
         img.onerror = () => {
-          // Fallback to normal Base64 if canvas drawing fails
           const reader = new FileReader();
           reader.readAsDataURL(file);
           reader.onload = () => resolve(reader.result);
@@ -403,80 +390,49 @@ export default function ProductManagementPage() {
         };
       });
 
-      // Package Generic Media
       const mappedMedia = [];
-      for (const m of productForm.media) {
+      for (const m of formData.media) {
         if (m.file) {
           const base64 = await compressImageOrToBase64(m.file);
-          mappedMedia.push({
-            fileData: base64,
-            fileName: m.file.name,
-            fileType: m.file.type,
-            is_primary: Boolean(m.is_primary)
-          });
+          mappedMedia.push({ fileData: base64, fileName: m.file.name, fileType: m.file.type, is_primary: Boolean(m.is_primary) });
         } else {
-          mappedMedia.push({
-            id: m._id || m.id,
-            media_url: m.media_url || m.preview || m.url,
-            media_type: m.media_type || "image",
-            is_primary: Boolean(m.is_primary)
-          });
+          mappedMedia.push({ id: m._id || m.id, media_url: m.media_url || m.preview || m.url, media_type: m.media_type || "image", is_primary: Boolean(m.is_primary) });
         }
       }
 
-      // Package Variants & Variant Media
       const mappedVariants = [];
-      for (const v of productForm.variants) {
+      for (const v of formData.variants) {
         const variantMedia = [];
         if (v.media) {
           for (const m of v.media) {
             if (m.file) {
               const base64 = await compressImageOrToBase64(m.file);
-              variantMedia.push({
-                fileData: base64,
-                fileName: m.file.name,
-                fileType: m.file.type,
-                is_primary: Boolean(m.is_primary)
-              });
+              variantMedia.push({ fileData: base64, fileName: m.file.name, fileType: m.file.type, is_primary: Boolean(m.is_primary) });
             } else {
-              variantMedia.push({
-                id: m._id || m.id,
-                media_url: m.media_url || m.preview || m.url,
-                media_type: m.media_type || "image",
-                is_primary: Boolean(m.is_primary)
-              });
+              variantMedia.push({ id: m._id || m.id, media_url: m.media_url || m.preview || m.url, media_type: m.media_type || "image", is_primary: Boolean(m.is_primary) });
             }
           }
         }
-        mappedVariants.push({
-          id: v._id || v.id,
-          material: v.material,
-          price: v.price,
-          stock: v.stock,
-          description: v.description,
-          media: variantMedia
-        });
+        mappedVariants.push({ id: v._id || v.id, material: v.material, price: v.price, stock: v.stock, description: v.description, media: variantMedia });
       }
 
       const finalMaterial = mappedVariants.length > 0
         ? [...new Set(mappedVariants.map(v => v.material).filter(m => m))].join(", ")
-        : (typeof productForm.material === 'string' ? productForm.material : productForm.material.join(", "));
+        : (typeof formData.material === 'string' ? formData.material : formData.material.join(", "));
 
       const res = await fetch(url, {
         method: method,
-        headers: {
-          "Content-Type": "application/json"
-        },
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           id: editingProductId,
-          name: productForm.name,
-          category_name: productForm.category_name,
-          gender: productForm.gender,
+          name: formData.name,
+          category_name: formData.category_name,
+          gender: formData.gender,
           material: finalMaterial,
-          price: productForm.price,
-          stock: productForm.stock,
-          description: productForm.description,
-          is_active: productForm.is_active,
+          price: formData.price,
+          stock: formData.stock,
+          description: formData.description,
+          is_active: formData.is_active,
           variants: mappedVariants,
           media: mappedMedia
         }),
@@ -484,9 +440,8 @@ export default function ProductManagementPage() {
       });
 
       const data = await res.json();
-
       if (data.success) {
-        window.location.reload(); 
+        window.location.reload();
         setShowAddProduct(false);
       } else {
         toast.error(data.message || "Failed to save product");
@@ -499,65 +454,64 @@ export default function ProductManagementPage() {
     }
   };
 
+  const handleSaveProduct = async (e) => {
+    e.preventDefault();
+    await doSaveProduct(productForm);
+  };
+
   const addVariant = () => {
-    setProductForm(prev => ({
-      ...prev,
-      variants: [...prev.variants, { material: "", price: prev.price, stock: "0", description: "", media: [] }]
-    }));
+    setVariantDraft({ material: "", price: productForm.price || "", stock: "0", description: "", media: [] });
+    setEditingVariantIdx(null);
+    setShowVariantModal(true);
   };
 
   const removeVariant = (index) => {
-    setProductForm(prev => ({
-      ...prev,
-      variants: prev.variants.filter((_, i) => i !== index)
-    }));
+    setProductForm(prev => ({ ...prev, variants: prev.variants.filter((_, i) => i !== index) }));
   };
 
-  const handleVariantChange = (index, field, value) => {
-    setProductForm(prev => {
-      const updated = [...prev.variants];
-      updated[index] = { ...updated[index], [field]: value };
-      return { ...prev, variants: updated };
-    });
+  const openEditVariant = (idx) => {
+    setVariantDraft({ ...productForm.variants[idx] });
+    setEditingVariantIdx(idx);
+    setShowVariantModal(true);
   };
 
-  const handleVariantMediaChange = (vIdx, e) => {
+  const handleVariantDraftMediaChange = (e) => {
     const files = Array.from(e.target.files);
     const newMedia = files.map(file => ({
       file,
       preview: URL.createObjectURL(file),
       media_type: file.type.startsWith("video/") ? "video" : "image",
-      is_primary: productForm.variants[vIdx].media.length === 0
+      is_primary: variantDraft.media.length === 0
     }));
-    setProductForm(prev => {
-      const updated = [...prev.variants];
-      updated[vIdx] = { ...updated[vIdx], media: [...updated[vIdx].media, ...newMedia] };
-      return { ...prev, variants: updated };
-    });
+    setVariantDraft(prev => ({ ...prev, media: [...prev.media, ...newMedia] }));
   };
 
-  const removeVariantMedia = (vIdx, mIdx) => {
-    setProductForm(prev => {
-      const updatedVariants = [...prev.variants];
-      const updatedMedia = [...updatedVariants[vIdx].media];
+  const removeVariantDraftMedia = (mIdx) => {
+    setVariantDraft(prev => {
+      const updatedMedia = [...prev.media];
       updatedMedia.splice(mIdx, 1);
-      if (updatedMedia.length > 0 && !updatedMedia.some(m => m.is_primary)) {
-        updatedMedia[0].is_primary = true;
-      }
-      updatedVariants[vIdx] = { ...updatedVariants[vIdx], media: updatedMedia };
-      return { ...prev, variants: updatedVariants };
+      if (updatedMedia.length > 0 && !updatedMedia.some(m => m.is_primary)) updatedMedia[0].is_primary = true;
+      return { ...prev, media: updatedMedia };
     });
   };
 
-  const setVariantPrimaryMedia = (vIdx, mIdx) => {
-    setProductForm(prev => {
-      const updatedVariants = [...prev.variants];
-      updatedVariants[vIdx] = {
-        ...updatedVariants[vIdx],
-        media: updatedVariants[vIdx].media.map((m, i) => ({ ...m, is_primary: i === mIdx }))
-      };
-      return { ...prev, variants: updatedVariants };
-    });
+  const setVariantDraftPrimaryMedia = (mIdx) => {
+    setVariantDraft(prev => ({ ...prev, media: prev.media.map((m, i) => ({ ...m, is_primary: i === mIdx })) }));
+  };
+
+  const saveVariantAndProduct = async () => {
+    if (!variantDraft.material) { toast.error("Metal name is required."); return; }
+    if (!variantDraft.price)    { toast.error("Price is required."); return; }
+    if (!productForm.name)      { toast.error("Please fill in the Product Name first."); return; }
+    if (!productForm.category_name) { toast.error("Please select a Category first."); return; }
+    if (!productForm.price)     { toast.error("Please fill in the Base Price first."); return; }
+    const updatedVariants = editingVariantIdx !== null
+      ? productForm.variants.map((v, i) => i === editingVariantIdx ? { ...variantDraft } : v)
+      : [...productForm.variants, { ...variantDraft }];
+    const updatedForm = { ...productForm, variants: updatedVariants };
+    setProductForm(updatedForm);
+    setShowVariantModal(false);
+    await doSaveProduct(updatedForm);
   };
 
   const handleMediaChange = (e) => {
@@ -566,7 +520,7 @@ export default function ProductManagementPage() {
       file,
       preview: URL.createObjectURL(file),
       media_type: file.type.startsWith("video/") ? "video" : "image",
-      is_primary: productForm.media.length === 0 // First one primary by default
+      is_primary: productForm.media.length === 0
     }));
     setProductForm(prev => ({ ...prev, media: [...prev.media, ...newMedia] }));
   };
@@ -575,21 +529,14 @@ export default function ProductManagementPage() {
     setProductForm(prev => {
       const updatedMedia = [...prev.media];
       updatedMedia.splice(index, 1);
-      // If removed was primary, set first one as primary
-      if (updatedMedia.length > 0 && !updatedMedia.some(m => m.is_primary)) {
-        updatedMedia[0].is_primary = true;
-      }
+      if (updatedMedia.length > 0 && !updatedMedia.some(m => m.is_primary)) updatedMedia[0].is_primary = true;
       return { ...prev, media: updatedMedia };
     });
   };
 
   const setPrimaryMedia = (index) => {
-    setProductForm(prev => ({
-      ...prev,
-      media: prev.media.map((m, i) => ({ ...m, is_primary: i === index }))
-    }));
+    setProductForm(prev => ({ ...prev, media: prev.media.map((m, i) => ({ ...m, is_primary: i === index })) }));
   };
-
 
   return (
     <>
@@ -808,118 +755,43 @@ export default function ProductManagementPage() {
               <button className="modal-close" onClick={() => setShowAddProduct(false)}><X size={20} /></button>
             </div>
             <form onSubmit={handleSaveProduct}>
-              <div className="modal-body" style={{ maxHeight: "70vh", overflowY: "auto" }}>
+              <div className="modal-body">
                 <div className="form-group">
                   <label className="form-label">Product Name *</label>
                   <input type="text" className="form-input" value={productForm.name} onChange={(e) => setProductForm({ ...productForm, name: e.target.value })} required placeholder="Enter product name" />
                 </div>
                 
-                {/* Base/Generic Media Upload Section */}
-                <div className="form-group">
-                  <label className="form-label">Base/Generic Media (Applies to all metals)</label>
-                  <div className="media-upload-area" style={{ border: "2px dashed #ddd", padding: "15px", borderRadius: "8px", textAlign: "center", marginBottom: "12px" }}>
-                    <input type="file" id="generic-media-input" multiple accept="image/*,video/*" onChange={handleMediaChange} style={{ display: "none" }} />
-                    <label htmlFor="generic-media-input" style={{ cursor: "pointer", color: "#666", fontSize: '13px' }}>
-                      <Plus size={20} style={{ marginBottom: "4px" }} />
-                      <p>Add common images/videos</p>
-                    </label>
-                  </div>
-                  
-                  {productForm.media.length > 0 && (
-                    <div className="media-preview-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "8px", marginBottom: '16px' }}>
-                      {productForm.media.map((item, idx) => (
-                        <div key={idx} style={{ position: "relative", borderRadius: "6px", overflow: "hidden", border: "1px solid #ddd" }}>
-                          {item.media_type === "video" ? (
-                            <div style={{ width: "100%", height: "60px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={16} color="#666" /></div>
-                          ) : (
-                            <img src={item.preview} alt="preview" style={{ width: "100%", height: "60px", objectFit: "cover" }} />
-                          )}
-                          <div style={{ position: "absolute", top: "2px", right: "2px" }}>
-                            <button type="button" onClick={() => removeMedia(idx)} style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: "18px", height: "18px", cursor: "pointer" }}><X size={10} color="#e74c3c" /></button>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
                 {/* --- Product Variants (Metals) Section --- */}
-                <div style={{ margin: '24px 0', padding: '20px', background: '#f9f9f9', borderRadius: '12px', border: '1px solid #eee' }}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
-                    <h3 style={{ fontSize: '16px', fontWeight: '700', color: '#2c2c2c' }}>Product Variants (Metals)</h3>
-                    <button type="button" className="add-btn secondary" onClick={addVariant} style={{ padding: '6px 12px', fontSize: '12px' }}>
-                      <Plus size={14} /> Add Metal Variant
+                <div style={{ margin: '20px 0', padding: '14px 16px', background: '#f9f9f9', borderRadius: '10px', border: '1px solid #eee' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: productForm.variants.length > 0 ? '10px' : '0' }}>
+                    <h3 style={{ fontSize: '13px', fontWeight: '700', color: '#2c2c2c', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Metal Variants</h3>
+                    <button type="button" className="add-btn secondary" onClick={addVariant} style={{ padding: '5px 12px', fontSize: '12px' }}>
+                      <Plus size={13} /> Add Metal Variant
                     </button>
                   </div>
-
                   {productForm.variants.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: '#888', padding: '20px', fontSize: '13px' }}>No variants added yet. Add a variant to manage material-specific images.</p>
+                    <p style={{ textAlign: 'center', color: '#bbb', padding: '10px 0 2px', fontSize: '12px' }}>No variants yet — click "Add Metal Variant".</p>
                   ) : (
-                    <div className="variants-list" style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {productForm.variants.map((v, vIdx) => (
-                        <div key={vIdx} className="variant-card" style={{ background: 'white', padding: '16px', borderRadius: '8px', border: '1px solid #ddd', position: 'relative' }}>
-                          <button type="button" onClick={() => removeVariant(vIdx)} style={{ position: 'absolute', top: '12px', right: '12px', background: 'none', border: 'none', cursor: 'pointer', color: '#e74c3c' }}><Trash2 size={16} /></button>
-                          
-                          <div className="form-row">
-                            <div className="form-group">
-                              <label className="form-label">Metal *</label>
-                              <input 
-                                type="text" 
-                                className="form-input" 
-                                value={v.material} 
-                                onChange={(e) => handleVariantChange(vIdx, 'material', e.target.value)} 
-                                required 
-                                placeholder="e.g. Gold, Silver, 18K Rose Gold" 
-                              />
-                            </div>
-                            <div className="form-group">
-                              <label className="form-label">Price (₹) *</label>
-                              <input type="number" className="form-input" value={v.price} onChange={(e) => handleVariantChange(vIdx, 'price', e.target.value)} required placeholder="Price for this metal" />
-                            </div>
-                            <div className="form-group">
-                              <label className="form-label">Stock *</label>
-                              <input type="number" className="form-input" value={v.stock} onChange={(e) => handleVariantChange(vIdx, 'stock', e.target.value)} required placeholder="Stock" />
-                            </div>
+                        <div key={vIdx} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', background: 'white', padding: '8px 12px', borderRadius: '8px', border: '1px solid #e8e8e8' }}>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <span style={{ width: '7px', height: '7px', borderRadius: '50%', background: '#d4af37', flexShrink: 0 }}></span>
+                            <span style={{ fontWeight: '600', fontSize: '13px', color: '#2c2c2c' }}>{v.material || 'Unnamed'}</span>
+                            {v.price && <span style={{ fontSize: '12px', color: '#555' }}>₹{v.price}</span>}
+                            {v.stock !== undefined && <span style={{ fontSize: '11px', color: '#888', background: '#f0f0f0', padding: '1px 7px', borderRadius: '10px' }}>{v.stock} stock</span>}
+                            {v.media?.length > 0 && <span style={{ fontSize: '11px', color: '#aaa' }}>{v.media.length} photo{v.media.length !== 1 ? 's' : ''}</span>}
                           </div>
-
-                          <div className="form-group">
-                            <label className="form-label">{v.material} Specific Media *</label>
-                            <div className="media-upload-area" style={{ border: "2px dashed #eee", padding: "12px", borderRadius: "8px", textAlign: "center", marginBottom: "12px" }}>
-                              <input type="file" id={`variant-media-${vIdx}`} multiple accept="image/*,video/*" onChange={(e) => handleVariantMediaChange(vIdx, e)} style={{ display: "none" }} />
-                              <label htmlFor={`variant-media-${vIdx}`} style={{ cursor: "pointer", color: "#666", fontSize: '12px' }}>
-                                <ImageIcon size={20} style={{ marginBottom: "4px" }} />
-                                <p>Upload images for {v.material}</p>
-                              </label>
-                            </div>
-
-                            {v.media.length > 0 && (
-                              <div className="media-preview-grid" style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(80px, 1fr))", gap: "8px" }}>
-                                {v.media.map((item, mIdx) => (
-                                  <div key={mIdx} className={`media-preview-card ${item.is_primary ? "primary" : ""}`} style={{ position: "relative", borderRadius: "6px", overflow: "hidden", border: item.is_primary ? "2px solid #d4af37" : "1px solid #ddd" }}>
-                                    {item.media_type === "video" ? (
-                                      <div style={{ width: "100%", height: "60px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={16} color="#666" /></div>
-                                    ) : (
-                                      <img src={item.preview} alt="preview" style={{ width: "100%", height: "60px", objectFit: "cover" }} />
-                                    )}
-                                    <div className="media-actions" style={{ position: "absolute", top: "2px", right: "2px", display: "flex", gap: "2px" }}>
-                                      <button type="button" onClick={() => setVariantPrimaryMedia(vIdx, mIdx)} title="Set Primary" style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer" }}><Star size={10} color={item.is_primary ? "#d4af37" : "#666"} /></button>
-                                      <button type="button" onClick={() => removeVariantMedia(vIdx, mIdx)} style={{ background: "rgba(255,255,255,0.9)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer" }}><X size={10} color="#e74c3c" /></button>
-                                    </div>
-                                    {item.is_primary && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "#d4af37", color: "white", fontSize: "8px", textAlign: "center", padding: "1px" }}>PRIMARY</div>}
-                                  </div>
-                                ))}
-                              </div>
-                            )}
-                          </div>
-                          <div className="form-group">
-                            <label className="form-label">{v.material} Description (Optional)</label>
-                            <textarea className="form-input" rows="2" value={v.description} onChange={(e) => handleVariantChange(vIdx, 'description', e.target.value)} placeholder={`Unique details for the ${v.material} version`}></textarea>
+                          <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
+                            <button type="button" onClick={() => openEditVariant(vIdx)} style={{ background: 'none', border: '1px solid #ddd', borderRadius: '6px', padding: '3px 9px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px', color: '#4a4a4a' }}><Edit size={11} /> Edit</button>
+                            <button type="button" onClick={() => removeVariant(vIdx)} style={{ background: 'none', border: '1px solid #fde8e8', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#e74c3c' }}><Trash2 size={11} /></button>
                           </div>
                         </div>
                       ))}
                     </div>
                   )}
                 </div>
+
 
                 <div className="form-row">
                   <div className="form-group">
@@ -953,17 +825,21 @@ export default function ProductManagementPage() {
                   </div>
                 </div>
                 <div className="form-group">
-                  <label className="form-label">Product Status</label>
-                  <div className="checkbox-group">
-                    <label className="checkbox-item"><input type="checkbox" checked={productForm.is_active} onChange={(e) => setProductForm({ ...productForm, is_active: e.target.checked })} /> Active</label>
-                  </div>
-                </div>
-                <div className="form-group">
                   <label className="form-label">Product Description</label>
                   <textarea className="form-input" rows="3" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} placeholder="Enter product description"></textarea>
                 </div>
               </div>
               <div className="modal-footer">
+                <div style={{ marginRight: "auto" }}>
+                  <button 
+                    type="button" 
+                    className={`status-btn ${productForm.is_active ? "active" : ""}`} 
+                    onClick={() => setProductForm({ ...productForm, is_active: !productForm.is_active })}
+                  >
+                    <span className="status-indicator-dot"></span>
+                    {productForm.is_active ? "Active" : "Inactive"}
+                  </button>
+                </div>
                 <button type="button" className="add-btn secondary" onClick={() => setShowAddProduct(false)}>Cancel</button>
                 <button type="submit" className="add-btn" disabled={loading}><Save size={16} /> {loading ? "Saving..." : (editingProductId ? "Update Product" : "Save Product")}</button>
               </div>
@@ -1032,6 +908,72 @@ export default function ProductManagementPage() {
                 <button type="submit" className="add-btn"><Save size={16} /> {editingCategoryId ? "Update Category" : "Create Category"}</button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ── Variant Sub-Modal ── */}
+      {showVariantModal && (
+        <div className="modal-overlay" style={{ zIndex: 1100 }} onClick={() => setShowVariantModal(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px', width: '92%' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">{editingVariantIdx !== null ? 'Edit Metal Variant' : 'Add Metal Variant'}</h2>
+              <button className="modal-close" onClick={() => setShowVariantModal(false)}><X size={20} /></button>
+            </div>
+            <div className="modal-body" style={{ maxHeight: '72vh', overflowY: 'auto' }}>
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Metal *</label>
+                  <input type="text" className="form-input" value={variantDraft.material} onChange={e => setVariantDraft(prev => ({ ...prev, material: e.target.value }))} placeholder="e.g. Gold, Silver, 18K Rose Gold" />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Price (₹) *</label>
+                  <input type="number" className="form-input" value={variantDraft.price} onChange={e => setVariantDraft(prev => ({ ...prev, price: e.target.value }))} placeholder="Price for this metal" />
+                </div>
+              </div>
+              <div className="form-group">
+                <label className="form-label">Stock Quantity</label>
+                <input type="number" className="form-input" value={variantDraft.stock} onChange={e => setVariantDraft(prev => ({ ...prev, stock: e.target.value }))} placeholder="Stock quantity" />
+              </div>
+              <div className="form-group">
+                <label className="form-label">{variantDraft.material || 'Variant'} Media</label>
+                <div style={{ border: "2px dashed #e8e8e8", padding: "14px", borderRadius: "8px", textAlign: "center", marginBottom: "10px", background: '#fafafa' }}>
+                  <input type="file" id="variant-draft-media" multiple accept="image/*,video/*" onChange={handleVariantDraftMediaChange} style={{ display: "none" }} />
+                  <label htmlFor="variant-draft-media" style={{ cursor: "pointer", color: "#888", fontSize: '12px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
+                    <ImageIcon size={22} color="#bbb" />
+                    <span>Click to upload images / videos for <strong>{variantDraft.material || 'this variant'}</strong></span>
+                  </label>
+                </div>
+                {variantDraft.media.length > 0 && (
+                  <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: "8px" }}>
+                    {variantDraft.media.map((item, mIdx) => (
+                      <div key={mIdx} style={{ position: "relative", borderRadius: "6px", overflow: "hidden", border: item.is_primary ? "2px solid #d4af37" : "1px solid #ddd" }}>
+                        {item.media_type === "video" ? (
+                          <div style={{ width: "100%", height: "62px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={16} color="#666" /></div>
+                        ) : (
+                          <img src={item.preview} alt="preview" style={{ width: "100%", height: "62px", objectFit: "cover" }} />
+                        )}
+                        <div style={{ position: "absolute", top: "2px", right: "2px", display: "flex", gap: "2px" }}>
+                          <button type="button" onClick={() => setVariantDraftPrimaryMedia(mIdx)} title="Set Primary" style={{ background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Star size={9} color={item.is_primary ? "#d4af37" : "#aaa"} /></button>
+                          <button type="button" onClick={() => removeVariantDraftMedia(mIdx)} style={{ background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={9} color="#e74c3c" /></button>
+                        </div>
+                        {item.is_primary && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "#d4af37", color: "white", fontSize: "8px", textAlign: "center", padding: "1px" }}>PRIMARY</div>}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              <div className="form-group">
+                <label className="form-label">{variantDraft.material || 'Variant'} Description (Optional)</label>
+                <textarea className="form-input" rows="3" value={variantDraft.description} onChange={e => setVariantDraft(prev => ({ ...prev, description: e.target.value }))} placeholder={`Unique details for the ${variantDraft.material || 'variant'} version`}></textarea>
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="add-btn secondary" onClick={() => setShowVariantModal(false)}>Cancel Variant</button>
+              <button type="button" className="add-btn" disabled={loading} onClick={saveVariantAndProduct}>
+                <Save size={16} /> {loading ? "Saving..." : "Save Variant"}
+              </button>
+            </div>
           </div>
         </div>
       )}

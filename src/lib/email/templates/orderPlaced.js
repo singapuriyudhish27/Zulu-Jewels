@@ -14,10 +14,15 @@ export function getOrderPlacedTemplate({ order, customer, user, items, transacti
     const paymentStatus = order.is_paid ? 'Paid' : 'Pending';
     const firstName = user?.firstName || customer?.customer_name || 'Valued Customer';
 
-    const itemRows = items.map(item => `
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const itemRows = items.map(item => {
+        const productUrl = `${baseUrl}/Pages/Products/${item.product_id}${item.variant_id ? `?variantId=${item.variant_id}` : ''}`;
+        return `
         <tr>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; font-size:14px; color:#2C2C2C; line-height:1.5;">
-                ${item.product_name || 'Product'}
+                <a href="${productUrl}" style="color:#C9A84C; font-weight:600; text-decoration:underline;">
+                    ${item.product_name || 'Product'}
+                </a>
                 ${item.variant_material ? `<br><span style="font-size:12px; color:#9B8B6E;">${item.variant_material}</span>` : ''}
             </td>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; text-align:center; font-size:14px; color:#6B5B45;">${item.quantity}</td>
@@ -28,7 +33,8 @@ export function getOrderPlacedTemplate({ order, customer, user, items, transacti
                 ₹${(Number(item.price) * Number(item.quantity)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 
     const subject = `Your Zulu Jewels Order #${orderId} is Confirmed`;
 

@@ -37,6 +37,8 @@ export async function buildOrderEmailData(orderId) {
             }
             items.push({
                 product_name:     product?.name || 'Product',
+                product_id:       oi.product_id,
+                variant_id:       oi.variant_id || null,
                 quantity:         oi.quantity,
                 price:            oi.price,
                 variant_material,

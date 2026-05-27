@@ -4,6 +4,7 @@ const ShippingPartnerSchema = new mongoose.Schema({
   partner_name: { type: String },
   type: { type: String },
   tracking_url: { type: String },
+  delivery_days: { type: Number, default: 7 },
   status: { type: Boolean, default: true },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
 

@@ -12,11 +12,22 @@ export function getOrderShippedTemplate({ order, customer, user, items, transact
         ? `₹${Number(transaction.amount).toLocaleString('en-IN', { minimumFractionDigits: 2 })}`
         : 'N/A';
     const firstName = user?.firstName || customer?.customer_name || 'Valued Customer';
+    
+    const expectedDelivery = order.expected_delivery_date
+        ? new Date(order.expected_delivery_date).toLocaleDateString('en-IN', {
+            year: 'numeric', month: 'long', day: 'numeric'
+          })
+        : 'N/A';
 
-    const itemRows = items.map(item => `
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const itemRows = items.map(item => {
+        const productUrl = `${baseUrl}/Pages/Products/${item.product_id}${item.variant_id ? `?variantId=${item.variant_id}` : ''}`;
+        return `
         <tr>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; font-size:14px; color:#2C2C2C; line-height:1.5;">
-                ${item.product_name || 'Product'}
+                <a href="${productUrl}" style="color:#C9A84C; font-weight:600; text-decoration:underline;">
+                    ${item.product_name || 'Product'}
+                </a>
                 ${item.variant_material ? `<br><span style="font-size:12px; color:#9B8B6E;">${item.variant_material}</span>` : ''}
             </td>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; text-align:center; font-size:14px; color:#6B5B45;">${item.quantity}</td>
@@ -24,7 +35,8 @@ export function getOrderShippedTemplate({ order, customer, user, items, transact
                 ₹${(Number(item.price) * Number(item.quantity)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 
     const subject = `Your Zulu Jewels Order #${orderId} Has Been Shipped`;
 
@@ -91,6 +103,35 @@ export function getOrderShippedTemplate({ order, customer, user, items, transact
         </td>
     </tr>
 
+    <!-- SHIPPING & TRACKING DETAILS -->
+    <tr>
+        <td style="padding:32px 48px; border-bottom:1px solid #F0EBE3; background-color:#FAFAF8;">
+            <h2 style="margin:0 0 18px; font-size:11px; letter-spacing:3px; color:#C9A84C; text-transform:uppercase; font-weight:600;">
+                Shipping & Tracking Details
+            </h2>
+            <table width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                    <td style="padding-bottom:12px; font-size:13px; color:#9B8B6E; width:40%;">Shipping Partner</td>
+                    <td style="padding-bottom:12px; font-size:13px; color:#2C2C2C; font-weight:600;">${order.shipping_partner || 'N/A'}</td>
+                </tr>
+                <tr>
+                    <td style="padding-bottom:12px; font-size:13px; color:#9B8B6E;">Expected Delivery</td>
+                    <td style="padding-bottom:12px; font-size:13px; color:#C9A84C; font-weight:700;">${expectedDelivery}</td>
+                </tr>
+                ${order.tracking_url ? `
+                <tr>
+                    <td style="font-size:13px; color:#9B8B6E;">Tracking Link</td>
+                    <td style="font-size:13px;">
+                        <a href="${order.tracking_url}" target="_blank" style="color:#C9A84C; font-weight:600; text-decoration:underline;">
+                            Track Shipment
+                        </a>
+                    </td>
+                </tr>
+                ` : ''}
+            </table>
+        </td>
+    </tr>
+
     <!-- SHIPPING ADDRESS -->
     <tr>
         <td style="padding:32px 48px; border-bottom:1px solid #F0EBE3;">
@@ -106,7 +147,7 @@ export function getOrderShippedTemplate({ order, customer, user, items, transact
 
     <!-- ITEMS IN SHIPMENT -->
     <tr>
-        <td style="padding:0 48px 32px; border-bottom:1px solid #F0EBE3;">
+        <td style="padding:32px 48px; border-bottom:1px solid #F0EBE3;">
             <h2 style="margin:0 0 18px; font-size:11px; letter-spacing:3px; color:#C9A84C; text-transform:uppercase; font-weight:600;">
                 Items In This Shipment
             </h2>
@@ -126,15 +167,6 @@ export function getOrderShippedTemplate({ order, customer, user, items, transact
                     </tr>
                 </tfoot>
             </table>
-        </td>
-    </tr>
-
-    <!-- INVOICE NOTE -->
-    <tr>
-        <td style="padding:16px 48px; border-bottom:1px solid #F0EBE3;">
-            <p style="margin:0; font-size:13px; color:#9B8B6E; text-align:center; line-height:1.6;">
-                Your invoice is attached to this email as a PDF.
-            </p>
         </td>
     </tr>
 

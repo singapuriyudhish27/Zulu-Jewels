@@ -13,6 +13,7 @@ import {
   Megaphone,
   Truck,
   LogOut,
+  Settings,
 } from 'lucide-react';
 import ConfirmModal from '@/components/common/ConfirmModal';
 import { useState, useMemo } from 'react';
@@ -34,6 +35,7 @@ export default function AdminLayoutContent({ children }) {
       { name: 'Reviews & Ratings', path: path('Reviews-Management'), icon: <Star size={18} /> },
       { name: 'Marketing', path: path('Marketing'), icon: <Megaphone size={18} /> },
       { name: 'Shipping & Payment', path: path('Shipping-Management'), icon: <Truck size={18} /> },
+      { name: 'Settings', path: path('Profile'), icon: <Settings size={18} /> },
     ],
     [base, path]
   );
@@ -69,8 +71,6 @@ export default function AdminLayoutContent({ children }) {
     }
   };
 
-  const handleProfile = () => router.push(path('Profile'));
-
   return (
     <div className="admin-layout">
       <div className="admin-sidebar">
@@ -104,14 +104,6 @@ export default function AdminLayoutContent({ children }) {
       </div>
 
       <div className="admin-main">
-        <div className="admin-header">
-          <input className="admin-search" placeholder="Search products, orders, customers..." />
-          <div className="admin-user">
-            <div className="admin-avatar" onClick={handleProfile} style={{ cursor: 'pointer' }}>
-              ZJ
-            </div>
-          </div>
-        </div>
         <div className="admin-content">{children}</div>
       </div>
 

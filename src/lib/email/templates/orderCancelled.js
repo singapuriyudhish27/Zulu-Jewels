@@ -13,10 +13,15 @@ export function getOrderCancelledTemplate({ order, customer, user, items, transa
         : 'N/A';
     const firstName = user?.firstName || customer?.customer_name || 'Valued Customer';
 
-    const itemRows = items.map(item => `
+    const baseUrl = process.env.BASE_URL || 'http://localhost:3000';
+    const itemRows = items.map(item => {
+        const productUrl = `${baseUrl}/Pages/Products/${item.product_id}${item.variant_id ? `?variantId=${item.variant_id}` : ''}`;
+        return `
         <tr>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; font-size:14px; color:#9B8B6E; line-height:1.5;">
-                <span style="text-decoration:line-through;">${item.product_name || 'Product'}</span>
+                <a href="${productUrl}" style="color:#C9A84C; font-weight:600; text-decoration:underline;">
+                    <span style="text-decoration:line-through; color:#9B8B6E;">${item.product_name || 'Product'}</span>
+                </a>
                 ${item.variant_material ? `<br><span style="font-size:12px; color:#C0B0A0;">${item.variant_material}</span>` : ''}
             </td>
             <td style="padding:14px 16px; border-bottom:1px solid #F0EBE3; text-align:center; font-size:14px; color:#C0B0A0;">${item.quantity}</td>
@@ -24,7 +29,8 @@ export function getOrderCancelledTemplate({ order, customer, user, items, transa
                 ₹${(Number(item.price) * Number(item.quantity)).toLocaleString('en-IN', { minimumFractionDigits: 2 })}
             </td>
         </tr>
-    `).join('');
+        `;
+    }).join('');
 
     const subject = `Your Zulu Jewels Order #${orderId} Has Been Cancelled`;
 
