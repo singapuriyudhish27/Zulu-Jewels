@@ -177,37 +177,13 @@ const maintenanceStyles = `
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    padding: 16px 20px;
+    padding: 24px;
     position: relative;
     overflow: hidden;
     box-sizing: border-box;
-    background: radial-gradient(ellipse 120% 80% at 50% 0%, #1f1a14 0%, #0a0a0a 55%, #050505 100%);
+    background: #0D0C09;
     font-family: 'Montserrat', sans-serif;
-    color: #f5f0e8;
-  }
-
-  .maint-bg-glow {
-    position: absolute;
-    width: 420px;
-    height: 420px;
-    border-radius: 50%;
-    filter: blur(100px);
-    opacity: 0.35;
-    pointer-events: none;
-  }
-
-  .maint-bg-glow--left {
-    top: -120px;
-    left: -100px;
-    background: radial-gradient(circle, #CEA268 0%, transparent 70%);
-    animation: maint-float 12s ease-in-out infinite;
-  }
-
-  .maint-bg-glow--right {
-    bottom: -80px;
-    right: -120px;
-    background: radial-gradient(circle, #8b6914 0%, transparent 70%);
-    animation: maint-float 14s ease-in-out infinite reverse;
+    color: #F5EFE3;
   }
 
   .maint-grain {
@@ -218,44 +194,31 @@ const maintenanceStyles = `
     background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   }
 
-  @keyframes maint-float {
-    0%, 100% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(24px, 16px) scale(1.05); }
-  }
-
   .maint-card {
     position: relative;
     z-index: 1;
-    max-width: 520px;
+    max-width: 480px;
     width: 100%;
-    max-height: calc(100dvh - 32px);
     text-align: center;
-    padding: 28px 32px 22px;
+    padding: 44px 40px;
     box-sizing: border-box;
-    overflow: hidden;
     display: flex;
     flex-direction: column;
     align-items: center;
-    background: linear-gradient(
-      165deg,
-      rgba(255, 255, 255, 0.06) 0%,
-      rgba(255, 255, 255, 0.02) 40%,
-      rgba(0, 0, 0, 0.2) 100%
-    );
-    border: 1px solid rgba(206, 162, 104, 0.25);
+    background: #1A1712;
+    border: 1px solid rgba(206, 162, 104, 0.3);
     border-radius: 2px;
     box-shadow:
-      0 0 0 1px rgba(255, 255, 255, 0.04) inset,
-      0 32px 80px rgba(0, 0, 0, 0.55),
-      0 0 120px rgba(206, 162, 104, 0.08);
-    backdrop-filter: blur(12px);
-    animation: maint-fade-up 0.9s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+      0 0 80px rgba(206, 162, 104, 0.06),
+      0 24px 64px rgba(0, 0, 0, 0.5),
+      0 0 0 1px rgba(206, 162, 104, 0.12) inset;
+    animation: maint-fade-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
   }
 
   @keyframes maint-fade-up {
     from {
       opacity: 0;
-      transform: translateY(20px);
+      transform: translateY(12px);
     }
     to {
       opacity: 1;
@@ -265,57 +228,36 @@ const maintenanceStyles = `
 
   .maint-logo-wrap {
     position: relative;
-    width: 72px;
-    height: 72px;
-    margin: 0 auto 12px;
-    flex-shrink: 0;
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 20px;
     display: flex;
     align-items: center;
     justify-content: center;
   }
 
-  .maint-logo-ring {
-    position: absolute;
-    inset: 0;
-    border-radius: 50%;
-    border: 1px solid rgba(206, 162, 104, 0.4);
-    animation: maint-pulse-ring 3s ease-in-out infinite;
-  }
-
-  @keyframes maint-pulse-ring {
-    0%, 100% {
-      transform: scale(1);
-      opacity: 0.6;
-    }
-    50% {
-      transform: scale(1.08);
-      opacity: 1;
-    }
-  }
-
   .maint-logo {
     position: relative;
     z-index: 1;
-    filter: drop-shadow(0 4px 24px rgba(206, 162, 104, 0.35));
   }
 
   .maint-eyebrow {
-    font-size: 9px;
+    font-size: 10px;
     font-weight: 600;
-    letter-spacing: 0.24em;
+    letter-spacing: 0.2em;
     text-transform: uppercase;
     color: #CEA268;
-    margin: 0 0 6px;
+    margin: 0 0 8px;
   }
 
   .maint-title {
     font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(28px, 4.5vh, 40px);
+    font-size: clamp(24px, 4vh, 32px);
     font-weight: 400;
-    line-height: 1.1;
-    color: #fff;
+    line-height: 1.2;
+    color: #F5EFE3;
     letter-spacing: 0.02em;
-    margin: 0;
+    margin: 0 0 16px;
   }
 
   .maint-divider {
@@ -323,122 +265,111 @@ const maintenanceStyles = `
     align-items: center;
     justify-content: center;
     gap: 12px;
-    margin: 12px 0 10px;
+    margin: 0 0 20px;
+    width: 100%;
   }
 
   .maint-divider-line {
-    width: 56px;
+    width: 40px;
     height: 1px;
-    background: linear-gradient(90deg, transparent, #CEA268, transparent);
+    background: rgba(206, 162, 104, 0.25);
   }
 
   .maint-divider-diamond {
     font-size: 8px;
     color: #CEA268;
-    opacity: 0.9;
   }
 
   .maint-message {
     font-size: 13px;
     font-weight: 400;
-    line-height: 1.5;
-    color: rgba(245, 240, 232, 0.75);
+    line-height: 1.6;
+    color: #9E8E78;
     margin: 0 auto;
-    max-width: 400px;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
+    max-width: 360px;
   }
 
   .maint-countdown {
-    margin-top: 16px;
-    padding-top: 14px;
-    border-top: 1px solid rgba(206, 162, 104, 0.15);
+    margin-top: 24px;
+    padding-top: 20px;
+    border-top: 1px solid rgba(206, 162, 104, 0.2);
     width: 100%;
   }
 
   .maint-countdown-label {
     font-size: 9px;
     font-weight: 600;
-    letter-spacing: 0.18em;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: rgba(206, 162, 104, 0.85);
-    margin-bottom: 10px;
+    color: #CEA268;
+    margin-bottom: 12px;
   }
 
   .maint-countdown-grid {
     display: flex;
     justify-content: center;
-    gap: 8px;
-    flex-wrap: nowrap;
+    gap: 12px;
   }
 
   .maint-countdown-unit {
     flex: 1;
-    max-width: 72px;
-    min-width: 0;
-    padding: 10px 6px 8px;
-    background: rgba(0, 0, 0, 0.35);
+    max-width: 64px;
+    padding: 8px 4px;
+    background: rgba(255, 255, 255, 0.04);
     border: 1px solid rgba(206, 162, 104, 0.2);
     border-radius: 2px;
   }
 
   .maint-countdown-value {
     display: block;
-    font-family: 'Cormorant Garamond', serif;
-    font-size: clamp(22px, 3.5vh, 28px);
+    font-size: 22px;
     font-weight: 500;
-    color: #fff;
+    color: #F5EFE3;
     line-height: 1;
-    letter-spacing: 0.04em;
   }
 
   .maint-countdown-name {
     display: block;
     font-size: 8px;
     font-weight: 600;
-    letter-spacing: 0.1em;
+    letter-spacing: 0.05em;
     text-transform: uppercase;
-    color: rgba(206, 162, 104, 0.7);
+    color: #7A6A55;
     margin-top: 4px;
   }
 
   .maint-return-date {
     font-size: 11px;
-    color: rgba(245, 240, 232, 0.45);
-    margin-top: 10px;
-    letter-spacing: 0.03em;
+    color: #7A6A55;
+    margin-top: 12px;
   }
 
   .maint-tagline {
-    margin-top: 12px;
+    margin-top: 24px;
     font-size: 9px;
     font-weight: 500;
     letter-spacing: 0.1em;
     text-transform: uppercase;
-    color: rgba(206, 162, 104, 0.5);
+    color: #5A4E3E;
   }
 
   .maint-footer {
-    margin-top: 10px;
-    padding-top: 0;
+    margin-top: 16px;
     font-size: 10px;
-    letter-spacing: 0.06em;
-    color: rgba(245, 240, 232, 0.22);
+    color: #5A4E3E;
   }
 
   .maint-loader {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 24px;
+    gap: 16px;
   }
 
   .maint-loader-ring {
-    width: 48px;
-    height: 48px;
-    border: 1px solid rgba(206, 162, 104, 0.2);
+    width: 36px;
+    height: 36px;
+    border: 1.5px solid #EAE6DF;
     border-top-color: #CEA268;
     border-radius: 50%;
     animation: maint-spin 1s linear infinite;
@@ -451,63 +382,18 @@ const maintenanceStyles = `
   .maint-loader-text {
     font-size: 11px;
     font-weight: 500;
-    letter-spacing: 0.2em;
+    letter-spacing: 0.15em;
     text-transform: uppercase;
-    color: rgba(206, 162, 104, 0.6);
+    color: #8C8C8C;
   }
 
   @media (max-width: 480px) {
     .maint-page {
-      padding: 12px 16px;
+      padding: 16px;
     }
 
     .maint-card {
-      padding: 22px 20px 18px;
-      max-height: calc(100dvh - 24px);
-    }
-
-    .maint-logo-wrap {
-      width: 64px;
-      height: 64px;
-      margin-bottom: 10px;
-    }
-
-    .maint-countdown-grid {
-      gap: 6px;
-    }
-
-    .maint-countdown-unit {
-      padding: 8px 4px 6px;
-    }
-  }
-
-  @media (max-height: 640px) {
-    .maint-card {
-      padding: 20px 24px 16px;
-    }
-
-    .maint-logo-wrap {
-      width: 56px;
-      height: 56px;
-      margin-bottom: 8px;
-    }
-
-    .maint-title {
-      font-size: 26px;
-    }
-
-    .maint-divider {
-      margin: 8px 0;
-    }
-
-    .maint-countdown {
-      margin-top: 12px;
-      padding-top: 10px;
-    }
-
-    .maint-tagline,
-    .maint-footer {
-      margin-top: 8px;
+      padding: 24px 20px;
     }
   }
 `;

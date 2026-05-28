@@ -30,6 +30,7 @@ function isMaintenanceExempt(pathname) {
   if (pathname.startsWith('/api/admin-portal')) return true;
   if (pathname.startsWith('/portal/')) return true;
   if (pathname.startsWith('/api/Admin')) return true;
+  if (pathname === '/api/Pages/Profile') return true; // Allow logout
   return false;
 }
 

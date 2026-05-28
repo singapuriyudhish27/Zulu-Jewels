@@ -484,53 +484,76 @@ export default function OrderManagementPage() {
 
     toast.custom((t) => (
       <div style={{
-        background: '#1a1a1a',
-        color: '#fff',
-        padding: '16px 20px',
-        borderRadius: '10px',
-        boxShadow: '0 8px 24px rgba(0,0,0,0.3)',
+        background: '#1A1712',
+        border: '1px solid rgba(206, 162, 104, 0.3)',
+        color: '#F5EFE3',
+        padding: '12px 14px',
+        borderRadius: '6px',
+        boxShadow: '0 10px 30px rgba(0,0,0,0.5)',
         display: 'flex',
         flexDirection: 'column',
-        gap: '12px',
-        minWidth: '300px',
+        gap: '10px',
+        width: '280px',
+        fontFamily: "'Montserrat', sans-serif",
         opacity: t.visible ? 1 : 0,
         transition: 'opacity 0.3s ease',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <Trash2 size={18} color="#e74c3c" />
+          <div style={{
+            background: 'rgba(239, 68, 68, 0.1)',
+            padding: '6px',
+            borderRadius: '4px',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+          }}>
+            <Trash2 size={16} color="#ef4444" />
+          </div>
           <div>
-            <div style={{ fontWeight: 700, fontSize: '14px', marginBottom: '2px' }}>
+            <div style={{ fontWeight: 600, fontSize: '12px', color: '#F5EFE3', marginBottom: '2px', letterSpacing: '0.02em' }}>
               Delete {selectedOrder.id}?
             </div>
-            <div style={{ fontSize: '12px', color: '#aaa' }}>
+            <div style={{ fontSize: '10px', color: '#9E8E78', letterSpacing: '0.01em' }}>
               This action cannot be undone.
             </div>
           </div>
         </div>
-        <div style={{ display: 'flex', gap: '8px' }}>
+        <div style={{ display: 'flex', gap: '6px' }}>
           <button
             onClick={() => { toast.dismiss(t.id); performDeleteOrder(); }}
             style={{
-              flex: 1, padding: '9px', background: '#e74c3c', color: '#fff',
-              border: 'none', borderRadius: '6px', fontSize: '13px',
-              fontWeight: 700, cursor: 'pointer',
+              flex: 1, padding: '7px', background: '#ef4444', color: '#FFFFFF',
+              border: 'none', borderRadius: '2px', fontSize: '10px',
+              fontWeight: 700, cursor: 'pointer', textTransform: 'uppercase',
+              letterSpacing: '0.05em', transition: 'opacity 0.2s ease',
             }}
+            onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
+            onMouseLeave={(e) => e.currentTarget.style.opacity = '1'}
           >
             Yes, Delete
           </button>
           <button
             onClick={() => toast.dismiss(t.id)}
             style={{
-              flex: 1, padding: '9px', background: '#333', color: '#ccc',
-              border: '1px solid #444', borderRadius: '6px', fontSize: '13px',
-              fontWeight: 600, cursor: 'pointer',
+              flex: 1, padding: '7px', background: 'transparent', color: '#CEA268',
+              border: '1px solid rgba(206, 162, 104, 0.25)', borderRadius: '2px', fontSize: '10px',
+              fontWeight: 600, cursor: 'pointer', textTransform: 'uppercase',
+              letterSpacing: '0.05em', transition: 'all 0.2s ease',
+            }}
+            onMouseEnter={(e) => {
+              e.currentTarget.style.background = 'rgba(206, 162, 104, 0.05)';
+              e.currentTarget.style.borderColor = 'rgba(206, 162, 104, 0.4)';
+            }}
+            onMouseLeave={(e) => {
+              e.currentTarget.style.background = 'transparent';
+              e.currentTarget.style.borderColor = 'rgba(206, 162, 104, 0.25)';
             }}
           >
             Cancel
           </button>
         </div>
       </div>
-    ), { duration: 8000 });
+    ), { id: 'delete-confirm', duration: 8000 });
   };
 
   return (
