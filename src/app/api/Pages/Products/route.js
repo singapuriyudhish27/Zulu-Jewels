@@ -23,10 +23,15 @@ export async function GET(request) {
         }
         const cats = await Category.find(categoryFilter).sort({ name: 1 });
 
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
         // Build product filter
         const productFilter = { is_deleted: false };
         if (search) {
-            const regex = new RegExp(search, 'i');
+            const escapedSearch = escapeRegExp(search);
+            const regex = new RegExp(escapedSearch, 'i');
             productFilter.$or = [{ name: regex }, { description: regex }];
         }
 

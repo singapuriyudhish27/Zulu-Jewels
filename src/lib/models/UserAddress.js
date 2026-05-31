@@ -6,4 +6,6 @@ const UserAddressSchema = new mongoose.Schema({
   is_default: { type: Boolean, default: false },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
 
+UserAddressSchema.index({ user_id: 1 });
+
 export default mongoose.models.UserAddress || mongoose.model('UserAddress', UserAddressSchema);

@@ -3,6 +3,9 @@ import crypto from "crypto";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { processOrderSuccess } from "@/lib/orderUtils";
+import { connectDB } from "@/lib/db";
+import Product from "@/lib/models/Product";
+import ProductVariant from "@/lib/models/ProductVariant";
 
 // Helper function to extract user from session cookie
 async function getUserFromCookie() {
@@ -39,11 +42,30 @@ export async function POST(req) {
             return NextResponse.json({message: "No Signature By RazorPay"}, { status: 400 });
         }
 
+        // Verify and override specificItem details to prevent client-side data tampering
+        let verifiedSpecificItem = null;
+        if (specificItem) {
+            await connectDB();
+            let unitPrice = 0;
+            if (specificItem.variantId) {
+                const variant = await ProductVariant.findById(specificItem.variantId);
+                unitPrice = variant ? variant.price : 0;
+            }
+            if (!unitPrice) {
+                const product = await Product.findById(specificItem.productId);
+                unitPrice = product ? product.price : 0;
+            }
+            verifiedSpecificItem = {
+                ...specificItem,
+                price: unitPrice
+            };
+        }
+
         // Process the order in the database
         await processOrderSuccess(user.userId, {
             payment_method: "RazorPay",
             receipt_url: `https://dashboard.razorpay.com/app/payments/${razorpay_payment_id}`,
-            specificItem: specificItem || null
+            specificItem: verifiedSpecificItem
         });
 
         return NextResponse.json({ success: true }, { status: 200 });

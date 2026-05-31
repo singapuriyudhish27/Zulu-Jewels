@@ -144,10 +144,10 @@ export async function POST() {
     //Remove the JWT cookie
     response.cookies.set("zulu_jewels", "", {
         httpOnly: true,
-        secure: process.env.NODE_ENV === "development",
+        secure: process.env.NODE_ENV !== "development",
         sameSite: "strict",
         path: "/",
-        expires: new Date(0), //Imidiately expire the cookie
+        expires: new Date(0), //Immediately expire the cookie
     });
     return response;
 }

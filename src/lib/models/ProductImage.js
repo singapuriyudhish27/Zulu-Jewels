@@ -8,4 +8,7 @@ const ProductImageSchema = new mongoose.Schema({
   is_primary: { type: Boolean, default: false },
 });
 
+ProductImageSchema.index({ product_id: 1 });
+ProductImageSchema.index({ variant_id: 1 });
+
 export default mongoose.models.ProductImage || mongoose.model('ProductImage', ProductImageSchema);

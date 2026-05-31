@@ -7,8 +7,15 @@ import Product from "@/lib/models/Product";
 import Inquiry from "@/lib/models/Inquiry";
 import Review from "@/lib/models/Review";
 
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
+
 //Get The Dashboard Data
-export async function GET() {
+export async function GET(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
+
     try {
         await connectDB();
 

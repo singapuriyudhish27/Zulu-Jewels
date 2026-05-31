@@ -1,7 +1,13 @@
 import { NextResponse } from "next/server";
 import nodemailer from "nodemailer";
 
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
+
 export async function POST(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const { to, subject, message } = await req.json();
 

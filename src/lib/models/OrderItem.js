@@ -8,4 +8,7 @@ const OrderItemSchema = new mongoose.Schema({
   price: { type: Number, required: true },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
 
+OrderItemSchema.index({ order_id: 1 });
+OrderItemSchema.index({ product_id: 1 });
+
 export default mongoose.models.OrderItem || mongoose.model('OrderItem', OrderItemSchema);

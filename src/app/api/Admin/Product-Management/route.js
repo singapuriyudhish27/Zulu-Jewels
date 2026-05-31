@@ -5,8 +5,13 @@ import Category from "@/lib/models/Category";
 import Product from "@/lib/models/Product";
 import ProductVariant from "@/lib/models/ProductVariant";
 import ProductImage from "@/lib/models/ProductImage";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
-export async function GET() {
+export async function GET(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
 
@@ -60,6 +65,10 @@ export async function GET() {
 
 //Add New Product
 export async function POST(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const data = await request.json();
@@ -158,6 +167,10 @@ export async function POST(request) {
 
 //Edit Product
 export async function PUT(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const data = await request.json();
@@ -229,7 +242,7 @@ export async function PUT(request) {
 
             if (variantId && typeof variantId === 'string' && variantId.length > 5) {
                 // Update
-                await ProductVariant.updateOne({ _id: variantId }, {
+                await ProductVariant.updateOne({ _id: variantId, product_id: id }, {
                     material: v.material,
                     description: v.description,
                     price: Number(v.price) || Number(price),
@@ -297,6 +310,10 @@ export async function PUT(request) {
 
 //Delete Product
 export async function DELETE(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const body = await request.json();

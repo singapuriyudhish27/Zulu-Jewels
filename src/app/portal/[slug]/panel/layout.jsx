@@ -21,7 +21,7 @@ export default async function AdminPanelLayout({ children, params }) {
     redirect(getAdminPortalPath(slug));
   }
 
-  if (decoded.email !== process.env.ADMIN_EMAIL) {
+  if (decoded.email !== process.env.ADMIN_EMAIL || decoded.role !== 'admin') {
     redirect('/Pages');
   }
 

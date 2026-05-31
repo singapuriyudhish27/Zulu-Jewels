@@ -4,9 +4,14 @@ import Review from "@/lib/models/Review";
 import User from "@/lib/models/User";
 import OrderItem from "@/lib/models/OrderItem";
 import Product from "@/lib/models/Product";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 //Get The Reviews Data
-export async function GET() {
+export async function GET(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
 
@@ -66,7 +71,11 @@ export async function GET() {
 }
 
 //Edit Reviews
-export async function PUT() {
+export async function PUT(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
 
     } catch (error) {

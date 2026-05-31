@@ -3,11 +3,16 @@ import { connectDB } from "@/lib/db";
 import Category from "@/lib/models/Category";
 import Product from "@/lib/models/Product";
 import { saveFile } from "@/lib/storage";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 // Helper removed - now using centralized storage utility
 
 //Add New Category
 export async function POST(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const formData = await request.formData();
@@ -61,6 +66,10 @@ export async function POST(request) {
 
 //Update Category
 export async function PUT(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const formData = await request.formData();
@@ -109,6 +118,10 @@ export async function PUT(request) {
 
 //Delete Category
 export async function DELETE(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const body = await request.json();

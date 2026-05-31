@@ -5,8 +5,14 @@ import ShippingPartner from "@/lib/models/ShippingPartner";
 import PaymentOption from "@/lib/models/PaymentOption";
 import Transaction from "@/lib/models/Transaction";
 
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
+
 //Get The Shipping & Payment Data
-export async function GET() {
+export async function GET(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
 

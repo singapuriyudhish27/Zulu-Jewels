@@ -2,8 +2,13 @@ import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Inquiry from "@/lib/models/Inquiry";
 import User from "@/lib/models/User";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
-export async function GET() {
+export async function GET(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
 
@@ -47,6 +52,10 @@ export async function GET() {
 }
 
 export async function PUT(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { id, status } = await req.json();
@@ -65,6 +74,10 @@ export async function PUT(req) {
 }
 
 export async function DELETE(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { searchParams } = new URL(req.url);

@@ -11,6 +11,7 @@ import Category from "@/lib/models/Category";
 import ProductVariant from "@/lib/models/ProductVariant";
 import { sendOrderEmail } from "@/lib/emailService";
 import { buildOrderEmailData } from "@/lib/orderUtils";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 // Maps order status values to email event types
 const STATUS_EMAIL_MAP = {
@@ -20,7 +21,11 @@ const STATUS_EMAIL_MAP = {
 };
 
 //Get The Orders Data
-export async function GET() {
+export async function GET(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
 
@@ -110,6 +115,10 @@ export async function GET() {
 
 //Edit Orders
 export async function PUT(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         //Database Connection
         await connectDB();
@@ -200,6 +209,10 @@ export async function PUT(request) {
 
 // Delete Order (Only Allowed When Status = Cancelled)
 export async function DELETE(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const body = await request.json();

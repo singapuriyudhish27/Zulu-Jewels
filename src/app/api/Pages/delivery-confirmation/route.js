@@ -4,11 +4,30 @@ import Order from "@/lib/models/Order";
 import OrderItem from "@/lib/models/OrderItem";
 import Product from "@/lib/models/Product";
 import Customer from "@/lib/models/Customer";
-import User from "@/lib/models/User";
+import { cookies } from "next/headers";
+import jwt from "jsonwebtoken";
+
+// Helper function to extract user from session cookie
+async function getUserFromCookie() {
+    const cookieStore = await cookies();
+    const cookie = cookieStore.get("zulu_jewels")?.value;
+    if (!cookie) return null;
+    try {
+        const decoded = jwt.verify(cookie, process.env.JWT_SECRET);
+        return decoded;
+    } catch (err) {
+        return null;
+    }
+}
 
 // Get Order details for confirmation page
 export async function GET(request) {
     try {
+        const user = await getUserFromCookie();
+        if (!user) {
+            return NextResponse.json({ success: false, message: "Unauthorized. Please login first." }, { status: 401 });
+        }
+
         await connectDB();
         const { searchParams } = new URL(request.url);
         const orderId = searchParams.get("orderId");
@@ -20,6 +39,14 @@ export async function GET(request) {
         const order = await Order.findById(orderId);
         if (!order) {
             return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
+        }
+
+        // Enforce ownership or admin check
+        const isAdmin = user.role === 'admin';
+        const customer = await Customer.findOne({ user_id: user.userId });
+        const isOwner = customer && String(order.customer_id) === String(customer._id);
+        if (!isAdmin && !isOwner) {
+            return NextResponse.json({ success: false, message: "Forbidden: You do not have permission to view this order" }, { status: 403 });
         }
 
         // Fetch items in the order
@@ -59,6 +86,11 @@ export async function GET(request) {
 // Save customer delivery confirmation & feedback
 export async function POST(request) {
     try {
+        const user = await getUserFromCookie();
+        if (!user) {
+            return NextResponse.json({ success: false, message: "Unauthorized. Please login first." }, { status: 401 });
+        }
+
         await connectDB();
         const body = await request.json();
         const { orderId, received, remarks, feedback } = body;
@@ -71,6 +103,19 @@ export async function POST(request) {
             return NextResponse.json({ success: false, message: "Receipt confirmation is required" }, { status: 400 });
         }
 
+        const order = await Order.findById(orderId);
+        if (!order) {
+            return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
+        }
+
+        // Enforce ownership or admin check
+        const isAdmin = user.role === 'admin';
+        const customer = await Customer.findOne({ user_id: user.userId });
+        const isOwner = customer && String(order.customer_id) === String(customer._id);
+        if (!isAdmin && !isOwner) {
+            return NextResponse.json({ success: false, message: "Forbidden: You do not have permission to modify this order" }, { status: 403 });
+        }
+
         const updatedOrder = await Order.findByIdAndUpdate(
             orderId,
             {
@@ -81,10 +126,6 @@ export async function POST(request) {
             },
             { new: true }
         );
-
-        if (!updatedOrder) {
-            return NextResponse.json({ success: false, message: "Order not found" }, { status: 404 });
-        }
 
         console.log(`✅ Delivery Feedback Saved for Order #${orderId}`);
         return NextResponse.json({ success: true, message: "Feedback submitted successfully" }, { status: 200 });

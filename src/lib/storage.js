@@ -7,6 +7,19 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+const ALLOWED_MIME_TYPES = [
+  'image/jpeg',
+  'image/png',
+  'image/gif',
+  'image/webp',
+  'image/svg+xml',
+  'video/mp4',
+  'video/mpeg',
+  'video/webm',
+  'video/quicktime'
+];
+const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+
 /**
  * Uploads a file to Cloudinary.
  * @param {File} file - The file object from Request.formData()
@@ -15,12 +28,34 @@ cloudinary.config({
  */
 async function uploadToCloudinary(file, folder) {
   let buffer;
+  let mimeType = '';
+  let size = 0;
+
   if (typeof file === 'string' && file.startsWith('data:')) {
+    const mimeMatch = file.match(/^data:([^;]+);base64,/);
+    if (mimeMatch) {
+      mimeType = mimeMatch[1];
+    }
     const base64Data = file.split(',')[1];
     buffer = Buffer.from(base64Data, 'base64');
-  } else {
+    size = buffer.length;
+  } else if (file && typeof file === 'object' && typeof file.arrayBuffer === 'function') {
+    mimeType = file.type || '';
+    size = file.size || 0;
     const bytes = await file.arrayBuffer();
     buffer = Buffer.from(bytes);
+  } else {
+    throw new Error("Invalid file format");
+  }
+
+  // Validate file size
+  if (size > MAX_FILE_SIZE) {
+    throw new Error(`File size exceeds the limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+  }
+
+  // Validate mime-type
+  if (!mimeType || !ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase())) {
+    throw new Error(`Invalid file type: ${mimeType || 'unknown'}. Only standard images and videos are allowed.`);
   }
   
   return new Promise((resolve, reject) => {

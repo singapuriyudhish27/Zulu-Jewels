@@ -14,13 +14,9 @@
     "@stripe/stripe-js": "^8.7.0",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^1.41.3",
-    "crypto": "^1.0.1",
-    "dotenv": "^17.2.3",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.563.0",
     "mongoose": "^9.6.2",
-    "multer": "^2.1.1",
-    "multer-storage-cloudinary": "^4.0.0",
     "next": "16.1.6",
     "nodemailer": "^8.0.1",
     "razorpay": "^2.9.6",
@@ -33,6 +29,7 @@
     "@tailwindcss/postcss": "^4",
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
-    "tailwindcss": "^4"
+    "tailwindcss": "^4",
+    "typescript": "^5"
   }
 }

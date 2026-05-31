@@ -1,16 +1,3 @@
-// Ok, Now
-// Currently I am Using MYSQL as a Database,
-// But Now I want to Use MongoDB Database Instead Of MYSQL,
-
-// I want to Update The Codebase,
-// Do not change the Logic Of any Backend REST API,
-// I Just Want to Change the Code Of MYSQL To MongoDB.
-
-// How Would You Plan this To Achieve ?
-
-// Do Not Change Anything,
-// Just Share me.
-
 import { NextResponse } from 'next/server';
 
 const STATIC_EXT = /\.(ico|png|jpg|jpeg|gif|svg|webp|css|js|woff2?|ttf|map)$/i;
@@ -120,15 +107,38 @@ export async function middleware(request) {
 
   // Maintenance gate for storefront
   if (!isMaintenanceExempt(pathname) && isStorefrontPath(pathname)) {
-    const active = await fetchMaintenanceActive(request);
+    const cachedMaintenance = request.cookies.get('site_maintenance')?.value;
+    let active = false;
+    let checkPerformed = false;
+
+    if (cachedMaintenance !== undefined) {
+      active = cachedMaintenance === '1';
+    } else {
+      active = await fetchMaintenanceActive(request);
+      checkPerformed = true;
+    }
+
     if (active) {
       if (pathname.startsWith('/api/Pages')) {
-        return NextResponse.json(
+        const res = NextResponse.json(
           { success: false, message: 'Site is under maintenance', maintenance: true },
           { status: 503 }
         );
+        if (checkPerformed) {
+          res.cookies.set('site_maintenance', '1', { maxAge: 60, path: '/' });
+        }
+        return res;
       }
-      return NextResponse.redirect(new URL('/maintenance', request.url));
+      const res = NextResponse.redirect(new URL('/maintenance', request.url));
+      if (checkPerformed) {
+        res.cookies.set('site_maintenance', '1', { maxAge: 60, path: '/' });
+      }
+      return res;
+    } else if (checkPerformed) {
+      // Set cookie to avoid fetching database on subsequent requests for 1 minute
+      const res = NextResponse.next();
+      res.cookies.set('site_maintenance', '0', { maxAge: 60, path: '/' });
+      return res;
     }
   }
 

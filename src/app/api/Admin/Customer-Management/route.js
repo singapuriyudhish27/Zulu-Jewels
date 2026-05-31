@@ -5,7 +5,13 @@ import User from "@/lib/models/User";
 import Order from "@/lib/models/Order";
 import OrderItem from "@/lib/models/OrderItem";
 
-export async function GET() {
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
+
+export async function GET(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
 
