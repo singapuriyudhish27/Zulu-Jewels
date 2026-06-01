@@ -38,10 +38,7 @@ export async function POST(req) {
         //Get Connection
         await connectDB();
 
-        // Prevent registration with Admin Email
-        if (email && process.env.ADMIN_EMAIL && email.toLowerCase() === process.env.ADMIN_EMAIL.toLowerCase()) {
-            return NextResponse.json({ message: "Registration restricted for this email" }, { status: 400 });
-        }
+
         
         //User Existence Check
         const existingUser = await User.findOne({

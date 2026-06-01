@@ -10,17 +10,16 @@ import jwt from "jsonwebtoken";
 async function getUserIdFromCookie() {
     try {
         const cookieStore = await cookies();
-        const cookie = cookieStore.get("zulu_jewels");
-        const token = cookie?.value;
-        if (!token) return null;
-        const decoded = jwt.verify(token, process.env.JWT_SECRET);
+        const cookie = cookieStore.get("zulu_jewels")?.value || cookieStore.get("zulu_jewels_admin")?.value;
+        if (!cookie) return null;
+        const decoded = jwt.verify(cookie, process.env.JWT_SECRET);
         return decoded;
     } catch (error) {
         return null;
     }
 }
 
-//Fetch Logged In User's WhishList
+//Fetch Logged In User's WishList
 export async function GET() {
     try {
         const user = await getUserIdFromCookie();
@@ -36,10 +35,10 @@ export async function GET() {
         const email = user.email;
 
         //If Admin Login
-        if (email === process.env.ADMIN_EMAIL) {
+        if (user.role === 'admin') {
             const role = "Admin";
-            const user = email;            
-            return NextResponse.json({user, role}, {status: 200 });
+            const userEmail = email;            
+            return NextResponse.json({user: userEmail, role}, {status: 200 });
         }
 
         //Database Connection

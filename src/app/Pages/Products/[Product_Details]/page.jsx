@@ -749,12 +749,23 @@ export default function ProductDetailsPage() {
           transition: all 0.2s ease;
         }
         .pd-gallery-arrow:hover { border-color: #000000; }
-        .pd-thumbnails { display: flex; gap: 12px; }
+        .pd-thumbnails {
+          display: flex;
+          gap: 12px;
+          overflow-x: auto;
+          scrollbar-width: none;
+          scroll-snap-type: x mandatory;
+        }
+        .pd-thumbnails::-webkit-scrollbar {
+          display: none;
+        }
         .pd-thumb {
           width: 76px; height: 76px; background: #F9F9F9;
           display: flex; align-items: center; justify-content: center;
           font-size: 32px; cursor: pointer; border: 2px solid transparent;
           transition: border-color 0.2s ease;
+          flex-shrink: 0;
+          scroll-snap-align: start;
         }
         .pd-thumb.active { border-color: #000000; }
         .pd-thumb:hover { border-color: #cccccc; }
@@ -969,6 +980,23 @@ export default function ProductDetailsPage() {
           .pd-related-grid { grid-template-columns: repeat(2, 1fr); }
           .pd-benefits-grid { grid-template-columns: repeat(1, 1fr); }
           .pd-value-props { grid-template-columns: repeat(2, 1fr); }
+          .pd-vp-item { border-right: 1px solid #EFEFEF; border-bottom: 1px solid #EFEFEF; }
+          .pd-vp-item:nth-child(2n) { border-right: none; }
+          .pd-vp-item:nth-last-child(-n+2) { border-bottom: none; }
+        }
+        @media (max-width: 600px) {
+          .pd-value-props { grid-template-columns: 1fr; }
+          .pd-vp-item { border-right: none; border-bottom: 1px solid #EFEFEF; }
+          .pd-vp-item:last-child { border-bottom: none; }
+          .pd-actions-row { flex-direction: column; }
+          .pd-btn-primary, .pd-btn-secondary { width: 100%; }
+        }
+        @media (max-width: 480px) {
+          .pd-related-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+          .pd-product-name { font-size: 24px; }
+          .pd-price { font-size: 26px; }
+          .pd-btn-wishlist { max-width: 100%; }
+          .pd-tab-btn { margin-right: 20px; font-size: 13px; }
         }
       `}</style>
 

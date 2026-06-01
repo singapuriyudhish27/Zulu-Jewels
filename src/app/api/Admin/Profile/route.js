@@ -24,25 +24,22 @@ export async function GET() {
                 return NextResponse.json({ message: "Forbidden: Admins only" }, { status: 403 });
             }
 
-            if (decoded.email === process.env.ADMIN_EMAIL) {
-                return NextResponse.json({ firstName: "Super", lastName: "Admin", email: process.env.ADMIN_EMAIL });
-            } else {
-                //DB Connection
-                await connectDB();
-                //Fetch logged-in admin user details
-                const adminUser = await User.findOne({ _id: decoded.userId, role: 'admin' })
-                    .select('firstName lastName email phone role');
-                if (!adminUser) {
-                    return NextResponse.json({ message: "Admin not found" }, { status: 404 });
-                }
-                return NextResponse.json({
-                    firstName: adminUser.firstName,
-                    lastName: adminUser.lastName,
-                    email: adminUser.email,
-                    phone: adminUser.phone,
-                    role: adminUser.role
-                });
+            //DB Connection
+            await connectDB();
+            //Fetch logged-in admin user details
+            const adminUser = await User.findOne({ _id: decoded.userId, role: 'admin' })
+                .select('firstName lastName email phone role');
+            if (!adminUser) {
+                return NextResponse.json({ message: "Admin not found" }, { status: 404 });
             }
+            return NextResponse.json({
+                id: adminUser._id,
+                firstName: adminUser.firstName,
+                lastName: adminUser.lastName,
+                email: adminUser.email,
+                phone: adminUser.phone,
+                role: adminUser.role
+            });
         } catch (err) {
             return NextResponse.json({ message: "Error Getting Admin Profile" }, { status: 401 });
         }
@@ -119,6 +116,7 @@ export async function PUT(request) {
         const body = await request.json();
         const role = 'admin';
         const { id, firstName, lastName, email, phone, password } = body;
+        const targetId = id || auth.decoded.userId;
 
         if (!firstName || !lastName || !email || !phone) {
             return NextResponse.json({ message: "firstName, lastName, email, and phone are required" }, { status: 400 });
@@ -129,7 +127,7 @@ export async function PUT(request) {
             return NextResponse.json({ message: "Invalid email format" }, { status: 400 });
         }
 
-        if (id && !/^[0-9a-fA-F]{24}$/.test(id)) {
+        if (targetId && !/^[0-9a-fA-F]{24}$/.test(targetId)) {
             return NextResponse.json({ message: "Invalid User ID format" }, { status: 400 });
         }
 
@@ -137,7 +135,7 @@ export async function PUT(request) {
 
         //Check if email or phone is already used by another user (excluding current user)
         const existingUser = await User.findOne({
-            _id: { $ne: id },
+            _id: { $ne: targetId },
             $or: [{ email }, { phone }]
         });
 
@@ -154,7 +152,7 @@ export async function PUT(request) {
             updateFields.password_hash = await bcrypt.hash(password, 12);
         }
 
-        const result = await User.updateOne({ _id: id }, updateFields);
+        const result = await User.updateOne({ _id: targetId }, updateFields);
 
         if (result.matchedCount === 0) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });

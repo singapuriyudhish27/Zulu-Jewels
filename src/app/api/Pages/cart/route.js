@@ -10,7 +10,7 @@ import jwt from "jsonwebtoken";
 //Get User Data From Cookie
 async function getUserFromCookie() {
     const cookieStore = await cookies();
-    const cookie = cookieStore.get("zulu_jewels")?.value;
+    const cookie = cookieStore.get("zulu_jewels")?.value || cookieStore.get("zulu_jewels_admin")?.value;
     if (!cookie) return null;
     try {
         const decoded = jwt.verify(cookie, process.env.JWT_SECRET);
@@ -40,10 +40,10 @@ export async function GET() {
         }
 
         //If Admin Login
-        if (email === process.env.ADMIN_EMAIL) {
+        if (user.role === 'admin') {
             const role = "Admin";
-            const user = email;
-            return NextResponse.json({user, role}, {status: 200 });
+            const userEmail = email;
+            return NextResponse.json({user: userEmail, role}, {status: 200 });
         }
 
         //Database Connection

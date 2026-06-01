@@ -9,7 +9,7 @@ import UserAddress from "@/lib/models/UserAddress";
 export async function GET() {
     try {
         const cookieStore = await cookies();
-        const token = cookieStore.get("zulu_jewels")?.value;
+        const token = cookieStore.get("zulu_jewels")?.value || cookieStore.get("zulu_jewels_admin")?.value;
 
         //No Token -> Unauthorized
         if (!token) {
@@ -27,7 +27,7 @@ export async function GET() {
         const email = decoded.email;
 
         //If Admin Login
-        if (email === process.env.ADMIN_EMAIL) {
+        if (decoded.role === 'admin') {
             const role = "Admin";
             const user = email;            
             return NextResponse.json({user, role, addresses: []}, {status: 200 });

@@ -12,6 +12,7 @@ export default function ProfilePage() {
 
   const [settingsLoading, setSettingsLoading] = useState(false);
   const [settingsSaving, setSettingsSaving] = useState(false);
+  const [profileSaving, setProfileSaving] = useState(false);
   const [rotateModalOpen, setRotateModalOpen] = useState(false);
   const [rotating, setRotating] = useState(false);
   const [adminPortalUrl, setAdminPortalUrl] = useState('');
@@ -112,6 +113,15 @@ export default function ProfilePage() {
           throw new Error(data?.message || 'Failed to fetch profile data');
         }
         setLoggedInUserData(data);
+        setUser({
+          id: data.id || '',
+          firstName: data.firstName || '',
+          lastName: data.lastName || '',
+          email: data.email || '',
+          phone: data.phone || '',
+          password: '',
+          role: data.role || 'admin'
+        });
       } catch (error) {
         console.error("Profile Fetching From API Error:", error);
       } finally {
@@ -120,29 +130,18 @@ export default function ProfilePage() {
     }
     fetchProfile();
     fetchAdminSettings();
-
-
-
-    // Profile form submission
-    const profileForm = document.getElementById('profileForm');
-    if (profileForm) {
-      profileForm.addEventListener('submit', function(e) {
-        e.preventDefault();
-        toast.success('Profile updated successfully!');
-      });
-    }
-
-    // Logout functionality handled by handleLogout function
   }, [router]);
 
 
 
   const handleCurrentAdmin = async (e) => {
     e.preventDefault();
+    if (!user) return;
+    setProfileSaving(true);
 
     try {
       const response = await fetch("/api/Admin/Profile", {
-        method: "POST",
+        method: "PUT",
         credentials: 'include',
         headers: {
           'Content-Type': "application/json"
@@ -157,9 +156,13 @@ export default function ProfilePage() {
       }
 
       toast.success("Profile Updated Successfully.");
+      setLoggedInUserData({ ...loggedInUserdata, ...user, password: '' });
+      setUser({ ...user, password: '' });
     } catch (error) {
       console.error("Admin Profile Updation Error:", error);
       toast.error(error.message);
+    } finally {
+      setProfileSaving(false);
     }
   }
 
@@ -411,16 +414,16 @@ export default function ProfilePage() {
               <p>Manage your personal information</p>
             </div>
 
-            <form id="profileForm" className="profile-form">
+            <form id="profileForm" className="profile-form" onSubmit={handleCurrentAdmin}>
               <div className="form-row">
                 <div className="form-group">
                   <label className="form-label">First Name</label>
                   <input
                   type="text"
                   className="form-input"
-                  value={loggedInUserdata?.firstName || ''}
+                  value={user?.firstName || ''}
                   onChange={(e) => setUser({ ...user, firstName: e.target.value })}
-                  readOnly
+                  required
                   />
                 </div>
                 <div className="form-group">
@@ -428,23 +431,69 @@ export default function ProfilePage() {
                   <input
                   type="text"
                   className="form-input"
-                  value={loggedInUserdata?.lastName || ''}
+                  value={user?.lastName || ''}
                   onChange={(e) => setUser({ ...user, lastName: e.target.value })}
-                  readOnly
+                  required
                   />
                 </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Email Address</label>
-                <input
-                type="text"
-                className="form-input"
-                value={loggedInUserdata?.email || ''}
-                onChange={(e) => setUser({ ...user, email: e.target.value })}
-                readOnly
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">Email Address</label>
+                  <input
+                  type="email"
+                  className="form-input"
+                  value={user?.email || ''}
+                  onChange={(e) => setUser({ ...user, email: e.target.value })}
+                  required
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Phone Number</label>
+                  <input
+                  type="text"
+                  className="form-input"
+                  value={user?.phone || ''}
+                  onChange={(e) => setUser({ ...user, phone: e.target.value })}
+                  required
+                  />
+                </div>
               </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label className="form-label">New Password (leave blank to keep current)</label>
+                  <input
+                  type="password"
+                  className="form-input"
+                  value={user?.password || ''}
+                  onChange={(e) => setUser({ ...user, password: e.target.value })}
+                  placeholder="••••••••••••"
+                  minLength={12}
+                  maxLength={72}
+                  />
+                </div>
+                <div className="form-group">
+                  <label className="form-label">Role</label>
+                  <input
+                  type="text"
+                  className="form-input"
+                  value={user?.role || 'admin'}
+                  disabled
+                  style={{ background: '#f5f5f5', color: '#888', cursor: 'not-allowed' }}
+                  />
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                className="save-btn"
+                disabled={profileSaving}
+                style={{ marginTop: '8px', maxWidth: '200px' }}
+              >
+                {profileSaving ? 'Saving...' : 'Save Profile'}
+              </button>
             </form>
           </div>
 

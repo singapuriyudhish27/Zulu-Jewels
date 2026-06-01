@@ -14,9 +14,11 @@ import {
   Truck,
   LogOut,
   Settings,
+  Menu,
+  X,
 } from 'lucide-react';
 import ConfirmModal from '@/components/common/ConfirmModal';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useAdminBase } from '@/hooks/useAdminBase';
 
 export default function AdminLayoutContent({ children }) {
@@ -24,6 +26,11 @@ export default function AdminLayoutContent({ children }) {
   const pathname = usePathname();
   const { base, path } = useAdminBase();
   const [isLogoutModalOpen, setIsLogoutModalOpen] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+
+  useEffect(() => {
+    setIsSidebarOpen(false);
+  }, [pathname]);
 
   const menuItems = useMemo(
     () => [
@@ -73,7 +80,27 @@ export default function AdminLayoutContent({ children }) {
 
   return (
     <div className="admin-layout">
-      <div className="admin-sidebar">
+      {/* Mobile Top Bar */}
+      <div className="admin-mobile-header">
+        <div className="admin-mobile-logo">
+          <span>ZULU</span> JEWELS
+        </div>
+        <button 
+          className="admin-mobile-toggle" 
+          onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+          aria-label="Toggle navigation menu"
+        >
+          {isSidebarOpen ? <X size={22} /> : <Menu size={22} />}
+        </button>
+      </div>
+
+      {/* Sidebar Overlay Backdrop */}
+      <div 
+        className={`admin-sidebar-backdrop ${isSidebarOpen ? 'active' : ''}`} 
+        onClick={() => setIsSidebarOpen(false)} 
+      />
+
+      <div className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="admin-logo">
           <Image
             src="/Vector 1.png"

@@ -311,11 +311,45 @@ export default function Navbar() {
           display: none;
         }
         @media (max-width: 900px) {
-          .zj-nav-links {
+          .zj-nav-links:not(.right) {
+            display: none;
+          }
+          .zj-nav-links.right {
+            display: flex;
+            justify-content: flex-end;
+            align-items: center;
+            gap: 0;
+            margin-left: 0;
+            flex: none;
+          }
+          .zj-nav-links.right .zj-nav-link-item {
             display: none;
           }
           .zj-hamburger {
             display: flex;
+            margin-left: 8px;
+          }
+        }
+        @media (max-width: 768px) {
+          .zj-nav-icons {
+            gap: 10px;
+            margin-left: 8px;
+          }
+          .zj-nav-inner {
+            padding: 0 16px;
+            gap: 12px;
+          }
+        }
+        @media (max-width: 480px) {
+          .zj-nav-logo-icon {
+            height: 32px;
+          }
+          .zj-nav-logo-text {
+            font-size: 11px;
+            letter-spacing: 0.12em;
+          }
+          .zj-nav-icons {
+            gap: 6px;
           }
         }
       `}</style>
@@ -420,12 +454,61 @@ export default function Navbar() {
 
       {/* Mobile Menu */}
       <div className={`zj-mobile-menu ${isMenuOpen ? 'open' : ''}`}>
+        {/* Mobile Search Bar */}
+        <div className="zj-mobile-search" style={{ borderBottom: '1px solid #f0ebe4', paddingBottom: '16px', marginBottom: '8px' }}>
+          <div style={{ display: 'flex', alignItems: 'center', background: '#f9f6f3', borderRadius: '4px', padding: '10px 14px', gap: '10px' }}>
+            <Search size={18} color="#888" />
+            <input
+              type="text"
+              placeholder="Search products..."
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+              style={{
+                border: 'none',
+                outline: 'none',
+                background: 'transparent',
+                fontSize: '14px',
+                fontFamily: 'Montserrat, sans-serif',
+                width: '100%',
+                color: '#1a1a1a'
+              }}
+              onKeyDown={e => {
+                if (e.key === 'Enter' && searchQuery.trim()) {
+                  router.push(`/Pages/Products?search=${encodeURIComponent(searchQuery.trim())}`);
+                  setIsMenuOpen(false);
+                }
+              }}
+            />
+          </div>
+        </div>
         <Link href="/Pages" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
         <Link href="/Pages/Products" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Shop</Link>
         <Link href="/Pages/Products?category=wedding" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Wedding Collection</Link>
         <Link href="/Pages/custom" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Custom Jewelry</Link>
         <Link href="/Pages/about" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>About Us</Link>
         <Link href="/Pages/contact" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Contact</Link>
+        
+        {/* Mobile Account Utility Links */}
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0ebe4' }}>
+          <button 
+            onClick={() => { handleIconClick('profile', '/Pages/Profile?tab=profile'); setIsMenuOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
+          >
+            <User size={18} /> Profile / Account
+          </button>
+          <button 
+            onClick={() => { handleIconClick('wishlist', '/Pages/Profile?tab=wishlist'); setIsMenuOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
+          >
+            <Heart size={18} /> Wishlist
+          </button>
+          <button 
+            onClick={() => { handleIconClick('cart', '/Pages/cart'); setIsMenuOpen(false); }}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
+          >
+            <ShoppingBag size={18} /> Shopping Cart
+          </button>
+        </div>
       </div>
     </>
   );

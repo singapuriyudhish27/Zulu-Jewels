@@ -697,10 +697,26 @@ export default function HomePage() {
         @media (max-width: 1024px) {
           .zj-product-grid { grid-template-columns: repeat(3, 1fr); }
           .zj-testimonials-grid { grid-template-columns: repeat(2, 1fr); }
+          .zj-blog-grid-bottom { grid-template-columns: repeat(2, 1fr); gap: 24px; }
         }
         @media (max-width: 768px) {
           .zj-product-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
-          .zj-gifts-section { grid-template-columns: 1fr; gap: 48px; }
+          .zj-most-loved-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .zj-most-loved-title { margin-bottom: 24px; font-size: 26px; }
+          .zj-most-loved { padding: 40px 16px 20px; }
+          .zj-blog-featured { grid-template-columns: 1fr; gap: 20px; margin-bottom: 30px; }
+          .zj-blog-featured-title { font-size: 22px; }
+          .zj-blog-featured-image { aspect-ratio: 1.5; }
+          .zj-gifts-section { grid-template-columns: 1fr; gap: 0; height: auto; }
+          .zj-gifts-content { padding: 40px 24px; align-items: center; text-align: center; }
+          .zj-gifts-title { font-size: 28px; margin-bottom: 20px; text-align: center; }
+          .zj-gifts-text { margin-bottom: 24px; text-align: center; }
+          .zj-gifts-image { height: 300px; }
+          .zj-cta-banner-wrap { padding: 30px 16px; }
+          .zj-cta-banner { padding: 30px; min-height: 380px; justify-content: center; text-align: center; }
+          .zj-cta-content { align-items: center; }
+          .zj-cta-title { font-size: 28px; }
+          .zj-cta-subtitle { font-size: 13px; margin: 0 0 20px auto; text-align: center; }
           .zj-testimonials-grid { grid-template-columns: 1fr; }
           .zj-blog-grid { grid-template-columns: 1fr; }
           .zj-hero-decorations { display: none; }
@@ -708,6 +724,14 @@ export default function HomePage() {
         }
         @media (max-width: 480px) {
           .zj-product-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+          .zj-blog-grid-bottom { grid-template-columns: 1fr; gap: 20px; }
+          .zj-hero { height: 75vh; min-height: 480px; padding-bottom: 60px; }
+          .zj-hero-title { font-size: 32px; }
+          .zj-hero-subtitle { font-size: 13px; }
+          .zj-hero-btn { padding: 12px 28px; font-size: 10px; }
+          .zj-section { padding: 24px 16px; }
+          .zj-section-title { font-size: 24px; }
+          .zj-section-header { margin-bottom: 20px; }
         }
       `}</style>
 

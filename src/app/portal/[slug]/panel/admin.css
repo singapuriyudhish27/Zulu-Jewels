@@ -718,3 +718,85 @@
           .admin-header { padding: 20px; }
           .admin-search { width: 100%; }
         }
+
+        /* Responsive Table Wrapper */
+        .table-responsive, .content-card-body {
+          width: 100%;
+          overflow-x: auto;
+          -webkit-overflow-scrolling: touch;
+        }
+
+        /* Mobile header & sidebar layout classes */
+        .admin-mobile-header {
+          display: none;
+        }
+        .admin-sidebar-backdrop {
+          display: none;
+        }
+
+        @media (max-width: 1024px) {
+          .admin-sidebar {
+            transform: translateX(-100%);
+            transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            z-index: 999;
+          }
+          .admin-sidebar.open {
+            transform: translateX(0);
+          }
+          .admin-main {
+            margin-left: 0;
+          }
+          .admin-sidebar-backdrop {
+            display: block;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 998;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.3s ease, visibility 0.3s ease;
+            backdrop-filter: blur(2px);
+          }
+          .admin-sidebar-backdrop.active {
+            opacity: 1;
+            visibility: visible;
+          }
+          .admin-mobile-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 16px 24px;
+            background: #ffffff;
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 40;
+          }
+          .admin-mobile-logo {
+            font-family: var(--font-serif);
+            font-size: 15px;
+            font-weight: 600;
+            letter-spacing: 1.5px;
+            color: var(--charcoal);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+          }
+          .admin-mobile-logo span {
+            color: var(--gold);
+            font-weight: 700;
+          }
+          .admin-mobile-toggle {
+            background: transparent;
+            border: none;
+            cursor: pointer;
+            color: var(--charcoal);
+            padding: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+          }
+          .admin-content {
+            padding: 24px 16px;
+          }
+        }

@@ -11,7 +11,7 @@ export async function verifyAdminFromCookies() {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.email !== process.env.ADMIN_EMAIL || decoded.role !== 'admin') {
+    if (decoded.role !== 'admin') {
       return { ok: false, status: 403, message: 'Forbidden' };
     }
     return { ok: true, decoded };
@@ -29,7 +29,7 @@ export async function verifyAdminFromRequest(req) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET);
-    if (decoded.email !== process.env.ADMIN_EMAIL || decoded.role !== 'admin') {
+    if (decoded.role !== 'admin') {
       return { ok: false, status: 403, message: 'Forbidden' };
     }
     return { ok: true, decoded };
