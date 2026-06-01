@@ -60,7 +60,7 @@ export async function POST(request) {
         }, { status: 201 });
     } catch (error) {
         console.error("Error Adding Category:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }
 
@@ -110,7 +110,7 @@ export async function PUT(request) {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Updating Category:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }
 
@@ -163,6 +163,6 @@ export async function DELETE(request) {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Deleting Category:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }

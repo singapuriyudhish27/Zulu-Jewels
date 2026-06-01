@@ -1,15 +1,26 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
-import nodemailer from "nodemailer";
 import jwt from "jsonwebtoken";
+import { rateLimit } from "@/lib/rateLimit";
+import { getTransporter } from "@/lib/email/mailer";
 
 export async function POST(req) {
     try {
+        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+        if (!rateLimit(ip, 3, 300000)) {
+            return NextResponse.json({ message: "Too many requests. Please try again in 5 minutes." }, { status: 429 });
+        }
+
         const { email } = await req.json();
 
         if (!email) {
             return NextResponse.json({ message: "Email is required" }, { status: 400 });
+        }
+
+        const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!EMAIL_REGEX.test(email)) {
+            return NextResponse.json({ message: "Invalid email format" }, { status: 400 });
         }
 
         //DB Connection
@@ -41,15 +52,7 @@ export async function POST(req) {
         const resetUrl = `${baseUrl}/auth/reset-password?token=${resetToken}&email=${encodeURIComponent(user.email)}`;
 
         //Send An Email
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT),
-            secure: false,
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        const transporter = getTransporter();
 
         const mailOptions = {
             from: `"Zulu Jewellers Support" <${process.env.SMTP_USER}>`,

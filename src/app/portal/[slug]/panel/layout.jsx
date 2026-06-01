@@ -8,7 +8,7 @@ import AdminLayoutContent from './AdminLayoutContent';
 export default async function AdminPanelLayout({ children, params }) {
   const { slug } = await params;
   const cookieStore = await cookies();
-  const token = cookieStore.get('zulu_jewels')?.value;
+  const token = cookieStore.get('zulu_jewels_admin')?.value;
 
   if (!token) {
     redirect(getAdminPortalPath(slug));

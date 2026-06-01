@@ -335,7 +335,7 @@ export default function CustomerManagementPage() {
                     <div className="detail-section">
                       <div className="detail-section-title">Order History Overview</div>
                       <div style={{ fontSize: "13px", color: "var(--charcoal-light)", marginBottom: "12px" }}>
-                        This customer has {selectedCustomer.orders} total orders. Click "View Orders" below to see the full list.
+                        This customer has {selectedCustomer.orders} total orders. Click &ldquo;View Orders&rdquo; below to see the full list.
                       </div>
                     </div>
                   </div>

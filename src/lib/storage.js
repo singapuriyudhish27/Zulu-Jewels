@@ -1,5 +1,10 @@
 import { v2 as cloudinary } from 'cloudinary';
 
+// Guard: fail fast if Cloudinary is not configured
+if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+  throw new Error('[Storage] Cloudinary environment variables are not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
+}
+
 // Configure Cloudinary
 cloudinary.config({
   cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
@@ -88,6 +93,17 @@ export async function saveFile(file, folder = "products") {
   if (typeof file === 'string') {
     if (file.startsWith('data:')) {
       return await uploadToCloudinary(file, folder);
+    }
+    if (file.startsWith('/')) {
+      return file; // Allow local assets
+    }
+    try {
+      const url = new URL(file);
+      if (url.protocol !== 'https:' || url.hostname !== 'res.cloudinary.com') {
+        throw new Error("Only secure Cloudinary media resources are permitted");
+      }
+    } catch (err) {
+      throw new Error("Invalid media URL source: " + err.message);
     }
     return file;
   }

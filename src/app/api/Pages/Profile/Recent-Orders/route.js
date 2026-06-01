@@ -44,32 +44,72 @@ export async function GET() {
             return NextResponse.json({ success: true, data: [] }, { status: 200 });
         }
 
-        // Fetch orders for this customer
-        const orders = await Order.find({ customer_id: customer._id }).sort({ order_date: -1 });
+        // Fetch all orders for this customer
+        const orders = await Order.find({ customer_id: customer._id })
+            .sort({ order_date: -1 })
+            .lean();
+
+        if (orders.length === 0) {
+            return NextResponse.json({ success: true, data: [] }, { status: 200 });
+        }
+
+        // HIGH-2 FIX: Batch-fetch all related data instead of N+1 queries
+        const orderIds = orders.map(o => o._id);
+
+        // Fetch all order items in one query
+        const allItems = await OrderItem.find({ order_id: { $in: orderIds } }).lean();
+
+        // Collect unique IDs for batch fetching
+        const productIds = [...new Set(allItems.map(i => i.product_id?.toString()).filter(Boolean))];
+        const variantIds = [...new Set(allItems.map(i => i.variant_id?.toString()).filter(Boolean))];
+
+        // Batch-fetch products, variants and images simultaneously
+        const [products, variants, images] = await Promise.all([
+            Product.find({ _id: { $in: productIds } }).select('_id name price').lean(),
+            ProductVariant.find({ _id: { $in: variantIds } }).select('_id material').lean(),
+            ProductImage.find({ product_id: { $in: productIds } }).lean(),
+        ]);
+
+        // Build O(1) lookup maps
+        const productMap = Object.fromEntries(products.map(p => [p._id.toString(), p]));
+        const variantMap = Object.fromEntries(variants.map(v => [v._id.toString(), v]));
+
+        const imageMap = {};
+        for (const img of images) {
+            const pid = img.product_id.toString();
+            if (!imageMap[pid]) imageMap[pid] = [];
+            imageMap[pid].push(img);
+        }
+
+        // Group order items by order ID
+        const itemsByOrder = {};
+        for (const item of allItems) {
+            const oid = item.order_id.toString();
+            if (!itemsByOrder[oid]) itemsByOrder[oid] = [];
+            itemsByOrder[oid].push(item);
+        }
 
         const rows = [];
-        for (const order of orders) {
-            const items = await OrderItem.find({ order_id: order._id });
 
-            for (const oi of items) {
-                const product = await Product.findById(oi.product_id);
+        for (const order of orders) {
+            const orderItemList = itemsByOrder[order._id.toString()] || [];
+
+            for (const oi of orderItemList) {
+                const product = oi.product_id ? productMap[oi.product_id.toString()] : null;
                 if (!product) continue;
 
-                let variantMaterial = null;
-                if (oi.variant_id) {
-                    const variant = await ProductVariant.findById(oi.variant_id);
-                    if (variant) variantMaterial = variant.material;
-                }
+                const variant = oi.variant_id ? variantMap[oi.variant_id.toString()] : null;
+                const variantMaterial = variant?.material || null;
 
-                // Get best image
-                let imageQuery = { product_id: product._id };
+                // Find best image
+                const prodImages = imageMap[product._id.toString()] || [];
+                let image = null;
                 if (oi.variant_id) {
-                    imageQuery.$or = [
-                        { variant_id: oi.variant_id },
-                        { variant_id: null }
-                    ];
+                    image = prodImages.find(img => img.variant_id?.toString() === oi.variant_id.toString())
+                        || prodImages.find(img => !img.variant_id);
+                } else {
+                    image = prodImages.find(img => img.is_primary) || prodImages[0] || null;
                 }
-                const image = await ProductImage.findOne(imageQuery).sort({ is_primary: -1 });
 
                 rows.push({
                     order_id: order._id,

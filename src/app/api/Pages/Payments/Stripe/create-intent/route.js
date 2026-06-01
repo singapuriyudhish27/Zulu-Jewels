@@ -7,7 +7,12 @@ import Product from "@/lib/models/Product";
 import ProductVariant from "@/lib/models/ProductVariant";
 import CartItem from "@/lib/models/CartItem";
 
+if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('[Stripe] STRIPE_SECRET_KEY environment variable is not configured.');
+}
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+const ALLOWED_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY', 'CHF', 'NZD', 'MYR', 'HKD', 'ZAR', 'SAR', 'THB'];
 
 // Helper function to extract user from session cookie
 async function getUserFromCookie() {
@@ -30,6 +35,9 @@ export async function POST(req) {
     }
 
     const { currency = "INR", specificItem } = await req.json();
+    const safeCurrency = ALLOWED_CURRENCIES.includes((currency || '').toUpperCase())
+        ? currency.toUpperCase()
+        : 'INR';
 
     await connectDB();
 
@@ -79,7 +87,7 @@ export async function POST(req) {
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(finalAmount * 100),
-      currency,
+      currency: safeCurrency,
       automatic_payment_methods: { enabled: true },
       metadata: {
         userId: user.userId,
@@ -90,6 +98,6 @@ export async function POST(req) {
     return NextResponse.json({ clientSecret: paymentIntent.client_secret });
   } catch (error) {
     console.error("Stripe Checkout Error:", error);
-    return NextResponse.json({ error: error.message }, { status: 500 });
+    return NextResponse.json({ error: "Payment service temporarily unavailable. Please try again." }, { status: 500 });
   }
 }

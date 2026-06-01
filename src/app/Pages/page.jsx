@@ -844,7 +844,7 @@ export default function HomePage() {
                       <span className="zj-testimonial-name">{t.name}</span>
                       <span className="zj-testimonial-verified-badge">✓</span>
                     </div>
-                    <p className="zj-testimonial-text">"{t.text}"</p>
+                    <p className="zj-testimonial-text">&ldquo;{t.text}&rdquo;</p>
                   </div>
                 ))}
               </div>

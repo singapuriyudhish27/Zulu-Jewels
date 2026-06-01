@@ -29,46 +29,95 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        const orders = await Order.find().sort({ created_at: -1 });
-        console.log("Backend API To Get Users, Categories, Products Images, Products, Order Items, Orders & Customers.");
+        const orders = await Order.find().sort({ created_at: -1 }).limit(100).lean();
 
-        //Order Grouping
-        const recentOrders = [];
 
-        for (const o of orders) {
-            const customer = o.customer_id ? await Customer.findById(o.customer_id) : null;
-            const user = customer?.user_id ? await User.findById(customer.user_id).select('firstName lastName email phone') : null;
-            const items = await OrderItem.find({ order_id: o._id }).sort({ _id: 1 });
+        const customerIds = orders.map(o => o.customer_id).filter(Boolean);
 
-            const orderItems = [];
-            for (const oi of items) {
-                const product = await Product.findById(oi.product_id);
-                let category = null;
-                if (product?.category_id) {
-                    const cat = await Category.findById(product.category_id);
-                    category = cat ? { id: cat._id, name: cat.name } : null;
-                }
+        // Fetch customers in bulk
+        const customers = await Customer.find({ _id: { $in: customerIds } }).lean();
+        const customersMap = {};
+        for (const c of customers) {
+            customersMap[c._id.toString()] = c;
+        }
 
-                let variant_material = null;
-                if (oi.variant_id) {
-                    const variant = await ProductVariant.findById(oi.variant_id);
-                    variant_material = variant ? variant.material : null;
-                }
+        const userIds = customers.map(c => c.user_id).filter(Boolean);
 
-                orderItems.push({
-                    order_item_id: oi._id,
-                    product_id: product?._id || null,
-                    product_name: product?.name || null,
-                    product_price: product?.price || null,
-                    quantity: oi.quantity,
-                    item_price: oi.price,
-                    category,
-                    variant_id: oi.variant_id || null,
-                    variant_material,
-                });
+        // Fetch users in bulk
+        const users = await User.find({ _id: { $in: userIds } })
+            .select('firstName lastName email phone')
+            .lean();
+        
+        const usersMap = {};
+        for (const u of users) {
+            usersMap[u._id.toString()] = u;
+        }
+
+        const orderIds = orders.map(o => o._id);
+
+        // Fetch order items in bulk
+        const orderItems = await OrderItem.find({ order_id: { $in: orderIds } })
+            .sort({ _id: 1 })
+            .lean();
+
+        const productIds = orderItems.map(oi => oi.product_id).filter(Boolean);
+
+        // Fetch products in bulk
+        const products = await Product.find({ _id: { $in: productIds } }).lean();
+        const productsMap = {};
+        for (const p of products) {
+            productsMap[p._id.toString()] = p;
+        }
+
+        const categoryIds = products.map(p => p.category_id).filter(Boolean);
+
+        // Fetch categories in bulk
+        const categories = await Category.find({ _id: { $in: categoryIds } }).lean();
+        const categoriesMap = {};
+        for (const cat of categories) {
+            categoriesMap[cat._id.toString()] = { id: cat._id, name: cat.name };
+        }
+
+        const variantIds = orderItems.map(oi => oi.variant_id).filter(Boolean);
+
+        // Fetch variants in bulk
+        const variants = await ProductVariant.find({ _id: { $in: variantIds } }).lean();
+        const variantsMap = {};
+        for (const v of variants) {
+            variantsMap[v._id.toString()] = v.material;
+        }
+
+        // Map order items by order ID
+        const orderItemsMap = {};
+        for (const oi of orderItems) {
+            const oid = oi.order_id.toString();
+            if (!orderItemsMap[oid]) {
+                orderItemsMap[oid] = [];
             }
 
-            recentOrders.push({
+            const product = oi.product_id ? productsMap[oi.product_id.toString()] : null;
+            const category = product?.category_id ? categoriesMap[product.category_id.toString()] : null;
+            const variant_material = oi.variant_id ? variantsMap[oi.variant_id.toString()] : null;
+
+            orderItemsMap[oid].push({
+                order_item_id: oi._id,
+                product_id: product?._id || null,
+                product_name: product?.name || null,
+                product_price: product?.price || null,
+                quantity: oi.quantity,
+                item_price: oi.price,
+                category,
+                variant_id: oi.variant_id || null,
+                variant_material,
+            });
+        }
+
+        const recentOrders = orders.map(o => {
+            const customer = o.customer_id ? customersMap[o.customer_id.toString()] : null;
+            const user = customer?.user_id ? usersMap[customer.user_id.toString()] : null;
+            const items = orderItemsMap[o._id.toString()] || [];
+
+            return {
                 order_id: o._id,
                 order_date: o.order_date,
                 payment_method: o.payment_method,
@@ -97,9 +146,9 @@ export async function GET(req) {
                     email: user.email,
                     phone: user.phone,
                 } : { id: null, firstName: null, lastName: null, email: null, phone: null },
-                items: orderItems,
-            });
-        }
+                items,
+            };
+        });
 
         return NextResponse.json({
             success: true,
@@ -109,7 +158,7 @@ export async function GET(req) {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Orders Data:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }
 
@@ -143,6 +192,10 @@ export async function PUT(request) {
                 success: false,
                 message: "Order ID is required"
             }, { status: 400 });
+        }
+
+        if (!/^[0-9a-fA-F]{24}$/.test(order_id)) {
+            return NextResponse.json({ success: false, message: "Invalid Order ID format" }, { status: 400 });
         }
 
         // Build dynamic update fields
@@ -203,7 +256,7 @@ export async function PUT(request) {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Editing Orders:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }
 
@@ -223,6 +276,10 @@ export async function DELETE(request) {
                 { success: false, message: "Order ID is required." },
                 { status: 400 }
             );
+        }
+
+        if (!/^[0-9a-fA-F]{24}$/.test(order_id)) {
+            return NextResponse.json({ success: false, message: "Invalid Order ID format" }, { status: 400 });
         }
 
         // Fetch the order to validate status
@@ -248,7 +305,7 @@ export async function DELETE(request) {
         // Delete the order
         await Order.deleteOne({ _id: order_id });
 
-        console.log(`Order #${order_id} (Cancelled) deleted by Admin.`);
+
 
         return NextResponse.json({
             success: true,

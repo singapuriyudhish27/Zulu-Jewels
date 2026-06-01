@@ -9,6 +9,6 @@ export async function GET() {
         return NextResponse.json({
             success: false,
             message: "Error In Backend API Call"
-        });
+        }, { status: 500 });
     }
 }

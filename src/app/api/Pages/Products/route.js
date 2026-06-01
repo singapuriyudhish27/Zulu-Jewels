@@ -4,6 +4,10 @@ import Category from "@/lib/models/Category";
 import Product from "@/lib/models/Product";
 import ProductImage from "@/lib/models/ProductImage";
 
+function escapeRegExp(string) {
+    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+}
+
 export async function GET(request) {
     try {
         const { searchParams } = new URL(request.url);
@@ -21,11 +25,7 @@ export async function GET(request) {
                 categoryFilter = { _id: null }; // Invalid ObjectId format shouldn't match anything
             }
         }
-        const cats = await Category.find(categoryFilter).sort({ name: 1 });
-
-function escapeRegExp(string) {
-    return string.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
-}
+        const cats = await Category.find(categoryFilter).sort({ name: 1 }).lean();
 
         // Build product filter
         const productFilter = { is_deleted: false };
@@ -35,38 +35,65 @@ function escapeRegExp(string) {
             productFilter.$or = [{ name: regex }, { description: regex }];
         }
 
-        console.log("Backend API To Get Products with Filters.");
 
-        //Group The Data
-        const categoriesResult = [];
 
-        for (const cat of cats) {
-            const products = await Product.find({ ...productFilter, category_id: cat._id }).sort({ _id: -1 });
+        const catIds = cats.map(c => c._id);
 
-            const productsWithImages = [];
-            for (const p of products) {
-                const images = await ProductImage.find({ product_id: p._id }).sort({ variant_id: 1, media_url: 1 });
+        // Fetch products in bulk
+        const products = await Product.find({ ...productFilter, category_id: { $in: catIds } })
+            .sort({ _id: -1 })
+            .lean();
 
-                productsWithImages.push({
-                    id: p._id,
-                    category_id: cat._id,
-                    name: p.name,
-                    description: p.description,
-                    price: p.price,
-                    is_active: p.is_active,
-                    gender: p.gender,
-                    created_at: p.created_at,
-                    updated_at: p.updated_at,
-                    images: images.map(img => ({
-                        id: img._id,
-                        variant_id: img.variant_id,
-                        image_url: img.media_url,
-                        is_primary: img.is_primary,
-                    })),
-                    swatches: []
-                });
+        const productIds = products.map(p => p._id);
+
+        // Fetch images in bulk
+        const allImages = await ProductImage.find({ product_id: { $in: productIds } })
+            .sort({ variant_id: 1, media_url: 1 })
+            .lean();
+
+        const imagesMap = {};
+        for (const img of allImages) {
+            const pid = img.product_id.toString();
+            if (!imagesMap[pid]) {
+                imagesMap[pid] = [];
+            }
+            imagesMap[pid].push(img);
+        }
+
+        // Group products by category ID
+        const productsMap = {};
+        for (const p of products) {
+            if (!p.category_id) continue;
+            const cid = p.category_id.toString();
+            if (!productsMap[cid]) {
+                productsMap[cid] = [];
             }
 
+            const images = imagesMap[p._id.toString()] || [];
+            productsMap[cid].push({
+                id: p._id,
+                category_id: p.category_id,
+                name: p.name,
+                description: p.description,
+                price: p.price,
+                is_active: p.is_active,
+                gender: p.gender,
+                created_at: p.created_at,
+                updated_at: p.updated_at,
+                images: images.map(img => ({
+                    id: img._id,
+                    variant_id: img.variant_id,
+                    image_url: img.media_url,
+                    is_primary: img.is_primary,
+                })),
+                swatches: []
+            });
+        }
+
+        // Group The Data
+        const categoriesResult = [];
+        for (const cat of cats) {
+            const productsWithImages = productsMap[cat._id.toString()] || [];
             if (productsWithImages.length > 0 || !search) {
                 categoriesResult.push({
                     id: cat._id,
@@ -84,6 +111,6 @@ function escapeRegExp(string) {
         });
     } catch (error) {
         console.error("Error Getting All Products Data:", error);
-        return NextResponse.json({message: "Error In Backend API Call"});
+        return NextResponse.json({message: "Error In Backend API Call"}, { status: 500 });
     }
 }

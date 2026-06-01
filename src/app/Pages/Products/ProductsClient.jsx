@@ -39,19 +39,20 @@ function ProductsContent({ initialCategories }) {
 
   useEffect(() => {
     if (initialCategories) {
-      if (categoryId) {
-        const cat = initialCategories.find(c => String(c.id) === categoryId);
-        setActiveCategory(cat || null);
-        setProducts(cat ? (cat.products || []) : initialCategories.flatMap(c => c.products || []));
-      } else {
-        setActiveCategory(null);
-        setProducts(initialCategories.flatMap(cat => cat.products || []));
-      }
-      setLoading(false);
+      const cat = categoryId ? (initialCategories.find(c => String(c.id) === categoryId) || null) : null;
+      const prods = categoryId 
+        ? (initialCategories.find(c => String(c.id) === categoryId)?.products || [])
+        : initialCategories.flatMap(c => c.products || []);
+
+      Promise.resolve().then(() => {
+        setActiveCategory(cat);
+        setProducts(prods);
+        setLoading(false);
+      });
       return;
     }
 
-    setLoading(true);
+    Promise.resolve().then(() => setLoading(true));
     const apiUrl = categoryId 
       ? `/api/Pages/Products?category=${categoryId}`
       : '/api/Pages/Products';

@@ -3,16 +3,21 @@ import { connectDB } from "@/lib/db";
 import Coupon from "@/lib/models/Coupon";
 import Banner from "@/lib/models/Banner";
 import ContentPage from "@/lib/models/ContentPage";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 //Get The Marketing Data
-export async function GET() {
+export async function GET(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
 
         const coupons = await Coupon.find().sort({ valid_until: -1 });
         const banners = await Banner.find().sort({ title: 1 });
         const contentPages = await ContentPage.find().sort({ updated_at: -1 });
-        console.log("Backend API To Get Banners, Coupons & Content Pages.");
+
 
         return NextResponse.json({
             success: true,
@@ -24,12 +29,16 @@ export async function GET() {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Marketing Data:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }
 
 //Add New Coupon
 export async function POST(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { coupon_code, discount, discount_type, min_order_amount, max_discount, valid_until, is_active } = await req.json();
@@ -57,12 +66,20 @@ export async function POST(req) {
 
 //Edit Coupon
 export async function PUT(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { id, coupon_code, discount, discount_type, min_order_amount, max_discount, valid_until, is_active } = await req.json();
 
         if (!id || !coupon_code || !discount || !discount_type) {
             return NextResponse.json({ success: false, message: "ID, Code, Discount, and Type are required" }, { status: 400 });
+        }
+
+        if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+            return NextResponse.json({ success: false, message: "Invalid Coupon ID format" }, { status: 400 });
         }
 
         await Coupon.updateOne({ _id: id }, {
@@ -84,6 +101,10 @@ export async function PUT(req) {
 
 //Delete Coupon
 export async function DELETE(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { searchParams } = new URL(req.url);
@@ -91,6 +112,10 @@ export async function DELETE(req) {
 
         if (!id) {
             return NextResponse.json({ success: false, message: "ID is required" }, { status: 400 });
+        }
+
+        if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+            return NextResponse.json({ success: false, message: "Invalid Coupon ID format" }, { status: 400 });
         }
 
         await Coupon.deleteOne({ _id: id });

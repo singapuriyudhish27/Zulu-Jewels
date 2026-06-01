@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import ShippingPartner from "@/lib/models/ShippingPartner";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 // Add New Shipping Partner
 export async function POST(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const body = await request.json();
         const { partner_name, type, tracking_url, delivery_days, status } = body;
@@ -21,7 +26,7 @@ export async function POST(request) {
             status: status !== undefined ? status : true
         });
 
-        console.log("✅ New Shipping Partner Added:", partner_name);
+
         return NextResponse.json({ success: true, message: "Shipping Partner added successfully", data: newPartner }, { status: 201 });
     } catch (error) {
         console.error("Error Adding Shipping Partner:", error);
@@ -31,6 +36,10 @@ export async function POST(request) {
 
 // Edit Shipping Partner
 export async function PUT(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const body = await request.json();
         const { id, partner_name, type, tracking_url, delivery_days, status } = body;
@@ -48,7 +57,7 @@ export async function PUT(request) {
             status: status !== undefined ? status : true
         }, { new: true });
 
-        console.log("✅ Shipping Partner Updated:", partner_name);
+
         return NextResponse.json({ success: true, message: "Shipping Partner updated successfully", data: updatedPartner }, { status: 200 });
     } catch (error) {
         console.error("Error Editing Shipping Partner:", error);
@@ -58,6 +67,10 @@ export async function PUT(request) {
 
 // Delete Shipping Partner
 export async function DELETE(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
@@ -69,7 +82,7 @@ export async function DELETE(request) {
         await connectDB();
         await ShippingPartner.deleteOne({ _id: id });
 
-        console.log("✅ Shipping Partner Deleted, ID:", id);
+
         return NextResponse.json({ success: true, message: "Shipping Partner deleted successfully" }, { status: 200 });
     } catch (error) {
         console.error("Error Deleting Shipping Partner:", error);

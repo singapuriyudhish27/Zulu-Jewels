@@ -19,9 +19,9 @@ export async function GET(req) {
         const shippingZones = await ShippingZone.find().sort({ zone_name: 1 });
         const shippingPartners = await ShippingPartner.find().sort({ partner_name: 1 });
         const paymentOptions = await PaymentOption.find().sort({ category: 1 });
-        const transactions = await Transaction.find().sort({ created_at: -1 });
+        const transactions = await Transaction.find().sort({ created_at: -1 }).limit(100);
 
-        console.log("Backend API To Get Shipping Zones, Shipping Partners, Payment Options & Transactions.");
+
         return NextResponse.json({
             success: true,
             data: {
@@ -33,6 +33,6 @@ export async function GET(req) {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Shipping & Payment Data:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }

@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Transaction from "@/lib/models/Transaction";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 // Download Receipt - Get Transaction Details by ID
 export async function GET(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");

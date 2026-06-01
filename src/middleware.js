@@ -62,7 +62,7 @@ async function isValidPortalSlug(request, slug) {
 }
 
 function hasAdminSession(request) {
-  return Boolean(request.cookies.get('zulu_jewels')?.value);
+  return Boolean(request.cookies.get('zulu_jewels_admin')?.value);
 }
 
 export async function middleware(request) {

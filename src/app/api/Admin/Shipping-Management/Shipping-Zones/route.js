@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import ShippingZone from "@/lib/models/ShippingZone";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 // Add New Shipping Zone
 export async function POST(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const body = await request.json();
         const { zone_name, areas, location, shipping_rate, delivery_time, status } = body;
@@ -22,7 +27,7 @@ export async function POST(request) {
             status: status !== undefined ? status : true
         });
 
-        console.log("✅ New Shipping Zone Added:", zone_name);
+
         return NextResponse.json({ success: true, message: "Shipping Zone added successfully", data: newZone }, { status: 201 });
     } catch (error) {
         console.error("Error Adding Shipping Zone:", error);
@@ -32,6 +37,10 @@ export async function POST(request) {
 
 // Edit Shipping Zone
 export async function PUT(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const body = await request.json();
         const { id, zone_name, areas, location, shipping_rate, delivery_time, status } = body;
@@ -50,7 +59,7 @@ export async function PUT(request) {
             status: status !== undefined ? status : true
         }, { new: true });
 
-        console.log("✅ Shipping Zone Updated:", zone_name);
+
         return NextResponse.json({ success: true, message: "Shipping Zone updated successfully", data: updatedZone }, { status: 200 });
     } catch (error) {
         console.error("Error Editing Shipping Zone:", error);
@@ -60,6 +69,10 @@ export async function PUT(request) {
 
 // Delete Shipping Zone
 export async function DELETE(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
@@ -71,7 +84,7 @@ export async function DELETE(request) {
         await connectDB();
         await ShippingZone.deleteOne({ _id: id });
 
-        console.log("✅ Shipping Zone Deleted, ID:", id);
+
         return NextResponse.json({ success: true, message: "Shipping Zone deleted successfully" }, { status: 200 });
     } catch (error) {
         console.error("Error Deleting Shipping Zone:", error);

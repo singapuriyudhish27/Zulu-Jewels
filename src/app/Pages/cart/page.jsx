@@ -564,7 +564,7 @@ export default function CartPage() {
           <div className="ca-empty">
             <div className="ca-empty-icon">🛍️</div>
             <h2 className="ca-empty-title">Your cart is empty</h2>
-            <p className="ca-empty-text">Looks like you haven't added any jewelry to your cart yet. Explore our collections to find the perfect piece.</p>
+            <p className="ca-empty-text">{"Looks like you haven't added any jewelry to your cart yet. Explore our collections to find the perfect piece."}</p>
             <Link href="/Pages/Products" className="ca-checkout-btn" style={{ textDecoration: 'none' }}>
               <ShoppingBag size={16} /> Explore Collections
             </Link>

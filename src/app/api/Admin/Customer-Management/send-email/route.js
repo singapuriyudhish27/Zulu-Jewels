@@ -1,7 +1,18 @@
 import { NextResponse } from "next/server";
-import nodemailer from "nodemailer";
-
 import { verifyAdminFromRequest } from "@/lib/adminAuth";
+import { getTransporter } from "@/lib/email/mailer";
+import { connectDB } from "@/lib/db";
+import User from "@/lib/models/User";
+
+function escapeHtml(text) {
+  if (typeof text !== 'string') return '';
+  return text
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
 
 export async function POST(req) {
     const auth = await verifyAdminFromRequest(req);
@@ -18,16 +29,19 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
+        await connectDB();
+        // Check database to ensure target is a registered user
+        const customerExists = await User.findOne({ email: to });
+        if (!customerExists) {
+            return NextResponse.json({
+                success: false,
+                message: "Recipient must be a registered customer"
+            }, { status: 400 });
+        }
+
         // Configure Nodemailer
-        const transporter = nodemailer.createTransport({
-            host: process.env.SMTP_HOST,
-            port: Number(process.env.SMTP_PORT),
-            secure: false, // true for 465, false for other ports
-            auth: {
-                user: process.env.SMTP_USER,
-                pass: process.env.SMTP_PASS,
-            },
-        });
+        const transporter = getTransporter();
+        const escapedMessage = escapeHtml(message).replace(/\n/g, '<br>');
 
         // Set up email options
         const mailOptions = {
@@ -37,7 +51,7 @@ export async function POST(req) {
             html: `
                 <div style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; line-height: 1.6; color: #2c2c2c;">
                     <h2 style="color: #d4af37; border-bottom: 2px solid #d4af37; padding-bottom: 10px;">Message from Zulu Jewels</h2>
-                    <p>${message.replace(/\n/g, '<br>')}</p>
+                    <p>${escapedMessage}</p>
                     <br/>
                     <div style="margin-top: 20px; border-top: 1px solid #d9d9d9; padding-top: 10px; font-size: 12px; color: #4a4a4a;">
                         <p>Best regards,<br/>

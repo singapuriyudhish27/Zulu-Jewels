@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import ContentPage from "@/lib/models/ContentPage";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 //Add New Content Page
 export async function POST(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { page_name, url, content, status } = await req.json();
@@ -28,6 +33,10 @@ export async function POST(req) {
 
 //Edit Content Page
 export async function PUT(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { id, page_name, url, content, status } = await req.json();
@@ -52,6 +61,10 @@ export async function PUT(req) {
 
 //Delete Content Page
 export async function DELETE(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { searchParams } = new URL(req.url);

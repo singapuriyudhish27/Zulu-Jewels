@@ -24,8 +24,6 @@ async function getUserIdFromCookie() {
 export async function GET() {
     try {
         const user = await getUserIdFromCookie();
-        const userId = user.userId;
-        const email = user.email;
 
         if (!user) {
             return NextResponse.json({
@@ -33,6 +31,9 @@ export async function GET() {
                 message: "Unauthorized"
             }, { status: 401 });
         }
+
+        const userId = user.userId;
+        const email = user.email;
 
         //If Admin Login
         if (email === process.env.ADMIN_EMAIL) {
@@ -45,34 +46,60 @@ export async function GET() {
         await connectDB();
         const role = "User";
 
-        const likes = await UserLike.find({ user_id: userId }).sort({ created_at: -1 });
-        console.log("Backend API To Get Users & User's Liked Products(Wishlists).");
+        const likes = await UserLike.find({ user_id: userId }).sort({ created_at: -1 }).lean();
+
+
+        const productIds = likes.map(l => l.product_id);
+        const variantIds = likes.map(l => l.variant_id).filter(Boolean);
+
+        // Fetch products, variants, and images in bulk
+        const [products, variants, images] = await Promise.all([
+            Product.find({ _id: { $in: productIds } }).lean(),
+            ProductVariant.find({ _id: { $in: variantIds } }).lean(),
+            ProductImage.find({ product_id: { $in: productIds } }).lean()
+        ]);
+
+        // Map to O(1) lookups
+        const productMap = Object.fromEntries(products.map(p => [p._id.toString(), p]));
+        const variantMap = Object.fromEntries(variants.map(v => [v._id.toString(), v]));
+        
+        const imagesMap = {};
+        for (const img of images) {
+            const pid = img.product_id.toString();
+            if (!imagesMap[pid]) {
+                imagesMap[pid] = [];
+            }
+            imagesMap[pid].push(img);
+        }
 
         const data = [];
         for (const like of likes) {
-            const product = await Product.findById(like.product_id);
+            const product = productMap[like.product_id.toString()];
             if (!product) continue;
 
             let price = product.price;
             let variantMaterial = null;
 
             if (like.variant_id) {
-                const variant = await ProductVariant.findById(like.variant_id);
+                const variant = variantMap[like.variant_id.toString()];
                 if (variant) {
                     price = variant.price || product.price;
                     variantMaterial = variant.material;
                 }
             }
 
-            // Get best image
-            let imageQuery = { product_id: product._id };
+            // Find best image
+            const prodImages = imagesMap[product._id.toString()] || [];
+            let image = null;
             if (like.variant_id) {
-                imageQuery.$or = [
-                    { variant_id: like.variant_id },
-                    { variant_id: null }
-                ];
+                image = prodImages.find(img => img.variant_id?.toString() === like.variant_id.toString()) ||
+                        prodImages.find(img => !img.variant_id);
+            } else {
+                image = prodImages.find(img => !img.variant_id);
             }
-            const image = await ProductImage.findOne(imageQuery).sort({ is_primary: -1 });
+            if (!image && prodImages.length > 0) {
+                image = prodImages.find(img => img.is_primary) || prodImages[0];
+            }
 
             data.push({
                 wishlist_id: like._id,
@@ -96,7 +123,7 @@ export async function GET() {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting WhishList Data:", error);
-        return NextResponse.json({message: "Error In Backend API Call"});
+        return NextResponse.json({message: "Error In Backend API Call"}, { status: 500 });
     }
 }
 
@@ -121,6 +148,14 @@ export async function POST(req) {
             }, { status: 400 });
         }
 
+        const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
+        if (!OBJECT_ID_RE.test(product_id)) {
+            return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
+        }
+        if (variant_id && !OBJECT_ID_RE.test(variant_id)) {
+            return NextResponse.json({ success: false, message: "Invalid variant ID format" }, { status: 400 });
+        }
+
         //Database Connection
         await connectDB();
 
@@ -131,7 +166,7 @@ export async function POST(req) {
             { user_id: userId, product_id, variant_id: variant_id || null, is_custom },
             { upsert: true, new: true }
         );
-        console.log("Backend API To Add New Products To User's Wishlists.");
+
 
         return NextResponse.json({
             success: true,
@@ -139,7 +174,7 @@ export async function POST(req) {
         }, { status: 201 });
     } catch (error) {
         console.error("Error Adding WhishList Data:", error);
-        return NextResponse.json({message: "Error In Backend API Call"});
+        return NextResponse.json({message: "Error In Backend API Call"}, { status: 500 });
     }
 }
 
@@ -164,6 +199,14 @@ export async function DELETE(req) {
             }, { status: 400 });
         }
 
+        const OBJECT_ID_RE = /^[0-9a-fA-F]{24}$/;
+        if (!OBJECT_ID_RE.test(product_id)) {
+            return NextResponse.json({ success: false, message: "Invalid product ID format" }, { status: 400 });
+        }
+        if (variant_id && !OBJECT_ID_RE.test(variant_id)) {
+            return NextResponse.json({ success: false, message: "Invalid variant ID format" }, { status: 400 });
+        }
+
         //Database Connection
         await connectDB();
 
@@ -174,7 +217,7 @@ export async function DELETE(req) {
             product_id,
             variant_id: variant_id || null
         });
-        console.log("Backend API To Remove Products From User's Wishlists.");
+
 
         if (result.deletedCount === 0) {
             return NextResponse.json(
@@ -189,6 +232,6 @@ export async function DELETE(req) {
         }, { status: 201 });
     } catch (error) {
         console.error("Error Removing Wishlist Data:", error);
-        return NextResponse.json({message: "Error In Backend API Call"});
+        return NextResponse.json({message: "Error In Backend API Call"}, { status: 500 });
     }
 }

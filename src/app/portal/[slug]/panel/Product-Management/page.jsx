@@ -770,7 +770,7 @@ export default function ProductManagementPage() {
                     </button>
                   </div>
                   {productForm.variants.length === 0 ? (
-                    <p style={{ textAlign: 'center', color: '#bbb', padding: '10px 0 2px', fontSize: '12px' }}>No variants yet — click "Add Metal Variant".</p>
+                    <p style={{ textAlign: 'center', color: '#bbb', padding: '10px 0 2px', fontSize: '12px' }}>No variants yet &mdash; click &ldquo;Add Metal Variant&rdquo;.</p>
                   ) : (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
                       {productForm.variants.map((v, vIdx) => (

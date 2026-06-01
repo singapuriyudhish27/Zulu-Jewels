@@ -3,19 +3,24 @@ import { connectDB } from "@/lib/db";
 import User from "@/lib/models/User";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function POST(req) {
     try {
+        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+        if (!rateLimit(ip, 5, 300000)) {
+            return NextResponse.json({ message: "Too many password reset attempts. Please try again in 5 minutes." }, { status: 429 });
+        }
+
         const { email, token, newPassword } = await req.json();
 
         if (!email || !token || !newPassword) {
             return NextResponse.json({ message: "Email, token, and new password are required" }, { status: 400 });
         }
 
-        if (newPassword.length < 8) {
-            return NextResponse.json({ message: "Password must be at least 8 characters long" }, { status: 400 });
+        if (newPassword.length < 8 || newPassword.length > 72) {
+            return NextResponse.json({ message: "Password must be between 8 and 72 characters long" }, { status: 400 });
         }
-
         await connectDB();
 
         const user = await User.findOne({ email });

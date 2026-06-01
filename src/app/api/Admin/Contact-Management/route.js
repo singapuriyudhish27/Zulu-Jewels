@@ -12,17 +12,25 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        const inquiries = await Inquiry.find().sort({ _id: -1 });
-        console.log("Backend API To Get Users & Inquiries.");
+        const inquiries = await Inquiry.find().sort({ _id: -1 }).lean();
 
-        const data = [];
-        for (const i of inquiries) {
-            let user = null;
-            if (i.user_id) {
-                user = await User.findById(i.user_id).select('firstName lastName email phone is_active is_verified');
-            }
 
-            data.push({
+        const userIds = inquiries.map(i => i.user_id).filter(Boolean);
+
+        // Fetch users in bulk
+        const users = await User.find({ _id: { $in: userIds } })
+            .select('firstName lastName email phone is_active is_verified')
+            .lean();
+        
+        const usersMap = {};
+        for (const u of users) {
+            usersMap[u._id.toString()] = u;
+        }
+
+        const data = inquiries.map(i => {
+            const user = i.user_id ? usersMap[i.user_id.toString()] : null;
+
+            return {
                 userId: user?._id || null,
                 firstName: user?.firstName || null,
                 lastName: user?.lastName || null,
@@ -37,17 +45,16 @@ export async function GET(req) {
                     status: i.status,
                     created_at: i.created_at,
                 }
-            });
-        }
+            };
+        });
 
         return NextResponse.json({
             success: true,
-            data,
-            adminEmail: process.env.SMTP_USER
+            data
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Inquiry Data:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }
 

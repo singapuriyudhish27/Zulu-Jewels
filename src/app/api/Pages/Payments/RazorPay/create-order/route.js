@@ -7,6 +7,12 @@ import Product from "@/lib/models/Product";
 import ProductVariant from "@/lib/models/ProductVariant";
 import CartItem from "@/lib/models/CartItem";
 
+if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    throw new Error('[RazorPay] RAZORPAY_KEY_ID or RAZORPAY_KEY_SECRET environment variable is not configured.');
+}
+
+const ALLOWED_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY', 'CHF', 'NZD', 'MYR', 'HKD', 'ZAR', 'SAR', 'THB'];
+
 const razorPay = new Razorpay({
     key_id: process.env.RAZORPAY_KEY_ID,
     key_secret: process.env.RAZORPAY_KEY_SECRET,
@@ -32,6 +38,9 @@ export async function POST(req) {
         }
 
         const { currency = "INR", receipt, specificItem } = await req.json();
+        const safeCurrency = ALLOWED_CURRENCIES.includes((currency || '').toUpperCase())
+            ? currency.toUpperCase()
+            : 'INR';
 
         await connectDB();
 
@@ -70,10 +79,9 @@ export async function POST(req) {
             return NextResponse.json({ error: "Invalid payment amount calculated" }, { status: 400 });
         }
 
-        // Razorpay expects amount in paise (multiply by 100)
         const options = {
             amount: Math.round(finalAmount * 100),
-            currency,
+            currency: safeCurrency,
             receipt: receipt || `rcpt_${Date.now()}`,
         };
 

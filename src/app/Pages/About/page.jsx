@@ -350,7 +350,7 @@ export default function AboutPage() {
             <div className="ab-journey-content">
               <h2 className="ab-journey-title">Our Journey of Craftsmanship and Passion</h2>
               <p className="ab-journey-text">
-                Founded with a vision to redefine luxury, ZULU JEWELLERS has been creating exquisite jewelry that combines timeless elegance with modern design. Our mission is to craft pieces that celebrate life's precious moments.
+                Founded with a vision to redefine luxury, ZULU JEWELLERS has been creating exquisite jewelry that combines timeless elegance with modern design. Our mission is to craft pieces that celebrate life&apos;s precious moments.
                 <br />
                 From humble beginnings to becoming a trusted name in premium jewelry, our brand is rooted in passion, precision, and authenticity. Every piece reflects our commitment to quality and artistry.
               </p>
@@ -390,7 +390,7 @@ export default function AboutPage() {
                 </li>
               </ul>
               <p className="ab-journey-text">
-                From concept to creation, our design process ensures perfection in every curve, sparkle, and finish. Whether it's a statement ring, a delicate bracelet, or a bridal set, our jewelry is a reflection of artistry and passion.
+                From concept to creation, our design process ensures perfection in every curve, sparkle, and finish. Whether it&apos;s a statement ring, a delicate bracelet, or a bridal set, our jewelry is a reflection of artistry and passion.
               </p>
             </div>
           </div>

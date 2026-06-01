@@ -23,6 +23,12 @@ async function getUserIdFromCookie() {
 export async function GET(request, { params }) {
     try {
         const { Product_Details: id } = await params;
+
+        // Validate ObjectId format to prevent Mongoose CastError
+        if (!id || !/^[0-9a-fA-F]{24}$/.test(id)) {
+            return NextResponse.json({ success: false, message: "Invalid Product ID" }, { status: 400 });
+        }
+
         await connectDB();
 
         const userId = await getUserIdFromCookie();
@@ -92,6 +98,14 @@ export async function POST(request) {
         const body = await request.json();
         const {product_id, variant_id, quantity = 1, action} = body;
 
+        const parsedQuantity = Math.floor(Number(quantity));
+        if (isNaN(parsedQuantity) || parsedQuantity <= 0) {
+            return NextResponse.json({
+                success: false,
+                message: "Quantity must be a positive integer"
+            }, { status: 400 });
+        }
+
         if (!product_id || !action) {
             return NextResponse.json({
                 success: false,
@@ -126,7 +140,7 @@ export async function POST(request) {
                     user_id: userId,
                     product_id,
                     variant_id: variant_id || null,
-                    quantity
+                    quantity: parsedQuantity
                 });
 
                 return NextResponse.json({
@@ -172,6 +186,6 @@ export async function POST(request) {
         }
     } catch (error) {
         console.error("Error Adding Cart Item:", error);
-        return NextResponse.json({message: "Error In Backend API Call"});
+        return NextResponse.json({message: "Error In Backend API Call"}, { status: 500 });
     }
 }

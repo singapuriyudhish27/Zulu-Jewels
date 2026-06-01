@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect } from 'react';
 import { useParams, useRouter } from 'next/navigation';
+import Link from 'next/link';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import toast, { Toaster } from 'react-hot-toast';
@@ -370,8 +371,8 @@ export default function DeliveryConfirmationPage() {
             <div style={{ textAlign: 'center', padding: '60px 40px' }}>
               <XCircle size={48} style={{ color: '#B05050', marginBottom: '16px', display: 'inline-block' }} />
               <h3 className="dc-thanks-title">Order Not Found</h3>
-              <p className="dc-thanks-text">We couldn't retrieve the details for this order. It may be invalid or expired.</p>
-              <a href="/Pages/Products" className="dc-back-btn">Go to Shop <ArrowRight size={14} /></a>
+              <p className="dc-thanks-text">{"We couldn't retrieve the details for this order. It may be invalid or expired."}</p>
+              <Link href="/Pages/Products" className="dc-back-btn">Go to Shop <ArrowRight size={14} /></Link>
             </div>
           ) : !submitted ? (
             <>
@@ -473,9 +474,9 @@ export default function DeliveryConfirmationPage() {
                 )}
               </div>
 
-              <a href="/Pages/Products" className="dc-back-btn">
+              <Link href="/Pages/Products" className="dc-back-btn">
                 Continue Shopping <ArrowRight size={14} />
-              </a>
+              </Link>
             </div>
           )}
         </div>

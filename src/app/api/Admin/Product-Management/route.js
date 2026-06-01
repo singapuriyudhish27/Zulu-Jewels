@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
 import { connectDB } from "@/lib/db";
 import { saveFile } from "@/lib/storage";
 import Category from "@/lib/models/Category";
@@ -16,25 +17,42 @@ export async function GET(request) {
         await connectDB();
 
         // Fetch Categories
-        const categories = await Category.find();
+        const categories = await Category.find().lean();
 
         // Fetch non-deleted products
-        const productsRaw = await Product.find({ is_deleted: false }).sort({ created_at: -1 });
+        const productsRaw = await Product.find({ is_deleted: false }).sort({ created_at: -1 }).lean();
+
+        const productIds = productsRaw.map(p => p._id);
+
+        // Fetch variants in bulk
+        const allVariants = await ProductVariant.find({ product_id: { $in: productIds } }).lean();
+        const variantsMap = {};
+        for (const v of allVariants) {
+            const pid = v.product_id.toString();
+            if (!variantsMap[pid]) {
+                variantsMap[pid] = [];
+            }
+            variantsMap[pid].push(v);
+        }
+
+        // Fetch images in bulk
+        const allImages = await ProductImage.find({ product_id: { $in: productIds } }).lean();
+        const imagesMap = {};
+        for (const img of allImages) {
+            const pid = img.product_id.toString();
+            if (!imagesMap[pid]) {
+                imagesMap[pid] = [];
+            }
+            imagesMap[pid].push(img);
+        }
 
         // Group Data
-        const products = [];
-
-        for (const p of productsRaw) {
-            // Find Category details
+        const products = productsRaw.map(p => {
             const category = categories.find(c => c._id.toString() === p.category_id?.toString());
-            
-            // Fetch Variants for this product
-            const variants = await ProductVariant.find({ product_id: p._id });
+            const variants = variantsMap[p._id.toString()] || [];
+            const images = imagesMap[p._id.toString()] || [];
 
-            // Fetch Images for this product
-            const images = await ProductImage.find({ product_id: p._id });
-
-            products.push({
+            return {
                 id: p._id,
                 name: p.name,
                 description: p.description,
@@ -47,10 +65,10 @@ export async function GET(request) {
                     id: category._id,
                     name: category.name,
                 } : { id: null, name: null },
-                variants: variants,
-                images: images
-            });
-        }
+                variants,
+                images
+            };
+        });
 
         return NextResponse.json({
             success: true,
@@ -59,7 +77,7 @@ export async function GET(request) {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Products Data:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }
 
@@ -110,52 +128,73 @@ export async function POST(request) {
 
         const productId = newProduct._id;
 
-        // Process Variants & Variant Media
-        for (let i = 0; i < variants.length; i++) {
-            const v = variants[i];
-            const newVariant = await ProductVariant.create({
-                product_id: productId,
-                material: v.material,
-                description: v.description,
-                price: Number(v.price) || Number(price),
-                stock: Number(v.stock) || 0
-            });
-            
-            const variantId = newVariant._id;
+        // Process Variants & Variant Media concurrently
+        const variantPromises = variants.map(async (v) => {
+            const variantId = new mongoose.Types.ObjectId();
             const variantMediaList = v.media || [];
             
-            for (let j = 0; j < variantMediaList.length; j++) {
-                const vm = variantMediaList[j];
+            const mediaUploadPromises = variantMediaList.map(async (vm) => {
                 const input = vm.fileData || vm.media_url || vm.url;
                 if (input) {
                     const uploadedUrl = await saveFile(input);
                     const mediaType = (vm.fileType && vm.fileType.startsWith("video/")) || (vm.media_type === "video") ? "video" : "image";
-                    await ProductImage.create({
+                    return {
                         product_id: productId,
                         variant_id: variantId,
                         media_url: uploadedUrl,
                         media_type: mediaType,
                         is_primary: Boolean(vm.is_primary)
-                    });
+                    };
                 }
-            }
-        }
-
-        // Process Generic Product Media
-        for (let i = 0; i < media.length; i++) {
-            const gm = media[i];
+                return null;
+            });
+            
+            const uploadedMedia = (await Promise.all(mediaUploadPromises)).filter(Boolean);
+            
+            return {
+                variantData: {
+                    _id: variantId,
+                    product_id: productId,
+                    material: v.material,
+                    description: v.description,
+                    price: Number(v.price) || Number(price),
+                    stock: Number(v.stock) || 0
+                },
+                mediaItems: uploadedMedia
+            };
+        });
+        
+        const genericMediaPromises = media.map(async (gm) => {
             const input = gm.fileData || gm.media_url || gm.url;
             if (input) {
                 const uploadedUrl = await saveFile(input);
                 const mediaType = (gm.fileType && gm.fileType.startsWith("video/")) || (gm.media_type === "video") ? "video" : "image";
-                await ProductImage.create({
+                return {
                     product_id: productId,
                     variant_id: null,
                     media_url: uploadedUrl,
                     media_type: mediaType,
                     is_primary: Boolean(gm.is_primary)
-                });
+                };
             }
+            return null;
+        });
+
+        // Run all concurrent uploads
+        const [resolvedVariants, resolvedGenericMedia] = await Promise.all([
+            Promise.all(variantPromises),
+            Promise.all(genericMediaPromises)
+        ]);
+
+        // Insert into database
+        for (const item of resolvedVariants) {
+            await ProductVariant.create(item.variantData);
+            for (const img of item.mediaItems) {
+                await ProductImage.create(img);
+            }
+        }
+        for (const img of resolvedGenericMedia.filter(Boolean)) {
+            await ProductImage.create(img);
         }
 
         return NextResponse.json({ success: true, message: "Product added successfully" }, { status: 201 });
@@ -189,6 +228,9 @@ export async function PUT(request) {
         } = data;
 
         if (!id) return NextResponse.json({ success: false, message: "Product Id Not Found" }, { status: 400 });
+        if (!/^[0-9a-fA-F]{24}$/.test(id)) {
+            return NextResponse.json({ success: false, message: "Invalid Product ID format" }, { status: 400 });
+        }
 
         // If it's a simple status toggle JSON update (only id and is_active are passed, others are missing), we do the update and return early
         const isStatusToggleOnly = !name && !category_name && !price;
@@ -235,70 +277,93 @@ export async function PUT(request) {
             await ProductImage.deleteMany({ variant_id: { $in: toDelete } });
         }
 
-        // 3. Update or Insert Variants
-        for (let i = 0; i < variants.length; i++) {
-            const v = variants[i];
+        // 3. Update or Insert Variants concurrently
+        const variantPromises = variants.map(async (v) => {
             let variantId = v.id || v._id;
+            const isUpdate = variantId && typeof variantId === 'string' && variantId.length > 5;
 
-            if (variantId && typeof variantId === 'string' && variantId.length > 5) {
-                // Update
-                await ProductVariant.updateOne({ _id: variantId, product_id: id }, {
-                    material: v.material,
-                    description: v.description,
-                    price: Number(v.price) || Number(price),
-                    stock: Number(v.stock) || 0
-                });
-            } else {
-                // Insert
-                const newVariant = await ProductVariant.create({
-                    product_id: id,
-                    material: v.material,
-                    description: v.description,
-                    price: Number(v.price) || Number(price),
-                    stock: Number(v.stock) || 0
-                });
-                variantId = newVariant._id.toString();
+            if (!isUpdate) {
+                variantId = new mongoose.Types.ObjectId().toString();
             }
 
-            // 4. Media Management for this Variant
+            // Upload variant media concurrently
             const variantMediaList = v.media || [];
-            
-            // Clear existing variant images to re-sync
-            await ProductImage.deleteMany({ variant_id: variantId });
-
-            for (let j = 0; j < variantMediaList.length; j++) {
-                const vm = variantMediaList[j];
+            const mediaUploadPromises = variantMediaList.map(async (vm) => {
                 const input = vm.fileData || vm.media_url || vm.url;
                 if (input) {
                     const uploadedUrl = await saveFile(input);
                     const mediaType = (vm.fileType && vm.fileType.startsWith("video/")) || (vm.media_type === "video") ? "video" : "image";
-                    await ProductImage.create({
+                    return {
                         product_id: id,
                         variant_id: variantId,
                         media_url: uploadedUrl,
                         media_type: mediaType,
                         is_primary: Boolean(vm.is_primary)
-                    });
+                    };
                 }
-            }
-        }
+                return null;
+            });
 
-        // Handle generic product media
-        await ProductImage.deleteMany({ product_id: id, variant_id: null });
-        for (let i = 0; i < media.length; i++) {
-            const gm = media[i];
+            const uploadedMedia = (await Promise.all(mediaUploadPromises)).filter(Boolean);
+
+            return {
+                variantId,
+                isUpdate,
+                variantData: {
+                    material: v.material,
+                    description: v.description,
+                    price: Number(v.price) || Number(price),
+                    stock: Number(v.stock) || 0
+                },
+                mediaItems: uploadedMedia
+            };
+        });
+
+        const genericMediaPromises = media.map(async (gm) => {
             const input = gm.fileData || gm.media_url || gm.url;
             if (input) {
                 const uploadedUrl = await saveFile(input);
                 const mediaType = (gm.fileType && gm.fileType.startsWith("video/")) || (gm.media_type === "video") ? "video" : "image";
-                await ProductImage.create({
+                return {
                     product_id: id,
                     variant_id: null,
                     media_url: uploadedUrl,
                     media_type: mediaType,
                     is_primary: Boolean(gm.is_primary)
+                };
+            }
+            return null;
+        });
+
+        // Run all concurrent uploads in parallel
+        const [resolvedVariants, resolvedGenericMedia] = await Promise.all([
+            Promise.all(variantPromises),
+            Promise.all(genericMediaPromises)
+        ]);
+
+        // Apply Database Writes
+        for (const item of resolvedVariants) {
+            if (item.isUpdate) {
+                await ProductVariant.updateOne({ _id: item.variantId, product_id: id }, item.variantData);
+            } else {
+                await ProductVariant.create({
+                    _id: item.variantId,
+                    product_id: id,
+                    ...item.variantData
                 });
             }
+
+            // Sync media for this variant
+            await ProductImage.deleteMany({ variant_id: item.variantId });
+            for (const img of item.mediaItems) {
+                await ProductImage.create(img);
+            }
+        }
+
+        // Generic media
+        await ProductImage.deleteMany({ product_id: id, variant_id: null });
+        for (const img of resolvedGenericMedia.filter(Boolean)) {
+            await ProductImage.create(img);
         }
 
         return NextResponse.json({ success: true, message: "Product updated successfully" }, { status: 200 });
@@ -320,6 +385,9 @@ export async function DELETE(request) {
         const { product_id } = body;
 
         if (!product_id) return NextResponse.json({ success: false, message: "Product id Not Found" }, { status: 400 });
+        if (!/^[0-9a-fA-F]{24}$/.test(product_id)) {
+            return NextResponse.json({ success: false, message: "Invalid Product ID format" }, { status: 400 });
+        }
 
         const product = await Product.findById(product_id);
         if (!product) return NextResponse.json({ success: false, message: "Product not found" }, { status: 404 });

@@ -30,8 +30,8 @@ export default function AboutPreview() {
               className="mb-6"
             />
             <p className="text-lg text-gray-600 mb-4">
-              At Zulu Jewels, we believe that jewelry is more than an accessory—it's a statement of 
-              personal style and a celebration of life's precious moments.
+              At Zulu Jewels, we believe that jewelry is more than an accessory&mdash;it&apos;s a statement of 
+              personal style and a celebration of life&apos;s precious moments.
             </p>
             <p className="text-lg text-gray-600 mb-6">
               Our master craftsmen combine traditional techniques with contemporary design, creating 

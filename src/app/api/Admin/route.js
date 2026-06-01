@@ -19,15 +19,15 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        // Database Collections
-        const orders = await Order.find().sort({ created_at: -1 });
-        const orderItems = await OrderItem.find().sort({ created_at: -1 });
-        const transactions = await Transaction.find().sort({ created_at: -1 });
-        const inquiries = await Inquiry.find().sort({ _id: -1 });
-        const reviews = await Review.find().sort({ rating: -1, created_at: -1 });
+        // Database Collections (limit query results to avoid memory exhaustion)
+        const orders = await Order.find().sort({ created_at: -1 }).limit(100);
+        const orderItems = await OrderItem.find().sort({ created_at: -1 }).limit(200);
+        const transactions = await Transaction.find().sort({ created_at: -1 }).limit(100);
+        const inquiries = await Inquiry.find().sort({ _id: -1 }).limit(100);
+        const reviews = await Review.find().sort({ rating: -1, created_at: -1 }).limit(100);
 
         // Calculate product order counts
-        const productsRaw = await Product.find();
+        const productsRaw = await Product.find().limit(200);
         
         // Count how many order items reference each product
         // Using aggregation for better performance
@@ -55,7 +55,7 @@ export async function GET(req) {
             order_count: countMap[p._id.toString()] || 0
         })).sort((a, b) => b.order_count - a.order_count);
 
-        console.log("Backend API To Get Orders, Inquiries, Reviews, Products & Transactions.");
+
         return NextResponse.json({
             success: true,
             data: {
@@ -66,9 +66,9 @@ export async function GET(req) {
                 inquiries,
                 reviews,
             }
-        }, { status: 200 });
+        }, { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
     } catch (error) {
         console.error("Error Getting Dashboard Data:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }

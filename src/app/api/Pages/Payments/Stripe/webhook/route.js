@@ -2,6 +2,13 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { processOrderSuccess } from "@/lib/orderUtils";
 
+if (!process.env.STRIPE_SECRET_KEY) {
+    throw new Error('[Stripe] STRIPE_SECRET_KEY environment variable is not configured.');
+}
+if (!process.env.STRIPE_WEBHOOK_SECRET) {
+    throw new Error('[Stripe] STRIPE_WEBHOOK_SECRET environment variable is not configured. Register your webhook endpoint in the Stripe Dashboard.');
+}
+
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
 export async function POST(req) {
@@ -35,14 +42,11 @@ export async function POST(req) {
                 specificItem = JSON.parse(specificItemStr);
             }
 
-            // Create Order in Database
             await processOrderSuccess(userId, {
                 payment_method: "Stripe",
                 receipt_url: paymentIntent.charges?.data?.[0]?.receipt_url || `https://dashboard.stripe.com/payments/${paymentIntent.id}`,
                 specificItem
             });
-
-            console.log(`✅ Order successfully processed via Stripe Webhook for User ID: ${userId}`);
         } catch (error) {
             console.error("❌ Failed to process order in Stripe Webhook:", error);
             // We return a 200 even on processing failure to stop Stripe from retrying infinitely,

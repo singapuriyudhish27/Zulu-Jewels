@@ -110,7 +110,16 @@ export async function PUT(request) {
                 { password_hash: hashedPassword }
             );
 
-            return NextResponse.json({ message: "Password updated successfully" }, { status: 200 });
+            // MED-9: Invalidate old session — clear the cookie so the client must log in again
+            const response = NextResponse.json({ message: "Password updated successfully. Please log in again." }, { status: 200 });
+            response.cookies.set("zulu_jewels", "", {
+                httpOnly: true,
+                secure: process.env.NODE_ENV !== "development",
+                sameSite: "strict",
+                path: "/",
+                expires: new Date(0),
+            });
+            return response;
         }
 
         //Update User In Database
@@ -137,17 +146,20 @@ export async function PUT(request) {
 //Logout Route
 export async function POST() {
     const cookieStore = await cookies();
-    const token = cookieStore.get('zulu_jewels')?.value;
+    const token = cookieStore.get('zulu_jewels')?.value || cookieStore.get('zulu_jewels_admin')?.value;
 
     const response = NextResponse.json({message: "Logged Out Successfully", hadToken: !!token});
 
-    //Remove the JWT cookie
-    response.cookies.set("zulu_jewels", "", {
+    //Remove the JWT cookies
+    const cookieOptions = {
         httpOnly: true,
         secure: process.env.NODE_ENV !== "development",
         sameSite: "strict",
         path: "/",
         expires: new Date(0), //Immediately expire the cookie
-    });
+    };
+
+    response.cookies.set("zulu_jewels", "", cookieOptions);
+    response.cookies.set("zulu_jewels_admin", "", cookieOptions);
     return response;
 }

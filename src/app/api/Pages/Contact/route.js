@@ -4,6 +4,7 @@ import User from "@/lib/models/User";
 import Inquiry from "@/lib/models/Inquiry";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import { rateLimit } from "@/lib/rateLimit";
 
 async function getUserIdFromCookie() {
     try {
@@ -21,13 +22,38 @@ async function getUserIdFromCookie() {
 
 export async function POST(req) {
     try {
+        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+        if (!rateLimit(ip, 5, 300000)) {
+            return NextResponse.json({
+                success: false,
+                message: "Too many requests. Please try again in 5 minutes."
+            }, { status: 429 });
+        }
+
         const body = await req.json();
         const { name, email, phone, subject, message } = body;
+
+        const MAX_SUBJECT_LEN = 200;
+        const MAX_MESSAGE_LEN = 2000;
 
         if (!message || !subject) {
             return NextResponse.json({
                 success: false,
                 message: "Subject and message are required"
+            }, { status: 400 });
+        }
+
+        if (subject.length > MAX_SUBJECT_LEN) {
+            return NextResponse.json({
+                success: false,
+                message: `Subject must not exceed ${MAX_SUBJECT_LEN} characters`
+            }, { status: 400 });
+        }
+
+        if (message.length > MAX_MESSAGE_LEN) {
+            return NextResponse.json({
+                success: false,
+                message: `Message must not exceed ${MAX_MESSAGE_LEN} characters`
             }, { status: 400 });
         }
 
@@ -59,8 +85,6 @@ export async function POST(req) {
                 message 
             })
         });
-        
-        console.log("Inquiry stored in database.");
 
         return NextResponse.json({
             success: true,
@@ -70,8 +94,7 @@ export async function POST(req) {
         console.error("Contact API Error:", error);
         return NextResponse.json({ 
             success: false, 
-            message: "Error in backend API call",
-            error: error.message 
+            message: "Internal Server Error"
         }, { status: 500 });
     }
 }

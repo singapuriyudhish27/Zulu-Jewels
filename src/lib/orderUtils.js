@@ -140,7 +140,15 @@ export async function processOrderSuccess(userId, details) {
                 quantity: specificItem.quantity || 1,
                 price: specificItem.price
             }], { session });
-            finalAmount = specificItem.price;
+
+            // Decrement variant stock
+            if (specificItem.variantId) {
+                await ProductVariant.updateOne(
+                    { _id: specificItem.variantId },
+                    { $inc: { stock: -(specificItem.quantity || 1) } }
+                ).session(session);
+            }
+            finalAmount = specificItem.price * (specificItem.quantity || 1);
         } else {
             // Case B: Whole Cart Purchase
             const cartItems = await CartItem.find({ user_id: userId }).session(session);
@@ -158,6 +166,13 @@ export async function processOrderSuccess(userId, details) {
                 if (item.variant_id) {
                     const variant = await ProductVariant.findById(item.variant_id).session(session);
                     unitPrice = variant ? variant.price : null;
+                    if (variant) {
+                        // Decrement variant stock
+                        await ProductVariant.updateOne(
+                            { _id: item.variant_id },
+                            { $inc: { stock: -item.quantity } }
+                        ).session(session);
+                    }
                 }
                 if (!unitPrice) {
                     const product = await Product.findById(item.product_id).session(session);

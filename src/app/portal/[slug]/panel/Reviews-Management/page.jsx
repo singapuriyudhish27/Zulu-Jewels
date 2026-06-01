@@ -392,7 +392,7 @@ export default function ReviewsManagementPage() {
                   fontStyle: 'italic',
                   borderLeft: '3px solid var(--gold)'
                 }}>
-                  "{selectedReviewForReply?.review}"
+                  &ldquo;{selectedReviewForReply?.review}&rdquo;
                 </div>
               </div>
               <div className="form-group">

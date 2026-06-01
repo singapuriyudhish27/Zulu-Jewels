@@ -54,9 +54,11 @@ export async function GET(request) {
         const itemsWithDetails = [];
 
         for (const item of items) {
-            const product = await Product.findById(item.product_name ? null : item.product_id); // check if product exists
+            const product = item.product_id
+                ? await Product.findById(item.product_id).select('name').lean()
+                : null;
             itemsWithDetails.push({
-                product_name: item.product_name || product?.name || "Premium Jewelry Item",
+                product_name: product?.name || "Premium Jewelry Item",
                 quantity: item.quantity,
                 price: item.price
             });
@@ -127,7 +129,7 @@ export async function POST(request) {
             { new: true }
         );
 
-        console.log(`✅ Delivery Feedback Saved for Order #${orderId}`);
+
         return NextResponse.json({ success: true, message: "Feedback submitted successfully" }, { status: 200 });
 
     } catch (error) {

@@ -33,7 +33,10 @@ export default async function sitemap() {
     }));
 
     // Dynamic Products
-    const products = await Product.find({ is_deleted: false });
+    const products = await Product.find({ is_deleted: false })
+        .select('_id updated_at')
+        .limit(5000)
+        .lean();
     const productRoutes = products.map((prod) => ({
       url: `${baseUrl}/Pages/Products/${prod._id.toString()}`,
       lastModified: prod.updated_at || new Date(),

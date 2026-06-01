@@ -8,41 +8,59 @@ export async function GET() {
     try {
         await connectDB();
 
-        const categories = await Category.find();
-        console.log("Backend API To Get Home Page Data.");
+        const categories = await Category.find().lean();
 
-        //Catgeory Wise Data Grouping
-        const result = [];
 
-        for (const cat of categories) {
-            const products = await Product.find({ category_id: cat._id, is_deleted: false }).sort({ _id: -1 });
+        const allProducts = await Product.find({ is_deleted: false }).sort({ _id: -1 }).lean();
+        const productIds = allProducts.map(p => p._id);
 
-            const productsWithImages = [];
-            for (const p of products) {
-                const images = await ProductImage.find({ product_id: p._id }).sort({ is_primary: -1 });
+        // Fetch all images in bulk
+        const allImages = await ProductImage.find({ product_id: { $in: productIds } }).lean();
+        const imagesMap = {};
+        for (const img of allImages) {
+            const pid = img.product_id.toString();
+            if (!imagesMap[pid]) {
+                imagesMap[pid] = [];
+            }
+            imagesMap[pid].push(img);
+        }
 
-                productsWithImages.push({
-                    id: p._id,
-                    name: p.name,
-                    description: p.description,
-                    price: p.price,
-                    is_active: p.is_active,
-                    created_at: p.created_at,
-                    images: images.map(img => ({
-                        id: img._id,
-                        image_url: img.media_url,
-                        is_primary: Boolean(img.is_primary),
-                    })),
-                });
+        // Sort images in-memory so primary images are first
+        for (const pid in imagesMap) {
+            imagesMap[pid].sort((a, b) => (b.is_primary ? 1 : 0) - (a.is_primary ? 1 : 0));
+        }
+
+        // Group products by category ID
+        const productsMap = {};
+        for (const p of allProducts) {
+            if (!p.category_id) continue;
+            const cid = p.category_id.toString();
+            if (!productsMap[cid]) {
+                productsMap[cid] = [];
             }
 
-            result.push({
-                id: cat._id,
-                name: cat.name,
-                image: cat.image_url,
-                products: productsWithImages,
+            const images = imagesMap[p._id.toString()] || [];
+            productsMap[cid].push({
+                id: p._id,
+                name: p.name,
+                description: p.description,
+                price: p.price,
+                is_active: p.is_active,
+                created_at: p.created_at,
+                images: images.map(img => ({
+                    id: img._id,
+                    image_url: img.media_url,
+                    is_primary: Boolean(img.is_primary),
+                })),
             });
         }
+
+        const result = categories.map(cat => ({
+            id: cat._id,
+            name: cat.name,
+            image: cat.image_url,
+            products: productsMap[cat._id.toString()] || [],
+        }));
 
         return NextResponse.json({
             success: true,
@@ -51,6 +69,6 @@ export async function GET() {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Home Page Data:", error);
-        return NextResponse.json({message: "Error In Backend API Call"});
+        return NextResponse.json({message: "Error In Backend API Call"}, { status: 500 });
     }
 }

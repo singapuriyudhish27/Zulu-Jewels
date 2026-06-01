@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import PaymentOption from "@/lib/models/PaymentOption";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 // Add New Payment Method
 export async function POST(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const body = await request.json();
         const { category, bank_details, option_details, status } = body;
@@ -20,7 +25,7 @@ export async function POST(request) {
             status: status !== undefined ? status : true
         });
 
-        console.log("✅ New Payment Method Added:", category);
+
         return NextResponse.json({ success: true, message: "Payment Method added successfully", data: newMethod }, { status: 201 });
     } catch (error) {
         console.error("Error Adding Payment Method:", error);
@@ -30,6 +35,10 @@ export async function POST(request) {
 
 // Edit Payment Method (also used for toggling status)
 export async function PUT(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const body = await request.json();
         const { id, status } = body;
@@ -56,7 +65,7 @@ export async function PUT(request) {
 
         const updatedMethod = await PaymentOption.findById(id);
 
-        console.log("✅ Payment Method Updated, ID:", id);
+
         return NextResponse.json({ success: true, message: "Payment Method updated successfully", data: updatedMethod }, { status: 200 });
     } catch (error) {
         console.error("Error Editing Payment Method:", error);
@@ -66,6 +75,10 @@ export async function PUT(request) {
 
 // Delete Payment Method
 export async function DELETE(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         const { searchParams } = new URL(request.url);
         const id = searchParams.get("id");
@@ -77,7 +90,7 @@ export async function DELETE(request) {
         await connectDB();
         await PaymentOption.deleteOne({ _id: id });
 
-        console.log("✅ Payment Method Deleted, ID:", id);
+
         return NextResponse.json({ success: true, message: "Payment Method deleted successfully" }, { status: 200 });
     } catch (error) {
         console.error("Error Deleting Payment Method:", error);

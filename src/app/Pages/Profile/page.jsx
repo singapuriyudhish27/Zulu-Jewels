@@ -1009,7 +1009,7 @@ export default function ProfilePage() {
                 ) : (
                   <div style={{ textAlign: 'center', padding: '60px 0' }}>
                     <ShoppingBag size={48} color="#E5E5E5" style={{ marginBottom: '16px' }} />
-                    <p style={{ fontSize: '15px', color: '#666' }}>You haven't placed any orders yet.</p>
+                    <p style={{ fontSize: '15px', color: '#666' }}>{"You haven't placed any orders yet."}</p>
                     <Link href="/Pages/Products" style={{ color: '#CEA268', fontSize: '13px', fontWeight: 600, textDecoration: 'none', marginTop: '12px', display: 'inline-block' }}>Start Shopping</Link>
                   </div>
                 )}

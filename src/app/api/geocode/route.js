@@ -1,6 +1,12 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 
 export async function GET(req) {
+    const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+    if (!rateLimit(ip, 30, 60000)) {
+        return NextResponse.json({ message: "Too many geocoding requests. Please try again later." }, { status: 429 });
+    }
+
     const { searchParams } = new URL(req.url);
     const query = searchParams.get("q");
 

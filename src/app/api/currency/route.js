@@ -1,12 +1,18 @@
 import { NextResponse } from "next/server";
+import { rateLimit } from "@/lib/rateLimit";
 
 // Simple in-memory cache (valid for 24 hours per server instance)
 let ratesCache = null;
 let cacheTimestamp = null;
 const CACHE_DURATION_MS = 24 * 60 * 60 * 1000; // 24 hours
 
-export async function GET() {
+export async function GET(req) {
     try {
+        const ip = req.headers.get("x-forwarded-for") || "127.0.0.1";
+        if (!rateLimit(ip, 30, 60000)) {
+            return NextResponse.json({ message: "Too many currency requests. Please try again later." }, { status: 429 });
+        }
+
         const now = Date.now();
 
         // Return cached rates if still fresh

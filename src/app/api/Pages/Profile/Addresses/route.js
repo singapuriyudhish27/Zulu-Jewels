@@ -23,10 +23,13 @@ export async function POST(request) {
         if (!decoded) return NextResponse.json({ message: "Unauthorized" }, { status: 401 });
 
         const { address_line, is_default } = await request.json();
+        const MAX_ADDRESS_LEN = 500;
         if (!address_line?.trim()) {
             return NextResponse.json({ message: "Address cannot be empty" }, { status: 400 });
         }
-
+        if (address_line.trim().length > MAX_ADDRESS_LEN) {
+            return NextResponse.json({ message: `Address must not exceed ${MAX_ADDRESS_LEN} characters` }, { status: 400 });
+        }
         await connectDB();
 
         // If this address is being set as default, clear any existing default first

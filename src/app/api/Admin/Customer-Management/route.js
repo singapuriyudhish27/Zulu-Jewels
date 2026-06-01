@@ -15,20 +15,59 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        const customers = await Customer.find().sort({ _id: 1 });
-        console.log("Backend API To Get Users, Customers, Orders & Order Items.");
+        const customers = await Customer.find().sort({ _id: -1 }).limit(100).lean();
 
-        const data = [];
 
-        for (const c of customers) {
-            const user = c.user_id ? await User.findById(c.user_id).select('firstName lastName email phone is_active is_verified') : null;
-            const orders = await Order.find({ customer_id: c._id }).sort({ created_at: -1 });
+        const userIds = customers.map(c => c.user_id).filter(Boolean);
+        const customerIds = customers.map(c => c._id);
 
-            const orderList = [];
-            for (const o of orders) {
-                const items = await OrderItem.find({ order_id: o._id }).sort({ created_at: -1 });
+        // Fetch users in bulk
+        const users = await User.find({ _id: { $in: userIds } })
+            .select('firstName lastName email phone is_active is_verified')
+            .lean();
+        
+        const usersMap = {};
+        for (const u of users) {
+            usersMap[u._id.toString()] = u;
+        }
 
-                orderList.push({
+        // Fetch orders in bulk
+        const orders = await Order.find({ customer_id: { $in: customerIds } })
+            .sort({ created_at: -1 })
+            .lean();
+        
+        const ordersMap = {};
+        for (const o of orders) {
+            const cid = o.customer_id.toString();
+            if (!ordersMap[cid]) {
+                ordersMap[cid] = [];
+            }
+            ordersMap[cid].push(o);
+        }
+
+        const orderIds = orders.map(o => o._id);
+
+        // Fetch order items in bulk
+        const orderItems = await OrderItem.find({ order_id: { $in: orderIds } })
+            .sort({ created_at: -1 })
+            .lean();
+
+        const orderItemsMap = {};
+        for (const oi of orderItems) {
+            const oid = oi.order_id.toString();
+            if (!orderItemsMap[oid]) {
+                orderItemsMap[oid] = [];
+            }
+            orderItemsMap[oid].push(oi);
+        }
+
+        const data = customers.map(c => {
+            const user = c.user_id ? usersMap[c.user_id.toString()] : null;
+            const cOrders = ordersMap[c._id.toString()] || [];
+            
+            const orderList = cOrders.map(o => {
+                const items = orderItemsMap[o._id.toString()] || [];
+                return {
                     id: o._id,
                     order_date: o.order_date,
                     payment_method: o.payment_method,
@@ -44,10 +83,10 @@ export async function GET(req) {
                         price: oi.price,
                         created_at: oi.created_at,
                     })),
-                });
-            }
+                };
+            });
 
-            data.push({
+            return {
                 id: c._id,
                 customer_name: c.customer_name,
                 location: c.location,
@@ -62,16 +101,15 @@ export async function GET(req) {
                     is_verified: user.is_verified,
                 } : null,
                 orders: orderList,
-            });
-        }
+            };
+        });
 
         return NextResponse.json({
             success: true,
-            data,
-            adminEmail: process.env.SMTP_USER
+            data
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Customers Data:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }

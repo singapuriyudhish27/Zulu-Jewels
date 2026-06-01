@@ -3,7 +3,7 @@ import jwt from 'jsonwebtoken';
 
 export async function verifyAdminFromCookies() {
   const cookieStore = await cookies();
-  const token = cookieStore.get('zulu_jewels')?.value;
+  const token = cookieStore.get('zulu_jewels_admin')?.value;
 
   if (!token) {
     return { ok: false, status: 401, message: 'Unauthorized' };
@@ -21,7 +21,7 @@ export async function verifyAdminFromCookies() {
 }
 
 export async function verifyAdminFromRequest(req) {
-  const token = req.cookies.get('zulu_jewels')?.value;
+  const token = req.cookies.get('zulu_jewels_admin')?.value;
 
   if (!token) {
     return { ok: false, status: 401, message: 'Unauthorized' };

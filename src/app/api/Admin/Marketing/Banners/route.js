@@ -1,9 +1,14 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Banner from "@/lib/models/Banner";
+import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 //Add New Banner
 export async function POST(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { title, location, status } = await req.json();
@@ -27,6 +32,10 @@ export async function POST(req) {
 
 //Edit Banner
 export async function PUT(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { id, title, location, status } = await req.json();
@@ -50,6 +59,10 @@ export async function PUT(req) {
 
 //Delete Banner
 export async function DELETE(req) {
+    const auth = await verifyAdminFromRequest(req);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
     try {
         await connectDB();
         const { searchParams } = new URL(req.url);
