@@ -3,7 +3,7 @@ import Category from '@/lib/models/Category';
 import Product from '@/lib/models/Product';
 
 export default async function sitemap() {
-  const baseUrl = 'https://zulujewellers.com';
+  const baseUrl = 'https://www.zulujewellers.com';
   
   // Static paths
   const routes = [
