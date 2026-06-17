@@ -10,6 +10,8 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [showSearch, setShowSearch] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [isShopOpen, setIsShopOpen] = useState(false);
+  const [isMobileShopOpen, setIsMobileShopOpen] = useState(false);
   const router = useRouter();
 
   const handleIconClick = async (type, targetPage) => {
@@ -135,7 +137,8 @@ export default function Navbar() {
           transition: all 0.3s ease;
           z-index: 1001;
         }
-        .zj-nav-link-item:hover .zj-nav-dropdown {
+        .zj-nav-link-item:hover .zj-nav-dropdown,
+        .zj-nav-dropdown.show {
           opacity: 1;
           visibility: visible;
           transform: translateY(0);
@@ -361,15 +364,33 @@ export default function Navbar() {
             <div className="zj-nav-link-item">
               <Link href="/Pages" className="zj-nav-link">Home</Link>
             </div>
-            <div className="zj-nav-link-item">
-              <Link href="/Pages/Products" className="zj-nav-link">Shop</Link>
+            <div 
+              className="zj-nav-link-item"
+              onMouseEnter={() => setIsShopOpen(true)}
+              onMouseLeave={() => setIsShopOpen(false)}
+            >
+              <button 
+                className="zj-nav-link"
+                onClick={() => setIsShopOpen(!isShopOpen)}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  fontFamily: 'inherit',
+                  cursor: 'pointer',
+                  outline: 'none',
+                  padding: '24px 0',
+                }}
+              >
+                Shop
+              </button>
               {categories.length > 0 && (
-                <div className="zj-nav-dropdown">
+                <div className={`zj-nav-dropdown ${isShopOpen ? 'show' : ''}`}>
                   {categories.map(cat => (
                     <Link 
                       key={cat._id || cat.id} 
                       href={`/Pages/Products?category=${cat._id || cat.id}`} 
                       className="zj-dropdown-link"
+                      onClick={() => setIsShopOpen(false)}
                     >
                       {cat.name}
                     </Link>
@@ -482,7 +503,63 @@ export default function Navbar() {
           </div>
         </div>
         <Link href="/Pages" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Home</Link>
-        <Link href="/Pages/Products" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Shop</Link>
+        <div style={{ display: 'flex', flexDirection: 'column' }}>
+          <button
+            onClick={() => setIsMobileShopOpen(!isMobileShopOpen)}
+            className="zj-mobile-link"
+            style={{
+              background: 'none',
+              border: 'none',
+              cursor: 'pointer',
+              textAlign: 'left',
+              width: '100%',
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+              padding: '10px 0',
+              borderBottom: '1px solid #f0ebe4',
+              fontFamily: 'Montserrat, sans-serif',
+              textTransform: 'uppercase',
+              fontSize: '15px',
+              fontWeight: 500,
+              color: '#1a1a1a'
+            }}
+          >
+            <span>Shop</span>
+            <span style={{ 
+              fontSize: '10px', 
+              transform: isMobileShopOpen ? 'rotate(180deg)' : 'rotate(0deg)', 
+              transition: 'transform 0.2s',
+              color: '#CEA268'
+            }}>▼</span>
+          </button>
+          {isMobileShopOpen && categories.length > 0 && (
+            <div style={{ 
+              display: 'flex', 
+              flexDirection: 'column', 
+              paddingLeft: '16px', 
+              background: '#f9f6f3',
+              borderRadius: '4px',
+              marginTop: '4px',
+              marginBottom: '8px'
+            }}>
+              {categories.map(cat => (
+                <Link
+                  key={cat._id || cat.id}
+                  href={`/Pages/Products?category=${cat._id || cat.id}`}
+                  className="zj-mobile-link"
+                  style={{ borderBottom: 'none', fontSize: '13px', padding: '8px 0' }}
+                  onClick={() => {
+                    setIsMenuOpen(false);
+                    setIsMobileShopOpen(false);
+                  }}
+                >
+                  {cat.name}
+                </Link>
+              ))}
+            </div>
+          )}
+        </div>
         <Link href="/Pages/Products?category=wedding" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Wedding Collection</Link>
         <Link href="/Pages/custom" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>Custom Jewelry</Link>
         <Link href="/Pages/about" className="zj-mobile-link" onClick={() => setIsMenuOpen(false)}>About Us</Link>
