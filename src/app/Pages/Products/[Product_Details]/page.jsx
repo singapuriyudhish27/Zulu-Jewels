@@ -691,7 +691,7 @@ export default function ProductDetailsPage() {
           font-family: 'Montserrat', sans-serif;
         }
         .pd-pay-cancel-btn:hover { background: #000000; color: #ffffff; }
-        .pd-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 72px; }
+        .pd-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 0px; }
 
         /* General Variables */
         :root {
@@ -703,15 +703,20 @@ export default function ProductDetailsPage() {
         }
 
         /* Breadcrumb */
+        .pd-breadcrumb-wrapper {
+          background: #111111;
+          width: 100%;
+          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        }
         .pd-breadcrumb {
-          max-width: 1280px; margin: 0 auto; padding: 32px 24px;
-          font-size: 11px; color: #888888; display: flex; gap: 12px; align-items: center;
+          max-width: 1280px; margin: 0 auto; padding: 112px 24px 32px;
+          font-size: 11px; color: rgba(255, 255, 255, 0.6); display: flex; gap: 12px; align-items: center;
           text-transform: uppercase; letter-spacing: 0.05em;
         }
-        .pd-breadcrumb a { color: #888888; text-decoration: none; transition: color 0.2s ease; }
-        .pd-breadcrumb a:hover { color: #000000; }
-        .pd-bc-sep { color: #cccccc; }
-        .pd-bc-cur { color: #000000; font-weight: 600; }
+        .pd-breadcrumb a { color: rgba(255, 255, 255, 0.6); text-decoration: none; transition: color 0.2s ease; }
+        .pd-breadcrumb a:hover { color: #CEA268; }
+        .pd-bc-sep { color: rgba(255, 255, 255, 0.3); }
+        .pd-bc-cur { color: #ffffff; font-weight: 600; }
 
         /* Main Product Area */
         .pd-product-area {
@@ -1004,12 +1009,14 @@ export default function ProductDetailsPage() {
       <div className="pd-page">
 
       {/* Breadcrumb */}
-      <div className="pd-breadcrumb">
-        <Link href="/Pages">Home</Link>
-        <span className="pd-bc-sep">›</span>
-        <Link href="/Pages/Products">Rings</Link>
-        <span className="pd-bc-sep">›</span>
-        <span className="pd-bc-cur">{product.name}</span>
+      <div className="pd-breadcrumb-wrapper">
+        <div className="pd-breadcrumb">
+          <Link href="/Pages">Home</Link>
+          <span className="pd-bc-sep">›</span>
+          <Link href="/Pages/Products">Rings</Link>
+          <span className="pd-bc-sep">›</span>
+          <span className="pd-bc-cur">{product.name}</span>
+        </div>
       </div>
 
       {/* Product Area */}

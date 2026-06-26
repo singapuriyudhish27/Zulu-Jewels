@@ -21,8 +21,8 @@ export default async function AdminPanelLayout({ children, params }) {
     redirect(getAdminPortalPath(slug));
   }
 
-  if (decoded.role !== 'admin') {
-    redirect('/Pages');
+  if (decoded.role !== 'admin' || decoded.portalSlug !== slug) {
+    redirect(getAdminPortalPath(slug));
   }
 
   return <AdminLayoutContent>{children}</AdminLayoutContent>;

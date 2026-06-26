@@ -21,7 +21,7 @@ const securityHeaders = [
   },
   {
     key: 'Content-Security-Policy',
-    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.stripe.com https://api.razorpay.com https://maps.googleapis.com; connect-src 'self' https://api.stripe.com https://api.razorpay.com https://nominatim.openstreetmap.org https://open.er-api.com; img-src 'self' data: https://res.cloudinary.com https://checkout.stripe.com; frame-src 'self' https://checkout.stripe.com https://api.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
+    value: "default-src 'self'; script-src 'self' 'unsafe-inline' 'unsafe-eval' https://checkout.stripe.com https://api.razorpay.com https://maps.googleapis.com; connect-src 'self' https://api.stripe.com https://api.razorpay.com https://nominatim.openstreetmap.org https://open.er-api.com; img-src 'self' data: blob: https://res.cloudinary.com https://checkout.stripe.com; frame-src 'self' https://checkout.stripe.com https://api.razorpay.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;"
   },
   {
     key: 'Permissions-Policy',

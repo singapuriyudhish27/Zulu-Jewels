@@ -109,7 +109,7 @@ function ProductsContent({ initialCategories }) {
   return (
     <>
       <style>{`
-        .pr-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 72px; }
+        .pr-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 0px; }
 
         /* General Variables */
         :root {
@@ -400,7 +400,7 @@ export default function EngagementPage({ initialCategories }) {
   return (
     <>
       <Navbar />
-      <main style={{ fontFamily: 'Montserrat, sans-serif', background: '#fff', paddingTop: '72px' }}>
+      <main style={{ fontFamily: 'Montserrat, sans-serif', background: '#fff', paddingTop: '0px' }}>
         <Suspense fallback={<div style={{ padding: '80px', textAlign: 'center', color: '#888' }}>Loading...</div>}>
           <ProductsContent initialCategories={initialCategories} />
         </Suspense>

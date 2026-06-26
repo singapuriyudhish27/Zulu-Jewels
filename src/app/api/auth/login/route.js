@@ -55,7 +55,7 @@ export async function POST(req) {
                 );
             }
             const token = jwt.sign(
-                { userId: user._id, email: user.email, role: "admin" },
+                { userId: user._id, email: user.email, role: "admin", portalSlug: portalSlug },
                 process.env.JWT_SECRET,
                 { expiresIn: "7d" }
             );

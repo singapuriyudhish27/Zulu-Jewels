@@ -16,11 +16,28 @@ export async function GET(request) {
     try {
         await connectDB();
 
+        const url = new URL(request.url);
+        const page = parseInt(url.searchParams.get("page") || "1", 10);
+        const limit = parseInt(url.searchParams.get("limit") || "0", 10);
+
         // Fetch Categories
         const categories = await Category.find().lean();
 
-        // Fetch non-deleted products
-        const productsRaw = await Product.find({ is_deleted: false }).sort({ created_at: -1 }).lean();
+        let productsRaw;
+        let totalProducts;
+
+        if (limit > 0) {
+            const skip = (page - 1) * limit;
+            totalProducts = await Product.countDocuments({ is_deleted: false });
+            productsRaw = await Product.find({ is_deleted: false })
+                .sort({ created_at: -1 })
+                .skip(skip)
+                .limit(limit)
+                .lean();
+        } else {
+            productsRaw = await Product.find({ is_deleted: false }).sort({ created_at: -1 }).lean();
+            totalProducts = productsRaw.length;
+        }
 
         const productIds = productsRaw.map(p => p._id);
 
@@ -74,6 +91,12 @@ export async function GET(request) {
             success: true,
             categories: categories,
             data: products,
+            pagination: limit > 0 ? {
+                totalProducts,
+                totalPages: Math.ceil(totalProducts / limit),
+                currentPage: page,
+                limit
+            } : null
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Products Data:", error);

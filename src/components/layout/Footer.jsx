@@ -1,7 +1,7 @@
 'use client';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
-import { Instagram, Twitter, Facebook, Youtube, Linkedin } from 'lucide-react';
+import { Instagram, Twitter, Facebook, Youtube, Linkedin, Award, ShieldCheck, Heart, Truck, Sparkles } from 'lucide-react';
 
 export default function Footer() {
   const router = useRouter();
@@ -182,9 +182,108 @@ export default function Footer() {
             justify-content: center;
           }
         }
+        .zj-footer-trust-bar {
+          border-bottom: 1px solid rgba(0,0,0,0.06);
+          padding: 32px 24px;
+          margin-bottom: 40px;
+        }
+        .zj-footer-trust-inner {
+          max-width: 1280px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: repeat(5, 1fr);
+          gap: 24px;
+        }
+        .zj-footer-trust-item {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+        }
+        .zj-footer-trust-icon {
+          font-size: 16px;
+          color: #CEA268;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+        .zj-footer-trust-info {
+          display: flex;
+          flex-direction: column;
+        }
+        .zj-footer-trust-title {
+          font-size: 11px;
+          font-weight: 700;
+          color: #000;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          margin-bottom: 2px;
+        }
+        .zj-footer-trust-desc {
+          font-size: 10px;
+          color: #777;
+          line-height: 1.3;
+        }
+        @media (max-width: 1024px) {
+          .zj-footer-trust-inner {
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+          }
+        }
+        @media (max-width: 768px) {
+          .zj-footer-trust-inner {
+            grid-template-columns: repeat(2, 1fr);
+          }
+        }
+        @media (max-width: 480px) {
+          .zj-footer-trust-inner {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+        }
       `}</style>
 
       <footer className="zj-footer">
+        {/* Trust Indicators Bar */}
+        <div className="zj-footer-trust-bar">
+          <div className="zj-footer-trust-inner">
+            <div className="zj-footer-trust-item">
+              <div className="zj-footer-trust-icon"><Award size={22} /></div>
+              <div className="zj-footer-trust-info">
+                <span className="zj-footer-trust-title">Certified Diamonds</span>
+                <span className="zj-footer-trust-desc">GIA & IGI Graded Solitaires</span>
+              </div>
+            </div>
+            <div className="zj-footer-trust-item">
+              <div className="zj-footer-trust-icon"><ShieldCheck size={22} /></div>
+              <div className="zj-footer-trust-info">
+                <span className="zj-footer-trust-title">BIS Hallmarked Gold</span>
+                <span className="zj-footer-trust-desc">100% Purity Guaranteed</span>
+              </div>
+            </div>
+            <div className="zj-footer-trust-item">
+              <div className="zj-footer-trust-icon"><Heart size={22} /></div>
+              <div className="zj-footer-trust-info">
+                <span className="zj-footer-trust-title">Ethical Sourcing</span>
+                <span className="zj-footer-trust-desc">Conflict-Free Origins</span>
+              </div>
+            </div>
+            <div className="zj-footer-trust-item">
+              <div className="zj-footer-trust-icon"><Truck size={22} /></div>
+              <div className="zj-footer-trust-info">
+                <span className="zj-footer-trust-title">Worldwide Shipping</span>
+                <span className="zj-footer-trust-desc">Fully Secured & Insured</span>
+              </div>
+            </div>
+            <div className="zj-footer-trust-item">
+              <div className="zj-footer-trust-icon"><Sparkles size={22} /></div>
+              <div className="zj-footer-trust-info">
+                <span className="zj-footer-trust-title">Lifetime Support</span>
+                <span className="zj-footer-trust-desc">Complimentary Polish & Care</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
         {/* Main footer grid */}
         <div className="zj-footer-grid">
           {/* Column 1: Customer Services */}

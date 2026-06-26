@@ -86,28 +86,37 @@ export default function ProductManagementPage() {
     type: "danger"
   });
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const response = await fetch('/api/Admin/Product-Management', {
-          credentials: 'include',
-        });
-        const result = await response.json();
-        console.log("Backend API To Get Products Data.", result);
-        if (result.success) {
-          setProductsData(result.data || []);
-          setCategoriesData(result.categories || []);
-        } else {
-          console.error("Failed to fetch products:", result.message);
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageSize, setPageSize] = useState(20);
+
+  const fetchData = async (page = 1) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/Admin/Product-Management?page=${page}&limit=${pageSize}`, {
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (result.success) {
+        setProductsData(result.data || []);
+        setCategoriesData(result.categories || []);
+        if (result.pagination) {
+          setTotalPages(result.pagination.totalPages || 1);
+          setCurrentPage(result.pagination.currentPage || 1);
         }
-      } catch (error) {
-        console.error("Error fetching products:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error("Failed to fetch products:", result.message);
       }
-    };
-    fetchData();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching products:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchData(currentPage);
+  }, [currentPage]);
 
   // Format currency helper
   const formatCurrency = (amount) => {
@@ -257,6 +266,7 @@ export default function ProductManagementPage() {
 
   const handleSaveCategory = async (e) => {
     e.preventDefault();
+    setLoading(true);
     try {
       const isEdit = !!editingCategoryId;
       const url = "/api/Admin/Product-Management/Category";
@@ -300,6 +310,9 @@ export default function ProductManagementPage() {
       }
     } catch (error) {
       console.error("Category save error:", error);
+      toast.error("Something went wrong");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -441,7 +454,8 @@ export default function ProductManagementPage() {
 
       const data = await res.json();
       if (data.success) {
-        window.location.reload();
+        toast.success(`Product ${isEdit ? 'updated' : 'added'} successfully`);
+        await fetchData(currentPage);
         setShowAddProduct(false);
       } else {
         toast.error(data.message || "Failed to save product");
@@ -744,6 +758,33 @@ export default function ProductManagementPage() {
                 )}
               </tbody>
             </table>
+            {totalPages > 1 && (
+              <div className="pagination-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '12px 24px', borderTop: '1px solid #eee' }}>
+                <span style={{ fontSize: '13px', color: '#666' }}>
+                  Showing Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+                </span>
+                <div style={{ display: 'flex', gap: '8px' }}>
+                  <button 
+                    type="button" 
+                    className="add-btn secondary" 
+                    disabled={currentPage === 1} 
+                    onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                    style={{ padding: '6px 12px', fontSize: '12px' }}
+                  >
+                    Previous
+                  </button>
+                  <button 
+                    type="button" 
+                    className="add-btn secondary" 
+                    disabled={currentPage === totalPages} 
+                    onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                    style={{ padding: '6px 12px', fontSize: '12px' }}
+                  >
+                    Next
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
 
       {/* Add Product Modal */}
@@ -905,7 +946,9 @@ export default function ProductManagementPage() {
                 </div>
               </div>
               <div className="modal-footer">
-                <button type="submit" className="add-btn"><Save size={16} /> {editingCategoryId ? "Update Category" : "Create Category"}</button>
+                <button type="submit" className="add-btn" disabled={loading}>
+                  <Save size={16} /> {loading ? "Saving..." : (editingCategoryId ? "Update Category" : "Create Category")}
+                </button>
               </div>
             </form>
           </div>

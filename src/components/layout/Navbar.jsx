@@ -13,6 +13,27 @@ export default function Navbar() {
   const [isShopOpen, setIsShopOpen] = useState(false);
   const [isMobileShopOpen, setIsMobileShopOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
+
+  const isAuthPage = pathname?.startsWith('/auth');
+  const isTransparentNavbarPage = !isAuthPage;
+  const isLightBgPage = 
+    pathname?.includes('/Pages/cart') || 
+    pathname?.includes('/Pages/Profile') || 
+    pathname?.includes('/Pages/delivery-confirmation') ||
+    pathname?.includes('/Pages/payment-success');
+
+  const [isScrolled, setIsScrolled] = useState(false);
+
+  useEffect(() => {
+    const handleScroll = () => {
+      setIsScrolled(window.scrollY > 20);
+    };
+    handleScroll();
+    window.addEventListener('scroll', handleScroll);
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
 
   const handleIconClick = async (type, targetPage) => {
     try {
@@ -80,6 +101,51 @@ export default function Navbar() {
           background: #fff;
           border-bottom: 1px solid #e8e0d8;
           font-family: 'Montserrat', sans-serif;
+          transition: background 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                      border-color 0.4s cubic-bezier(0.16, 1, 0.3, 1), 
+                      box-shadow 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .zj-navbar.zj-nav-transparent {
+          background: transparent;
+          border-bottom: 1px solid transparent;
+          box-shadow: none;
+        }
+        .zj-navbar.zj-nav-transparent .zj-nav-link {
+          color: #ffffff;
+        }
+        .zj-navbar.zj-nav-transparent .zj-nav-icon-btn {
+          color: #ffffff;
+        }
+        .zj-navbar.zj-nav-transparent .zj-nav-logo-text {
+          filter: brightness(0) invert(1);
+        }
+
+        .zj-navbar.zj-nav-transparent .zj-nav-link:hover,
+        .zj-navbar.zj-nav-transparent .zj-nav-icon-btn:hover {
+          color: #CEA268;
+        }
+        .zj-navbar.zj-nav-transparent.zj-nav-transparent-light {
+          border-bottom: 1px solid transparent;
+        }
+        .zj-navbar.zj-nav-transparent.zj-nav-transparent-light .zj-nav-link {
+          color: #1a1a1a;
+        }
+        .zj-navbar.zj-nav-transparent.zj-nav-transparent-light .zj-nav-icon-btn {
+          color: #1a1a1a;
+        }
+        .zj-navbar.zj-nav-transparent.zj-nav-transparent-light .zj-nav-logo-icon,
+        .zj-navbar.zj-nav-transparent.zj-nav-transparent-light .zj-nav-logo-text {
+          filter: none;
+        }
+        .zj-navbar.zj-nav-transparent.zj-nav-transparent-light .zj-nav-link:hover,
+        .zj-navbar.zj-nav-transparent.zj-nav-transparent-light .zj-nav-icon-btn:hover {
+          color: #CEA268;
+        }
+        .zj-navbar.zj-nav-solid {
+          background: rgba(255, 255, 255, 0.95);
+          backdrop-filter: blur(12px);
+          border-bottom: 1px solid rgba(232, 224, 216, 0.8);
+          box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
         }
         .zj-nav-inner {
           max-width: 1280px;
@@ -357,7 +423,7 @@ export default function Navbar() {
         }
       `}</style>
 
-      <nav className="zj-navbar">
+      <nav className={`zj-navbar ${isTransparentNavbarPage ? 'zj-nav-home' : ''} ${isTransparentNavbarPage && !isScrolled && !isMenuOpen ? 'zj-nav-transparent' : 'zj-nav-solid'} ${isTransparentNavbarPage && !isScrolled && !isMenuOpen && isLightBgPage ? 'zj-nav-transparent-light' : ''}`}>
         <div className="zj-nav-inner">
           {/* Left nav links */}
           <div className="zj-nav-links">
@@ -399,7 +465,7 @@ export default function Navbar() {
               )}
             </div>
             <div className="zj-nav-link-item">
-              <Link href="/Pages/Products?category=wedding" className="zj-nav-link">Wedding Collection</Link>
+              <Link href="/Pages/ourProcess" className="zj-nav-link">Our Process</Link>
             </div>
             <div className="zj-nav-link-item">
               <Link href="/Pages/custom" className="zj-nav-link">Custom Jewelry</Link>
@@ -416,9 +482,6 @@ export default function Navbar() {
 
           {/* Right nav links + icons */}
           <div className="zj-nav-links right">
-            {/* <div className="zj-nav-link-item">
-              <Link href="/Pages/custom" className="zj-nav-link">Custom Jewelry</Link>
-            </div> */}
             <div className="zj-nav-link-item">
               <Link href="/Pages/about" className="zj-nav-link">About Us</Link>
             </div>

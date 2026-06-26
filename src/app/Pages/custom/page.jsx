@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, ShoppingCart, ChevronRight, PenTool, Sparkles, Hammer, Scissors, Gem, FileText } from 'lucide-react';
 import Link from 'next/link';
@@ -10,6 +11,21 @@ import TrustBadge from '@/components/home/trustBadge';
 export default function CustomPage() {
   const router = useRouter();
   const pathname = usePathname();
+
+  useEffect(() => {
+    const observer = new IntersectionObserver((entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('cu-visible');
+        }
+      });
+    }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
+
+    document.querySelectorAll('.cu-animate').forEach(el => {
+      observer.observe(el);
+    });
+    return () => observer.disconnect();
+  }, []);
 
   const requireAuth = (action) => {
     const token = document.cookie
@@ -28,7 +44,7 @@ export default function CustomPage() {
   return (
     <>
       <style>{`
-        .cu-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 72px; }
+        .cu-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 0px; }
 
         /* General Variables */
         :root {
@@ -87,15 +103,44 @@ export default function CustomPage() {
           padding: 16px 40px;
           background: #EAB308;
           color: #000000;
+          border: 1px solid #EAB308;
           font-size: 12px;
           font-weight: 700;
           letter-spacing: 0.16em;
           text-transform: uppercase;
           text-decoration: none;
-          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+          z-index: 1;
+          transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s, transform 0.3s;
           border-radius: 2px;
+          opacity: 0;
+          transform: translateY(20px);
+          animation: cu-hero-fade-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: 0.8s;
         }
-        .cu-hero-btn:hover { background: #ffffff; transform: translateY(-2px); }
+        .cu-hero-btn::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: #ffffff;
+          transform: scaleX(0);
+          transform-origin: right;
+          transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: -1;
+        }
+        .cu-hero-btn:hover {
+          color: #000000;
+          border-color: #ffffff;
+          transform: translateY(-2px);
+        }
+        .cu-hero-btn:hover::before {
+          transform: scaleX(1);
+          transform-origin: left;
+        }
 
         /* Section Styling */
         .cu-section { padding: 100px 24px; max-width: 1280px; margin: 0 auto; }
@@ -200,8 +245,13 @@ export default function CustomPage() {
           opacity: 0;
           transition: opacity 0.4s ease;
         }
+        .cu-gallery-overlay-content {
+          transform: translateY(20px);
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+        }
         .cu-gallery-item:hover .cu-gallery-img { transform: scale(1.05); }
         .cu-gallery-item:hover .cu-gallery-overlay { opacity: 1; }
+        .cu-gallery-item:hover .cu-gallery-overlay-content { transform: translateY(0); }
         .cu-gallery-title { font-family: 'Cormorant Garamond', serif; font-size: 24px; color: #ffffff; margin-bottom: 8px; }
         .cu-gallery-desc { font-size: 13px; color: rgba(255,255,255,0.8); }
 
@@ -221,14 +271,39 @@ export default function CustomPage() {
           padding: 16px 40px;
           background: #000000;
           color: #ffffff;
+          border: 1px solid #000000;
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.16em;
           text-transform: uppercase;
           text-decoration: none;
-          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+          z-index: 1;
+          transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s, transform 0.3s;
         }
-        .cu-btn-dark:hover { background: #333; transform: translateY(-2px); }
+        .cu-btn-dark::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: #EAB308;
+          transform: scaleX(0);
+          transform-origin: right;
+          transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: -1;
+        }
+        .cu-btn-dark:hover {
+          color: #000000;
+          border-color: #EAB308;
+          transform: translateY(-2px);
+        }
+        .cu-btn-dark:hover::before {
+          transform: scaleX(1);
+          transform-origin: left;
+        }
         .cu-btn-outline {
           padding: 16px 40px;
           background: transparent;
@@ -239,9 +314,33 @@ export default function CustomPage() {
           letter-spacing: 0.16em;
           text-transform: uppercase;
           text-decoration: none;
-          transition: all 0.3s ease;
+          position: relative;
+          overflow: hidden;
+          z-index: 1;
+          transition: color 0.4s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.4s, transform 0.3s;
         }
-        .cu-btn-outline:hover { background: #000000; color: #ffffff; transform: translateY(-2px); }
+        .cu-btn-outline::before {
+          content: '';
+          position: absolute;
+          top: 0;
+          left: 0;
+          width: 100%;
+          height: 100%;
+          background: #000000;
+          transform: scaleX(0);
+          transform-origin: right;
+          transition: transform 0.5s cubic-bezier(0.16, 1, 0.3, 1);
+          z-index: -1;
+        }
+        .cu-btn-outline:hover {
+          color: #ffffff;
+          border-color: #000000;
+          transform: translateY(-2px);
+        }
+        .cu-btn-outline:hover::before {
+          transform: scaleX(1);
+          transform-origin: left;
+        }
 
         @media (max-width: 1024px) {
           .cu-process-grid { grid-template-columns: repeat(2, 1fr); gap: 48px; }
@@ -251,6 +350,63 @@ export default function CustomPage() {
           .cu-services-grid, .cu-gallery-grid { grid-template-columns: 1fr; }
           .cu-process-grid { grid-template-columns: 1fr; }
           .cu-hero { min-height: 480px; }
+        }
+
+        /* Scroll Reveal & Image Parallax */
+        .cu-animate {
+          opacity: 0;
+          transform: translateY(30px);
+          transition: opacity 1.2s cubic-bezier(0.16, 1, 0.3, 1), transform 1.2s cubic-bezier(0.16, 1, 0.3, 1);
+          will-change: transform, opacity;
+        }
+        .cu-animate.cu-visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+        .cu-animate-img {
+          transition: transform 1.8s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .cu-animate:not(.cu-visible) .cu-animate-img {
+          transform: scale(1.1) !important;
+        }
+
+        /* Hero Text Animations on Mount */
+        .cu-hero-eyebrow {
+          opacity: 0;
+          transform: translateY(20px);
+          animation: cu-hero-fade-in 1s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: 0.2s;
+        }
+        .cu-hero-title {
+          opacity: 0;
+          transform: translateY(30px);
+          animation: cu-hero-title-in 1.4s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: 0.4s;
+        }
+        .cu-hero-subtitle {
+          opacity: 0;
+          transform: translateY(30px);
+          animation: cu-hero-fade-in 1.2s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+          animation-delay: 0.6s;
+        }
+
+        @keyframes cu-hero-fade-in {
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        @keyframes cu-hero-title-in {
+          from {
+            opacity: 0;
+            transform: translateY(30px);
+            letter-spacing: 0.24em;
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+            letter-spacing: 0.15em;
+          }
         }
       `}</style>
 
@@ -269,34 +425,34 @@ export default function CustomPage() {
 
         {/* Process Section */}
         <section className="cu-section">
-          <div className="cu-section-header">
+          <div className="cu-section-header cu-animate">
             <p className="cu-section-eyebrow">How It Works</p>
             <h2 className="cu-section-title">The Custom Design Process</h2>
           </div>
 
           <div className="cu-process-grid">
-            <div className="cu-process-item">
+            <div className="cu-process-item cu-animate" style={{ transitionDelay: '0ms' }}>
               <span className="cu-process-num">01</span>
               <div className="cu-process-content">
                 <h3 className="cu-process-title">Consultation</h3>
                 <p className="cu-process-desc">Meet with our design experts to discuss your vision, preferences, and budget. We will help refine your ideas.</p>
               </div>
             </div>
-            <div className="cu-process-item">
+            <div className="cu-process-item cu-animate" style={{ transitionDelay: '100ms' }}>
               <span className="cu-process-num">02</span>
               <div className="cu-process-content">
                 <h3 className="cu-process-title">Design Creation</h3>
                 <p className="cu-process-desc">Our designers create detailed sketches and 3D renderings for your review and approval.</p>
               </div>
             </div>
-            <div className="cu-process-item">
+            <div className="cu-process-item cu-animate" style={{ transitionDelay: '200ms' }}>
               <span className="cu-process-num">03</span>
               <div className="cu-process-content">
                 <h3 className="cu-process-title">Crafting</h3>
                 <p className="cu-process-desc">Master jewelers handcraft your piece using premium materials and time-honored techniques.</p>
               </div>
             </div>
-            <div className="cu-process-item">
+            <div className="cu-process-item cu-animate" style={{ transitionDelay: '300ms' }}>
               <span className="cu-process-num">04</span>
               <div className="cu-process-content">
                 <h3 className="cu-process-title">Delivery</h3>
@@ -309,48 +465,48 @@ export default function CustomPage() {
         {/* Services Section */}
         <div className="cu-services-bg">
           <section className="cu-section">
-            <div className="cu-section-header">
+            <div className="cu-section-header cu-animate">
               <p className="cu-section-eyebrow">Our Services</p>
               <h2 className="cu-section-title">Custom Design Services</h2>
             </div>
 
             <div className="cu-services-grid">
-              <div className="cu-service-card">
+              <div className="cu-service-card cu-animate" style={{ transitionDelay: '0ms' }}>
                 <Sparkles className="cu-service-icon" size={40} strokeWidth={1} />
                 <h3 className="cu-service-title">Engagement Rings</h3>
                 <p className="cu-service-desc">Design the perfect engagement ring that captures your love story and reflects your unique style.</p>
                 <Link href="/Pages/contact" className="cu-service-link">Learn More <ChevronRight size={14} /></Link>
               </div>
 
-              <div className="cu-service-card">
+              <div className="cu-service-card cu-animate" style={{ transitionDelay: '80ms' }}>
                 <Gem className="cu-service-icon" size={40} strokeWidth={1} />
                 <h3 className="cu-service-title">Fine Jewelry</h3>
                 <p className="cu-service-desc">Create bespoke necklaces, earrings, bracelets, and more with our expert guidance.</p>
                 <Link href="/Pages/contact" className="cu-service-link">Learn More <ChevronRight size={14} /></Link>
               </div>
 
-              <div className="cu-service-card">
+              <div className="cu-service-card cu-animate" style={{ transitionDelay: '160ms' }}>
                 <Hammer className="cu-service-icon" size={40} strokeWidth={1} />
                 <h3 className="cu-service-title">Redesign & Restore</h3>
                 <p className="cu-service-desc">Transform heirloom pieces into modern treasures while preserving sentimental value.</p>
                 <Link href="/Pages/contact" className="cu-service-link">Learn More <ChevronRight size={14} /></Link>
               </div>
 
-              <div className="cu-service-card">
+              <div className="cu-service-card cu-animate" style={{ transitionDelay: '240ms' }}>
                 <PenTool className="cu-service-icon" size={40} strokeWidth={1} />
                 <h3 className="cu-service-title">Ring Modifications</h3>
                 <p className="cu-service-desc">Resize, reshape, or add stones to your existing jewelry with precision craftsmanship.</p>
                 <Link href="/Pages/contact" className="cu-service-link">Learn More <ChevronRight size={14} /></Link>
               </div>
 
-              <div className="cu-service-card">
+              <div className="cu-service-card cu-animate" style={{ transitionDelay: '320ms' }}>
                 <Scissors className="cu-service-icon" size={40} strokeWidth={1} />
                 <h3 className="cu-service-title">Stone Selection</h3>
                 <p className="cu-service-desc">Choose from our curated collection of certified diamonds and precious gemstones.</p>
                 <Link href="/Pages/contact" className="cu-service-link">Learn More <ChevronRight size={14} /></Link>
               </div>
 
-              <div className="cu-service-card">
+              <div className="cu-service-card cu-animate" style={{ transitionDelay: '400ms' }}>
                 <FileText className="cu-service-icon" size={40} strokeWidth={1} />
                 <h3 className="cu-service-title">Engraving</h3>
                 <p className="cu-service-desc">Personalize your piece with custom engraving, from dates to special messages.</p>
@@ -362,52 +518,64 @@ export default function CustomPage() {
 
         {/* Gallery Section */}
         <section className="cu-section">
-          <div className="cu-section-header">
+          <div className="cu-section-header cu-animate">
             <p className="cu-section-eyebrow">Our Creations</p>
             <h2 className="cu-section-title">Custom Design Portfolio</h2>
           </div>
 
           <div className="cu-gallery-grid">
-            <div className="cu-gallery-item">
-              <img src="/Home Page/Most Loved Pieces/Frame 122.png" alt="Art Deco Revival" className="cu-gallery-img" />
+            <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '0ms' }}>
+              <img src="/Home Page/Most Loved Pieces/Frame 122.png" alt="Art Deco Revival" className="cu-gallery-img cu-animate-img" />
               <div className="cu-gallery-overlay">
-                <h3 className="cu-gallery-title">Art Deco Revival</h3>
-                <p className="cu-gallery-desc">Vintage-inspired engagement ring with geometric details</p>
+                <div className="cu-gallery-overlay-content">
+                  <h3 className="cu-gallery-title">Art Deco Revival</h3>
+                  <p className="cu-gallery-desc">Vintage-inspired engagement ring with geometric details</p>
+                </div>
               </div>
             </div>
-            <div className="cu-gallery-item">
-              <img src="/Home Page/Most Loved Pieces/Frame 123.png" alt="Nature Embrace" className="cu-gallery-img" />
+            <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '80ms' }}>
+              <img src="/Home Page/Most Loved Pieces/Frame 123.png" alt="Nature Embrace" className="cu-gallery-img cu-animate-img" />
               <div className="cu-gallery-overlay">
-                <h3 className="cu-gallery-title">Nature Embrace</h3>
-                <p className="cu-gallery-desc">Organic leaf motif with emerald accents</p>
+                <div className="cu-gallery-overlay-content">
+                  <h3 className="cu-gallery-title">Nature Embrace</h3>
+                  <p className="cu-gallery-desc">Organic leaf motif with emerald accents</p>
+                </div>
               </div>
             </div>
-            <div className="cu-gallery-item">
-              <img src="/Home Page/Most Loved Pieces/Frame 124.png" alt="Modern Minimalist" className="cu-gallery-img" />
+            <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '160ms' }}>
+              <img src="/Home Page/Most Loved Pieces/Frame 124.png" alt="Modern Minimalist" className="cu-gallery-img cu-animate-img" />
               <div className="cu-gallery-overlay">
-                <h3 className="cu-gallery-title">Modern Minimalist</h3>
-                <p className="cu-gallery-desc">Sleek solitaire with hidden diamond details</p>
+                <div className="cu-gallery-overlay-content">
+                  <h3 className="cu-gallery-title">Modern Minimalist</h3>
+                  <p className="cu-gallery-desc">Sleek solitaire with hidden diamond details</p>
+                </div>
               </div>
             </div>
-            <div className="cu-gallery-item">
-              <img src="/Home Page/Most Loved Pieces/Frame 125.png" alt="Royal Heritage" className="cu-gallery-img" />
+            <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '240ms' }}>
+              <img src="/Home Page/Most Loved Pieces/Frame 125.png" alt="Royal Heritage" className="cu-gallery-img cu-animate-img" />
               <div className="cu-gallery-overlay">
-                <h3 className="cu-gallery-title">Royal Heritage</h3>
-                <p className="cu-gallery-desc">Heirloom redesign with sapphire centerpiece</p>
+                <div className="cu-gallery-overlay-content">
+                  <h3 className="cu-gallery-title">Royal Heritage</h3>
+                  <p className="cu-gallery-desc">Heirloom redesign with sapphire centerpiece</p>
+                </div>
               </div>
             </div>
-            <div className="cu-gallery-item">
-              <img src="/Home Page/Custom Design Template/Frame 91.png" alt="Celestial Dream" className="cu-gallery-img" />
+            <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '320ms' }}>
+              <img src="/Home Page/Custom Design Template/Frame 91.png" alt="Celestial Dream" className="cu-gallery-img cu-animate-img" />
               <div className="cu-gallery-overlay">
-                <h3 className="cu-gallery-title">Celestial Dream</h3>
-                <p className="cu-gallery-desc">Star-inspired pendant with diamond constellation</p>
+                <div className="cu-gallery-overlay-content">
+                  <h3 className="cu-gallery-title">Celestial Dream</h3>
+                  <p className="cu-gallery-desc">Star-inspired pendant with diamond constellation</p>
+                </div>
               </div>
             </div>
-            <div className="cu-gallery-item">
-              <img src="/About Page/Header/Frame 37391.png" alt="Timeless Classic" className="cu-gallery-img" />
+            <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '400ms' }}>
+              <img src="/About Page/Header/Frame 37391.png" alt="Timeless Classic" className="cu-gallery-img cu-animate-img" />
               <div className="cu-gallery-overlay">
-                <h3 className="cu-gallery-title">Timeless Classic</h3>
-                <p className="cu-gallery-desc">Three stone ring with matching wedding band</p>
+                <div className="cu-gallery-overlay-content">
+                  <h3 className="cu-gallery-title">Timeless Classic</h3>
+                  <p className="cu-gallery-desc">Three stone ring with matching wedding band</p>
+                </div>
               </div>
             </div>
           </div>
@@ -415,7 +583,7 @@ export default function CustomPage() {
 
         {/* CTA Section */}
         <section className="cu-cta-section">
-          <div className="cu-cta-content">
+          <div className="cu-cta-content cu-animate">
             <h2 className="cu-cta-title">Ready to Begin?</h2>
             <p className="cu-cta-text">Schedule a complimentary consultation with our design team to explore possibilities and bring your vision to life. No obligation, just creative inspiration.</p>
             <div className="cu-cta-btns">

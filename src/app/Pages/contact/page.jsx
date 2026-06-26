@@ -54,7 +54,7 @@ export default function ContactPage() {
   return (
     <>
       <style>{`
-        .ct-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 72px; }
+        .ct-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 0px; }
 
         /* General Variables */
         :root {

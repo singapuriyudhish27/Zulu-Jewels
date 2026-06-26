@@ -48,19 +48,6 @@ async function fetchMaintenanceActive(request) {
   }
 }
 
-async function isValidPortalSlug(request, slug) {
-  if (!slug) return false;
-  try {
-    const url = new URL(`/api/admin-portal/validate?slug=${encodeURIComponent(slug)}`, request.url);
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return false;
-    const data = await res.json();
-    return Boolean(data.valid);
-  } catch {
-    return false;
-  }
-}
-
 function hasAdminSession(request) {
   return Boolean(request.cookies.get('zulu_jewels_admin')?.value);
 }
@@ -81,10 +68,6 @@ export async function middleware(request) {
   const panelMatch = pathname.match(/^\/portal\/([^/]+)\/panel(\/.*)?$/);
   if (panelMatch) {
     const slug = panelMatch[1];
-    const valid = await isValidPortalSlug(request, slug);
-    if (!valid) {
-      return NextResponse.rewrite(new URL('/not-found', request.url));
-    }
     if (!hasAdminSession(request)) {
       return NextResponse.redirect(new URL(`/portal/${slug}`, request.url));
     }
@@ -95,10 +78,6 @@ export async function middleware(request) {
   const loginMatch = pathname.match(/^\/portal\/([^/]+)\/?$/);
   if (loginMatch) {
     const slug = loginMatch[1];
-    const valid = await isValidPortalSlug(request, slug);
-    if (!valid) {
-      return NextResponse.rewrite(new URL('/not-found', request.url));
-    }
     if (hasAdminSession(request)) {
       return NextResponse.redirect(new URL(`/portal/${slug}/panel`, request.url));
     }
