@@ -16,13 +16,14 @@
     "cloudinary": "^1.41.3",
     "jsonwebtoken": "^9.0.3",
     "lucide-react": "^0.563.0",
-    "mongoose": "^9.6.2",
+    "mongoose": "^9.7.2",
     "next": "15.1.0",
     "nodemailer": "^8.0.1",
     "razorpay": "^2.9.6",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "react-hot-toast": "^2.6.0",
+    "react-phone-number-input": "^3.4.17",
     "stripe": "^20.4.1"
   },
   "devDependencies": {

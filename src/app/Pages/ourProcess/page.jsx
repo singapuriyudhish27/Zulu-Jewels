@@ -3,6 +3,9 @@
 import React, { useState } from 'react';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
+import PhoneInput from 'react-phone-number-input';
+import flags from 'react-phone-number-input/flags';
+import 'react-phone-number-input/style.css';
 import { 
   Sparkles, 
   Gem, 
@@ -1115,6 +1118,10 @@ export default function BespokeJourneyPage() {
           opacity: 0;
           visibility: hidden;
           transition: all 0.4s ease;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          padding: 20px;
         }
 
         .bp-drawer-overlay.open {
@@ -1123,23 +1130,22 @@ export default function BespokeJourneyPage() {
         }
 
         .bp-drawer {
-          position: fixed;
-          top: 0;
-          right: 0;
-          bottom: 0;
+          position: relative;
           width: 100%;
           max-width: 500px;
+          max-height: 90vh;
           background: #ffffff;
           z-index: 2001;
-          box-shadow: -10px 0 40px rgba(0,0,0,0.15);
-          transform: translateX(100%);
-          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+          box-shadow: 0 10px 40px rgba(0,0,0,0.15);
+          transform: scale(0.95) translateY(20px);
+          transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
           display: flex;
           flex-direction: column;
+          border-radius: 8px;
         }
 
         .bp-drawer-overlay.open .bp-drawer {
-          transform: translateX(0);
+          transform: scale(1) translateY(0);
         }
 
         .bp-drawer-header {
@@ -1173,6 +1179,25 @@ export default function BespokeJourneyPage() {
           padding: 32px 24px;
           overflow-y: auto;
           flex: 1;
+          scrollbar-width: thin;
+          scrollbar-color: rgba(206, 162, 104, 0.3) transparent;
+        }
+
+        .bp-drawer-body::-webkit-scrollbar {
+          width: 5px;
+        }
+
+        .bp-drawer-body::-webkit-scrollbar-track {
+          background: transparent;
+        }
+
+        .bp-drawer-body::-webkit-scrollbar-thumb {
+          background: rgba(206, 162, 104, 0.3);
+          border-radius: 10px;
+        }
+
+        .bp-drawer-body::-webkit-scrollbar-thumb:hover {
+          background: rgba(206, 162, 104, 0.6);
         }
 
         .bp-form-group {
@@ -1187,6 +1212,70 @@ export default function BespokeJourneyPage() {
           color: #555555;
           margin-bottom: 8px;
           display: block;
+        }
+
+        /* Custom react-phone-number-input styling */
+        .PhoneInput {
+          display: flex;
+          align-items: center;
+          gap: 12px;
+          width: 100%;
+        }
+
+        .PhoneInputCountry {
+          display: flex;
+          align-items: center;
+          position: relative;
+          border: 1px solid #CEA268;
+          background: #fafafa;
+          padding: 12px 10px;
+          height: 46px;
+          cursor: pointer;
+        }
+
+        .PhoneInputCountrySelect {
+          position: absolute;
+          top: 0;
+          left: 0;
+          height: 100%;
+          width: 100%;
+          opacity: 0;
+          cursor: pointer;
+          z-index: 10;
+        }
+
+        .PhoneInputCountryIcon--square,
+        .PhoneInputCountryIcon {
+          width: 24px;
+          height: 16px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+        }
+
+        .PhoneInputCountryIcon img,
+        .PhoneInputCountryIcon svg {
+          width: 100%;
+          height: 100%;
+          object-fit: cover;
+        }
+
+        .PhoneInputInput {
+          flex: 1;
+          padding: 12px 16px;
+          border: 1px solid #CEA268;
+          background: #fafafa;
+          font-family: inherit;
+          font-size: 13px;
+          outline: none;
+          transition: all 0.3s;
+          border-radius: 0px;
+          height: 46px;
+        }
+
+        .PhoneInputInput:focus {
+          background: #ffffff;
+          box-shadow: 0 0 10px rgba(206, 162, 104, 0.15);
         }
 
         .bp-form-input, .bp-form-select, .bp-form-textarea {
@@ -1571,14 +1660,11 @@ export default function BespokeJourneyPage() {
 
                 <div className="bp-form-group">
                   <label className="bp-form-label" htmlFor="phone">Phone / WhatsApp</label>
-                  <input
-                    type="tel"
-                    id="phone"
-                    name="phone"
+                  <PhoneInput
+                    placeholder="Enter phone number"
                     value={formState.phone}
-                    onChange={handleInputChange}
-                    className="bp-form-input"
-                    placeholder="+1 (555) 000-0000"
+                    onChange={(value) => setFormState(prev => ({ ...prev, phone: value || '' }))}
+                    flags={flags}
                     required
                   />
                 </div>

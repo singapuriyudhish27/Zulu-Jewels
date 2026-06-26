@@ -171,6 +171,25 @@ export default function AboutPage() {
           background-color: #FAF8F6;
         }
 
+        /* Custom Section Backgrounds */
+        .ab-bg-journey {
+          background-color: #F5F2EB;
+        }
+
+
+
+        .ab-bg-trust {
+          background-color: #F7F5F0;
+        }
+
+        .ab-bg-design {
+          background-color: #F3EFE6;
+        }
+
+        .ab-bg-story-card-custom {
+          background-color: #ffffff !important;
+        }
+
         .ab-sec-header {
           text-align: center;
           max-width: 700px;
@@ -1218,7 +1237,7 @@ export default function AboutPage() {
         </section>
 
         {/* SECTION 3: Brand Journey Timeline */}
-        <section className="ab-sec-padding ab-bg-neutral">
+        <section className="ab-sec-padding ab-bg-journey">
           <div className="ab-sec-header ab-animate">
             <span className="ab-sec-eyebrow">Our Milestones</span>
             <h2 className="ab-sec-title">The Journey of ZULU</h2>
@@ -1306,7 +1325,7 @@ export default function AboutPage() {
         </section>
 
         {/* SECTION 4: Craftsmanship Process */}
-        <section className="ab-sec-padding">
+        <section className="ab-sec-padding ab-bg-trust">
           <div className="ab-sec-header ab-animate">
             <span className="ab-sec-eyebrow">Artistry in Motion</span>
             <h2 className="ab-sec-title">From Concept to Masterpiece</h2>
@@ -1407,7 +1426,7 @@ export default function AboutPage() {
         </section>
 
         {/* SECTION 5: Explore Our Collections */}
-        <section className="ab-sec-padding ab-bg-neutral">
+        <section className="ab-sec-padding">
           <div className="ab-sec-header ab-animate">
             <span className="ab-sec-eyebrow">The ZULU Curation</span>
             <h2 className="ab-sec-title">Explore Our Collections</h2>
@@ -1480,7 +1499,7 @@ export default function AboutPage() {
         </section>
 
         {/* SECTION 6: Certified Luxury */}
-        <section className="ab-sec-padding">
+        <section className="ab-sec-padding ab-bg-trust">
           <div className="ab-sec-header ab-animate">
             <span className="ab-sec-eyebrow">Trust & Transparency</span>
             <h2 className="ab-sec-title">Certified Luxury You Can Trust</h2>
@@ -1555,7 +1574,7 @@ export default function AboutPage() {
         </section>
 
         {/* SECTION 8: Custom Jewelry Experience */}
-        <section className="ab-sec-padding">
+        <section className="ab-sec-padding ab-bg-design">
           <div className="ab-custom-row">
             <div className="ab-custom-img-wrapper ab-animate">
               <img 
@@ -1623,7 +1642,7 @@ export default function AboutPage() {
           </div>
 
           <div className="ab-stories-grid">
-            <div className="ab-story-card ab-animate" style={{ transitionDelay: '0ms' }}>
+            <div className="ab-story-card ab-bg-story-card-custom ab-animate" style={{ transitionDelay: '0ms' }}>
               <span className="ab-story-quotes-icon">&ldquo;</span>
               <div>
                 <div className="ab-story-meta">
@@ -1641,7 +1660,7 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="ab-story-card ab-animate" style={{ transitionDelay: '100ms' }}>
+            <div className="ab-story-card ab-bg-story-card-custom ab-animate" style={{ transitionDelay: '100ms' }}>
               <span className="ab-story-quotes-icon">&ldquo;</span>
               <div>
                 <div className="ab-story-meta">
@@ -1659,7 +1678,7 @@ export default function AboutPage() {
               </div>
             </div>
 
-            <div className="ab-story-card ab-animate" style={{ transitionDelay: '200ms' }}>
+            <div className="ab-story-card ab-bg-story-card-custom ab-animate" style={{ transitionDelay: '200ms' }}>
               <span className="ab-story-quotes-icon">&ldquo;</span>
               <div>
                 <div className="ab-story-meta">
