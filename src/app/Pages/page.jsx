@@ -254,24 +254,27 @@ export default function HomePage() {
         .zj-hero-content {
           position: relative;
           z-index: 2;
-          max-width: 1280px;
+          max-width: 900px;
           margin: 0 auto;
           padding: 0 48px;
           width: 100%;
           display: flex;
           flex-direction: column;
+          align-items: center;
+          justify-content: center;
           gap: 20px;
         }
         .zj-hero-eyebrow {
+          font-family: 'Inter', sans-serif;
           font-size: 11px;
-          letter-spacing: 0.24em;
+          font-weight: 600;
+          letter-spacing: 0.35em;
           text-transform: uppercase;
           color: #EAB308;
-          font-weight: 600;
         }
         .zj-hero-title {
-          font-family: 'Cormorant Garamond', serif;
-          font-size: clamp(48px, 6.5vw, 84px);
+          font-family: 'Playfair Display', serif;
+          font-size: clamp(36px, 4.5vw, 64px);
           font-weight: 400;
           color: #fff;
           line-height: 1.1;
@@ -279,11 +282,12 @@ export default function HomePage() {
           letter-spacing: 0.01em;
         }
         .zj-hero-subtitle {
+          font-family: 'Inter', sans-serif;
           font-size: 15px;
           color: rgba(255,255,255,0.8);
           max-width: 520px;
           line-height: 1.8;
-          font-weight: 300;
+          font-weight: 500;
           margin-top: 8px;
         }
         .zj-hero-btn {
@@ -1117,12 +1121,12 @@ export default function HomePage() {
           <div className="zj-hero-overlay" />
           <div className="zj-hero-content">
             <span className="zj-hero-eyebrow">ZULU JEWELLERS</span>
-            <h1 className="zj-hero-title">{"The Autumn Equinox"}</h1>
+            <h1 className="zj-hero-title">{"UP TO 40% OFF"}</h1>
             <p className="zj-hero-subtitle">
-              {"Fall has arrived. Shop for our new releases starting today and find the piece that speaks to your essence."}
+              {"Discover timeless jewellery designed with exceptional craftsmanship, refined elegance, and enduring beauty—created to celebrate life's most meaningful moments."}
             </p>
-            <Link href="#product-sections" className="zj-hero-btn">
-              {"Shop Now →"}
+            <Link href="#collections" className="zj-hero-btn">
+              {"Explore Collection →"}
             </Link>
           </div>
         </section>
@@ -1182,7 +1186,7 @@ export default function HomePage() {
         </div>
 
         {/* Explore Our Collections (New Section) */}
-        <section className="zj-collections-section">
+        <section id="collections" className="zj-collections-section">
           <h2 className="zj-collections-title zj-animate">{"Explore Our Collections"}</h2>
           <p className="zj-collections-subtitle zj-animate">{"Immerse yourself in our distinct ateliers, each home to heirloom-quality fine creations."}</p>
           <div className="zj-col-grid">

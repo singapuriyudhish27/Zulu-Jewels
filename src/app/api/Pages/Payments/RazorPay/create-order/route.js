@@ -37,14 +37,16 @@ export async function POST(req) {
             return NextResponse.json({ error: "Unauthorized: Please login first." }, { status: 401 });
         }
 
-        const { currency = "INR", receipt, specificItem } = await req.json();
+        const { currency = "INR", receipt, specificItem, totalPayable } = await req.json();
+        console.log("Specific Item:", specificItem);
+        console.log("Total Payable*:", totalPayable);
         const safeCurrency = ALLOWED_CURRENCIES.includes((currency || '').toUpperCase())
             ? currency.toUpperCase()
             : 'INR';
 
         await connectDB();
 
-        let finalAmount = 0;
+        let finalAmount = Number(totalPayable);
 
         if (specificItem) {
             let unitPrice = 0;
@@ -56,7 +58,16 @@ export async function POST(req) {
                 const product = await Product.findById(specificItem.productId);
                 unitPrice = product ? product.price : 0;
             }
-            finalAmount = unitPrice * (specificItem.quantity || 1);
+            if (finalAmount < unitPrice) {
+                return NextResponse.json(
+                    { error: "Invalid payment amount" },
+                    { status: 400 }
+                );
+            }
+            const subtotal = unitPrice * (specificItem.quantity || 1);
+            const gst = subtotal * 0.03;
+            const shipping = 0;
+            finalAmount = subtotal + gst + shipping;
         } else {
             const cartItems = await CartItem.find({ user_id: user.userId });
             let totalCartAmount = 0;
@@ -70,9 +81,16 @@ export async function POST(req) {
                     const product = await Product.findById(item.product_id);
                     unitPrice = product ? product.price : 0;
                 }
-                totalCartAmount += unitPrice * item.quantity;
+                const subtotal = unitPrice * item.quantity;
+                const gst = subtotal * 0.03;
+                totalCartAmount += subtotal + gst;
             }
-            finalAmount = totalCartAmount;
+            if (finalAmount < totalCartAmount) {
+                return NextResponse.json(
+                    { error: "Invalid payment amount" },
+                    { status: 400 }
+                );
+            }
         }
 
         if (finalAmount <= 0) {

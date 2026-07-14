@@ -429,7 +429,7 @@ export default function ShippingPaymentPage() {
 
     const handleLogOut = () => {
         setOpen(false);
-        router.push("/auth/login");
+        router.push("/Pages");
     };
 
     const handleProfile = () => {

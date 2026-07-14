@@ -9,6 +9,7 @@ const ProductSchema = new mongoose.Schema({
   gender: { type: String },
   is_active: { type: Boolean, default: true },
   is_deleted: { type: Boolean, default: false },
+  specifications: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);

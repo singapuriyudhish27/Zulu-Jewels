@@ -21,48 +21,39 @@ const ConfirmModal = ({
     useEffect(() => {
         if (!isOpen) return;
 
-        // Determine icon based on type or custom icon prop
-        let displayIcon = icon;
-        let iconBg = 'rgba(239, 68, 68, 0.1)';
-        let iconColor = '#ef4444';
-        let actionBtnBg = '#ef4444';
+        let cardBg = '#f0f9ff';
+        let cardBorder = '1px solid #bae6fd';
+        let textColor = '#0369a1';
+        let iconBg = 'rgba(2, 132, 199, 0.1)';
+        let actionBtnBg = '#0284c7';
         let actionBtnColor = '#ffffff';
 
+        if (type === 'danger') {
+            cardBg = '#fef2f2';
+            cardBorder = '1px solid #fecaca';
+            textColor = '#b91c1c';
+            iconBg = 'rgba(220, 38, 38, 0.1)';
+            actionBtnBg = '#dc2626';
+            actionBtnColor = '#ffffff';
+        } else if (type === 'warning') {
+            cardBg = '#fffbeb';
+            cardBorder = '1px solid #fef3c7';
+            textColor = '#b45309';
+            iconBg = 'rgba(217, 119, 6, 0.1)';
+            actionBtnBg = '#d97706';
+            actionBtnColor = '#ffffff';
+        }
+
+        let displayIcon = icon;
         if (!displayIcon) {
             if (type === 'danger') {
-                displayIcon = <Trash2 size={16} color="#ef4444" />;
-                iconBg = 'rgba(239, 68, 68, 0.1)';
-                iconColor = '#ef4444';
-                actionBtnBg = '#ef4444';
-                actionBtnColor = '#ffffff';
+                displayIcon = <Trash2 size={16} color="#dc2626" />;
             } else if (type === 'warning') {
-                displayIcon = <AlertTriangle size={16} color="#eab308" />;
-                iconBg = 'rgba(234, 179, 8, 0.1)';
-                iconColor = '#eab308';
-                actionBtnBg = '#CEA268';
-                actionBtnColor = '#1A1712';
+                displayIcon = <AlertTriangle size={16} color="#d97706" />;
             } else {
-                displayIcon = <Info size={16} color="#3b82f6" />;
-                iconBg = 'rgba(59, 130, 246, 0.1)';
-                iconColor = '#3b82f6';
-                actionBtnBg = '#3b82f6';
-                actionBtnColor = '#ffffff';
+                displayIcon = <Info size={16} color="#0284c7" />;
             }
         } else {
-            if (type === 'warning') {
-                iconBg = 'rgba(234, 179, 8, 0.1)';
-                actionBtnBg = '#CEA268';
-                actionBtnColor = '#1A1712';
-            } else if (type === 'danger') {
-                iconBg = 'rgba(239, 68, 68, 0.1)';
-                actionBtnBg = '#ef4444';
-                actionBtnColor = '#ffffff';
-            } else {
-                iconBg = 'rgba(59, 130, 246, 0.1)';
-                actionBtnBg = '#3b82f6';
-                actionBtnColor = '#ffffff';
-            }
-            // Force size prop of custom icon element to be smaller if possible
             if (React.isValidElement(displayIcon)) {
                 displayIcon = React.cloneElement(displayIcon, { size: 16 });
             }
@@ -70,26 +61,27 @@ const ConfirmModal = ({
 
         const toastId = toast.custom((t) => (
             <div style={{
-                background: '#1A1712',
-                border: '1px solid rgba(206, 162, 104, 0.3)',
-                color: '#F5EFE3',
-                padding: '12px 14px',
-                borderRadius: '6px',
-                boxShadow: '0 10px 30px rgba(0, 0, 0, 0.5)',
+                background: cardBg,
+                border: cardBorder,
+                color: textColor,
+                padding: '16px 18px',
+                borderRadius: '10px',
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03), 0 0 1px rgba(0, 0, 0, 0.1)',
                 display: 'flex',
                 flexDirection: 'column',
-                gap: '10px',
-                width: '280px',
+                gap: '12px',
+                width: '340px',
                 fontFamily: "'Montserrat', sans-serif",
                 opacity: t.visible ? 1 : 0,
-                transform: t.visible ? 'translateY(0)' : 'translateY(-10px)',
-                transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+                transform: t.visible ? 'translateY(0)' : 'translateY(12px)',
+                transition: 'all 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
             }}>
-                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '10px' }}>
+                <div style={{ display: 'flex', alignItems: 'flex-start', gap: '12px' }}>
                     <div style={{
                         background: iconBg,
-                        padding: '6px',
-                        borderRadius: '4px',
+                        width: '32px',
+                        height: '32px',
+                        borderRadius: '50%',
                         display: 'flex',
                         alignItems: 'center',
                         justifyContent: 'center',
@@ -98,40 +90,35 @@ const ConfirmModal = ({
                         {displayIcon}
                     </div>
                     <div style={{ flex: 1 }}>
-                        <div style={{ fontWeight: 600, fontSize: '12px', color: '#F5EFE3', marginBottom: '2px', letterSpacing: '0.02em', lineHeight: '1.3' }}>
+                        <div style={{ fontWeight: 600, fontSize: '13px', color: textColor, marginBottom: '4px', letterSpacing: '0.01em', lineHeight: '1.4' }}>
                             {title}
                         </div>
-                        <div style={{ fontSize: '10px', color: '#9E8E78', letterSpacing: '0.01em', lineHeight: '1.4' }}>
+                        <div style={{ fontSize: '11.5px', color: textColor, opacity: 0.85, letterSpacing: '0.01em', lineHeight: '1.5' }}>
                             {message}
                         </div>
                     </div>
                 </div>
-                <div style={{ display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                <div style={{ display: 'flex', gap: '12px', justifyContent: 'flex-end', alignItems: 'center', marginTop: '4px' }}>
                     <button
                         onClick={() => {
                             toast.dismiss(t.id);
                             onClose();
                         }}
                         style={{
-                            padding: '6px 12px',
                             background: 'transparent',
-                            color: '#CEA268',
-                            border: '1px solid rgba(206, 162, 104, 0.25)',
-                            borderRadius: '2px',
-                            fontSize: '10px',
-                            fontWeight: 600,
+                            color: textColor,
+                            opacity: 0.75,
+                            border: 'none',
+                            fontSize: '11px',
+                            fontWeight: 500,
                             cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
-                            transition: 'all 0.2s ease',
+                            transition: 'opacity 0.2s ease',
                         }}
                         onMouseEnter={(e) => {
-                            e.currentTarget.style.background = 'rgba(206, 162, 104, 0.05)';
-                            e.currentTarget.style.borderColor = 'rgba(206, 162, 104, 0.4)';
+                            e.currentTarget.style.opacity = '1';
                         }}
                         onMouseLeave={(e) => {
-                            e.currentTarget.style.background = 'transparent';
-                            e.currentTarget.style.borderColor = 'rgba(206, 162, 104, 0.25)';
+                            e.currentTarget.style.opacity = '0.75';
                         }}
                     >
                         {cancelText}
@@ -143,16 +130,15 @@ const ConfirmModal = ({
                             onClose();
                         }}
                         style={{
-                            padding: '6px 12px',
+                            padding: '6px 14px',
                             background: actionBtnBg,
                             color: actionBtnColor,
                             border: 'none',
-                            borderRadius: '2px',
-                            fontSize: '10px',
-                            fontWeight: 700,
+                            borderRadius: '6px',
+                            fontSize: '11px',
+                            fontWeight: 600,
                             cursor: 'pointer',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.05em',
+                            letterSpacing: '0.02em',
                             transition: 'opacity 0.2s ease',
                         }}
                         onMouseEnter={(e) => e.currentTarget.style.opacity = '0.9'}
@@ -165,6 +151,7 @@ const ConfirmModal = ({
         ), {
             id: 'global-confirm',
             duration: Infinity,
+            position: 'bottom-center',
         });
 
         return () => {

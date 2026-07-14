@@ -118,7 +118,6 @@ export default function ProductDetailsPage() {
       try {
         const id = params.Product_Details;
         const res = await fetch(`/api/Pages/Products/${id}`);
-        console.log("Response:", res);
         if (!res.ok) {
           throw new Error(`HTTP error! status: ${res.status}`);
         }
@@ -258,7 +257,11 @@ export default function ProductDetailsPage() {
       const res = await fetch('/api/Pages/Payments/RazorPay/create-order', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ amount: amountInRupees * 100 }),
+        body: JSON.stringify({ 
+          currency: "INR",
+          specificItem,
+          totalPayable: amountInRupees
+       }),
       });
       const order = await res.json();
       const isLoaded = await loadRazorpay();
@@ -1026,10 +1029,13 @@ export default function ProductDetailsPage() {
           <div className="pd-main-img">
             {thumbs[activeThumb]?.type === 'video' ? (
               <video 
+                key={thumbs[activeThumb].url}
                 src={thumbs[activeThumb].url} 
                 controls 
                 autoPlay 
                 muted 
+                playsInline
+                preload="auto"
                 loop 
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />

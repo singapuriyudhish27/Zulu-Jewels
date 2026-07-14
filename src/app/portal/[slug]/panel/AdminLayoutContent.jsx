@@ -67,7 +67,7 @@ export default function AdminLayoutContent({ children }) {
         if (settingsRes.ok && settingsData.adminPortal?.path) {
           router.replace(settingsData.adminPortal.path);
         } else {
-          router.replace('/auth/login');
+          router.replace('/Pages');
         }
       } else {
         toast.error('Logout failed. Please try again.');

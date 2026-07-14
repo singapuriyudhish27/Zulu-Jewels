@@ -83,7 +83,8 @@ export async function GET(request) {
                     name: category.name,
                 } : { id: null, name: null },
                 variants,
-                images
+                images,
+                specifications: p.specifications || {}
             };
         });
 
@@ -123,7 +124,8 @@ export async function POST(request) {
             gender,
             is_active,
             variants = [],
-            media = []
+            media = [],
+            specifications = {}
         } = data;
 
         if (!category_name || !name || !price) {
@@ -146,7 +148,8 @@ export async function POST(request) {
             price: Number(price),
             material: finalMaterial,
             gender,
-            is_active
+            is_active,
+            specifications
         });
 
         const productId = newProduct._id;
@@ -179,6 +182,20 @@ export async function POST(request) {
                     _id: variantId,
                     product_id: productId,
                     material: v.material,
+                    metal_type: v.metal_type,
+                    metal_purity: v.metal_purity,
+                    metal_color: v.metal_color,
+                    metal_weight: v.metal_weight ? Number(v.metal_weight) : undefined,
+                    gemstone_type: v.gemstone_type || "None",
+                    gemstone_tcw: v.gemstone_tcw ? Number(v.gemstone_tcw) : undefined,
+                    gemstone_color: v.gemstone_color || undefined,
+                    gemstone_clarity: v.gemstone_clarity || undefined,
+                    gemstone_cut: v.gemstone_cut || undefined,
+                    gemstone_shape: v.gemstone_shape || undefined,
+                    gemstone_setting: v.gemstone_setting || undefined,
+                    gemstone_center_carat: v.gemstone_center_carat ? Number(v.gemstone_center_carat) : undefined,
+                    gemstone_cert_agency: v.gemstone_cert_agency || undefined,
+                    gemstone_cert_number: v.gemstone_cert_number || undefined,
                     description: v.description,
                     price: Number(v.price) || Number(price),
                     stock: Number(v.stock) || 0
@@ -247,7 +264,8 @@ export async function PUT(request) {
             gender,
             is_active,
             variants = [],
-            media = []
+            media = [],
+            specifications = {}
         } = data;
 
         if (!id) return NextResponse.json({ success: false, message: "Product Id Not Found" }, { status: 400 });
@@ -278,6 +296,7 @@ export async function PUT(request) {
         if (finalMaterial !== undefined) updateFields.material = finalMaterial;
         if (gender !== undefined) updateFields.gender = gender;
         if (is_active !== undefined) updateFields.is_active = is_active;
+        if (specifications !== undefined) updateFields.specifications = specifications;
 
         if (Object.keys(updateFields).length > 0) {
             await Product.updateOne({ _id: id }, updateFields);
@@ -334,6 +353,20 @@ export async function PUT(request) {
                 isUpdate,
                 variantData: {
                     material: v.material,
+                    metal_type: v.metal_type,
+                    metal_purity: v.metal_purity,
+                    metal_color: v.metal_color,
+                    metal_weight: v.metal_weight ? Number(v.metal_weight) : undefined,
+                    gemstone_type: v.gemstone_type || "None",
+                    gemstone_tcw: v.gemstone_tcw ? Number(v.gemstone_tcw) : undefined,
+                    gemstone_color: v.gemstone_color || undefined,
+                    gemstone_clarity: v.gemstone_clarity || undefined,
+                    gemstone_cut: v.gemstone_cut || undefined,
+                    gemstone_shape: v.gemstone_shape || undefined,
+                    gemstone_setting: v.gemstone_setting || undefined,
+                    gemstone_center_carat: v.gemstone_center_carat ? Number(v.gemstone_center_carat) : undefined,
+                    gemstone_cert_agency: v.gemstone_cert_agency || undefined,
+                    gemstone_cert_number: v.gemstone_cert_number || undefined,
                     description: v.description,
                     price: Number(v.price) || Number(price),
                     stock: Number(v.stock) || 0

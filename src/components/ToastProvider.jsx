@@ -11,64 +11,64 @@ export default function ToastProvider() {
       }}
     >
       {(t) => {
-        let bg = '#0A1118';
-        let border = '1px solid #3b82f6';
-        let color = '#93C5FD';
-        let iconColor = '#3b82f6';
-        let closeColor = '#3b82f6';
-        let closeHoverColor = '#60a5fa';
+        let bg = '#f0f9ff';
+        let border = '1px solid #bae6fd';
+        let color = '#0369a1';
+        let iconColor = '#0284c7';
+        let closeColor = '#0284c7';
+        let closeHoverColor = '#0369a1';
         let icon = null;
 
         const hasCustomEmoji = typeof t.icon === 'string';
 
         if (t.type === 'success') {
-          bg = '#0B130E';
-          border = '1px solid #10b981';
-          color = '#A7F3D0';
-          iconColor = '#10b981';
-          closeColor = '#10b981';
-          closeHoverColor = '#34d399';
+          bg = '#f0fdf4';
+          border = '1px solid #bbf7d0';
+          color = '#15803d';
+          iconColor = '#16a34a';
+          closeColor = '#16a34a';
+          closeHoverColor = '#15803d';
           icon = <CheckCircle2 size={18} strokeWidth={2} style={{ color: iconColor, flexShrink: 0 }} />;
         } else if (t.type === 'error') {
-          bg = '#160B0C';
-          border = '1px solid #ef4444';
-          color = '#FCA5A5';
-          iconColor = '#ef4444';
-          closeColor = '#ef4444';
-          closeHoverColor = '#f87171';
+          bg = '#fef2f2';
+          border = '1px solid #fecaca';
+          color = '#b91c1c';
+          iconColor = '#dc2626';
+          closeColor = '#dc2626';
+          closeHoverColor = '#b91c1c';
           icon = <AlertCircle size={18} strokeWidth={2} style={{ color: iconColor, flexShrink: 0 }} />;
         } else if (t.icon === 'ℹ️' || t.icon === 'ℹ') {
-          bg = '#0A1118';
-          border = '1px solid #3b82f6';
-          color = '#93C5FD';
-          iconColor = '#3b82f6';
-          closeColor = '#3b82f6';
-          closeHoverColor = '#60a5fa';
+          bg = '#f0f9ff';
+          border = '1px solid #bae6fd';
+          color = '#0369a1';
+          iconColor = '#0284c7';
+          closeColor = '#0284c7';
+          closeHoverColor = '#0369a1';
           icon = <Info size={18} strokeWidth={2} style={{ color: iconColor, flexShrink: 0 }} />;
         } else if (t.icon === '⚠️' || t.icon === '⚠') {
-          bg = '#141108';
-          border = '1px solid #eab308';
-          color = '#FDE047';
-          iconColor = '#eab308';
-          closeColor = '#eab308';
-          closeHoverColor = '#facc15';
+          bg = '#fffbeb';
+          border = '1px solid #fef3c7';
+          color = '#b45309';
+          iconColor = '#d97706';
+          closeColor = '#d97706';
+          closeHoverColor = '#b45309';
           icon = <AlertTriangle size={18} strokeWidth={2} style={{ color: iconColor, flexShrink: 0 }} />;
         } else {
           if (hasCustomEmoji) {
-            bg = '#0D0C09';
-            border = '1px solid rgba(206, 162, 104, 0.3)';
-            color = '#F5EFE3';
+            bg = '#fafaf9';
+            border = '1px solid #e7e5e4';
+            color = '#44403c';
             iconColor = '#CEA268';
-            closeColor = '#7A6A55';
-            closeHoverColor = '#CEA268';
+            closeColor = '#78716c';
+            closeHoverColor = '#44403c';
             icon = <span style={{ fontSize: '16px', flexShrink: 0 }}>{t.icon}</span>;
           } else {
-            bg = '#0A1118';
-            border = '1px solid #3b82f6';
-            color = '#93C5FD';
-            iconColor = '#3b82f6';
-            closeColor = '#3b82f6';
-            closeHoverColor = '#60a5fa';
+            bg = '#f0f9ff';
+            border = '1px solid #bae6fd';
+            color = '#0369a1';
+            iconColor = '#0284c7';
+            closeColor = '#0284c7';
+            closeHoverColor = '#0369a1';
             icon = <Info size={18} strokeWidth={2} style={{ color: iconColor, flexShrink: 0 }} />;
           }
         }
@@ -85,7 +85,7 @@ export default function ToastProvider() {
               border: border,
               borderRadius: '8px',
               padding: '14px 18px',
-              boxShadow: '0 10px 40px rgba(0, 0, 0, 0.4)',
+              boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.05), 0 4px 6px -2px rgba(0, 0, 0, 0.03), 0 0 1px rgba(0, 0, 0, 0.1)',
               minWidth: '320px',
               maxWidth: '480px',
               transition: 'all 0.2s ease',
