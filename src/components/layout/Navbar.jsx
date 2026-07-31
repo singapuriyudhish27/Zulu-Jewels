@@ -15,13 +15,14 @@ export default function Navbar() {
   const router = useRouter();
   const pathname = usePathname();
 
-  const isAuthPage = pathname?.startsWith('/auth');
-  const isTransparentNavbarPage = !isAuthPage;
+  const isAuthPage = pathname?.toLowerCase().startsWith('/auth');
+  const isProductDetailsPage = pathname?.toLowerCase().startsWith('/pages/products/') && pathname?.toLowerCase() !== '/pages/products';
+  const isTransparentNavbarPage = !isAuthPage && !isProductDetailsPage;
   const isLightBgPage = 
-    pathname?.includes('/Pages/cart') || 
-    pathname?.includes('/Pages/Profile') || 
-    pathname?.includes('/Pages/delivery-confirmation') ||
-    pathname?.includes('/Pages/payment-success');
+    pathname?.toLowerCase().includes('/pages/cart') || 
+    pathname?.toLowerCase().includes('/pages/profile') || 
+    pathname?.toLowerCase().includes('/pages/delivery-confirmation') ||
+    pathname?.toLowerCase().includes('/pages/payment-success');
 
   const [isScrolled, setIsScrolled] = useState(false);
 
@@ -142,8 +143,7 @@ export default function Navbar() {
           color: #CEA268;
         }
         .zj-navbar.zj-nav-solid {
-          background: rgba(255, 255, 255, 0.95);
-          backdrop-filter: blur(12px);
+          background: #ffffff;
           border-bottom: 1px solid rgba(232, 224, 216, 0.8);
           box-shadow: 0 4px 30px rgba(0, 0, 0, 0.03);
         }

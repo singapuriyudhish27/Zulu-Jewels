@@ -59,7 +59,28 @@ const BLOGS = [
   }
 ];
 
-
+const GENERAL_FAQS = [
+  {
+    q: "Are all Zulu Jewellers diamonds certified?",
+    a: "Yes, every solitaire diamond we offer is graded and certified by world-renowned laboratories, primarily the Gemological Institute of America (GIA) and the International Gemological Institute (IGI). Your purchase will include the original grading certificate."
+  },
+  {
+    q: "Do you offer international shipping and secure delivery?",
+    a: "We offer fully secured, insured worldwide shipping. All packages are shipped via top-tier courier services with tracking, requiring signature confirmation upon delivery to guarantee safety."
+  },
+  {
+    q: "Can I design a custom piece of jewelry?",
+    a: "Bespoke design is our specialty. You can collaborate directly with our designers and master artisans to create a unique piece. Visit our 'Start Custom Design' section to begin your bespoke journey."
+  },
+  {
+    q: "What is your return and exchange policy?",
+    a: "We offer a 30-day return policy for standard items in original, unworn condition. Custom creations, engraved pieces, and resized rings are final sale but covered under our lifetime support policy."
+  },
+  {
+    q: "How should I care for my Zulu Jewellers fine jewelry?",
+    a: "To maintain luster, clean your jewelry gently with warm water, mild soap, and a soft brush. We recommend bringing your jewelry to our boutique annually for professional inspection and complimentary cleaning."
+  }
+];
 
 export default function HomePage() {
   const router = useRouter();
@@ -70,6 +91,7 @@ export default function HomePage() {
   const [loading, setLoading] = useState(true);
   const [activeCategory, setActiveCategory] = useState(null);
   const [bestSellerTab, setBestSellerTab] = useState(null);
+  const [activeFaq, setActiveFaq] = useState(null);
   const productSectionRef = useRef(null);
 
   useEffect(() => {
@@ -1103,6 +1125,101 @@ export default function HomePage() {
             letter-spacing: 0.01em;
           }
         }
+
+        /* FAQ Section styling */
+        .zj-faq-section {
+          max-width: 900px;
+          margin: 0 auto;
+          padding: 80px 24px;
+          font-family: 'Montserrat', sans-serif;
+        }
+        .zj-faq-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 40px;
+          font-weight: 400;
+          text-align: center;
+          color: #000;
+          margin-bottom: 48px;
+          letter-spacing: 0.02em;
+        }
+        .zj-faq-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .zj-faq-item {
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          padding-bottom: 16px;
+          transition: all 0.3s ease;
+        }
+        .zj-faq-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          cursor: pointer;
+          padding: 8px 0;
+          gap: 20px;
+        }
+        .zj-faq-question {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1a1a1a;
+          letter-spacing: 0.02em;
+          margin: 0;
+          transition: color 0.2s;
+        }
+        .zj-faq-item:hover .zj-faq-question {
+          color: #EAB308;
+        }
+        .zj-faq-icon {
+          font-size: 24px;
+          font-weight: 300;
+          color: #555;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.3s ease, color 0.3s;
+          user-select: none;
+        }
+        .zj-faq-icon.active {
+          color: #EAB308;
+          transform: rotate(45deg);
+        }
+        .zj-faq-answer-container {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.3s ease, opacity 0.3s ease;
+          opacity: 0;
+        }
+        .zj-faq-answer-container.open {
+          max-height: 200px;
+          opacity: 1;
+        }
+        .zj-faq-answer {
+          font-size: 14px;
+          color: #555;
+          line-height: 1.8;
+          font-weight: 300;
+          padding: 12px 0 8px;
+          margin: 0;
+        }
+        @media (max-width: 600px) {
+          .zj-faq-section {
+            padding: 50px 16px;
+          }
+          .zj-faq-title {
+            font-size: 32px;
+            margin-bottom: 32px;
+          }
+          .zj-faq-question {
+            font-size: 14px;
+          }
+          .zj-faq-answer {
+            font-size: 13px;
+          }
+        }
       `}</style>
 
       <Navbar />
@@ -1131,59 +1248,76 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* Curated Masterpieces Section */}
-        <section className="zj-most-loved">
-          <h2 className="zj-most-loved-title zj-animate">{"Curated Masterpieces"}</h2>
-          <p className="zj-curated-intro zj-animate">
-            {"A handpicked selection of our most admired creations, showcasing exceptional craftsmanship, timeless elegance, and modern sophistication."}
-          </p>
-          <div className="zj-most-loved-grid">
-            {MOST_LOVED.map((item, i) => (
-              <div key={item.id} className="zj-most-loved-item zj-animate" style={{ transitionDelay: `${i * 100}ms` }}>
-                <img src={item.img} alt="Curated Masterpiece" className="zj-most-loved-item-img zj-animate-img" />
-              </div>
-            ))}
+        {/* This Month's Best Sellers (New Section) */}
+        <section className="zj-best-sellers-section">
+          <div className="zj-best-sellers-inner">
+            <h2 className="zj-best-sellers-title zj-animate">{"This Month's Best Sellers"}</h2>
+            <p className="zj-best-sellers-subtitle zj-animate">{"Our most coveted designs, curated for their exceptional beauty and demand."}</p>
+            
+            <div className="zj-best-sellers-tabs">
+              {collections.map((col) => (
+                <button
+                  key={col.id}
+                  className={`zj-best-seller-tab-btn ${bestSellerTab === col.id ? 'active' : ''}`}
+                  onClick={() => setBestSellerTab(col.id)}
+                >
+                  {col.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="zj-product-grid">
+              {getBestSellers(bestSellerTab).map((p, pi) => (
+                <div 
+                  key={pi} 
+                  className="zj-product-card zj-animate" 
+                  onClick={() => router.push(`/Pages/Products/${p.id}`)}
+                  style={{ transitionDelay: `${pi * 80}ms` }}
+                >
+                  <div className="zj-product-img-wrap">
+                    {p.images && p.images.length > 0 ? (
+                      <img 
+                        src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
+                        alt={p.name} 
+                        className="zj-animate-img"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="zj-product-img-placeholder">💍</div>
+                    )}
+                    <button 
+                      className="zj-product-wishlist" 
+                      onClick={e => { 
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        toggleWishlist(p.id); 
+                      }}
+                      style={{ color: wishlist[p.id] ? '#EAB308' : '#bbbbbb' }}
+                    >
+                      {wishlist[p.id] ? '♥' : '♡'}
+                    </button>
+                  </div>
+                  <div className="zj-product-name">{p.name}</div>
+                  <div className="zj-product-price">
+                    {p.price ? `₹${Number(p.price).toLocaleString()}` : "Price on Request"}
+                  </div>
+                  {p.swatches && p.swatches.length > 0 && (
+                    <div className="zj-product-swatches">
+                      {p.swatches.map((s, i) => (
+                        <span key={i} className="zj-swatch" style={{ background: s }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {getBestSellers(bestSellerTab).length === 0 && (
+                <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '40px', color: '#888', fontSize: '13px' }}>
+                  {"No top sellers available in this category."}
+                </div>
+              )}
+            </div>
           </div>
         </section>
-
-        <hr className="zj-divider" />
-
-        {/* Custom Design CTA */}
-        <div className="zj-cta-banner-wrap">
-          <div className="zj-cta-banner">
-            <video 
-              src="/About Page/Craftmentship Video.mp4" 
-              autoPlay 
-              loop 
-              muted 
-              playsInline 
-              className="zj-cta-video"
-            />
-            <div className="zj-cta-content zj-animate">
-              <span className="zj-cta-eyebrow">{"BESPOKE DESIGN"}</span>
-              <h2 className="zj-cta-title">{"Design Your Own Masterpiece"}</h2>
-              <p className="zj-cta-subtitle">{"Bring your dream jewelry to life with our expert craftsmanship."}</p>
-              <Link href="/Pages/custom" className="zj-cta-btn-primary">{"Start Custom Design"}</Link>
-            </div>
-          </div>
-        </div>
-
-        {/* Gifts Section */}
-        <div className="zj-gifts-outer">
-          <section className="zj-gifts-section">
-            <div className="zj-gifts-content zj-animate">
-              <span className="zj-gifts-eyebrow">{"THE GIFTING SUITE"}</span>
-              <h2 className="zj-gifts-title">{"Gifts of the season"}</h2>
-              <p className="zj-gifts-text">
-                {"Discover our carefully curated selection of gifts perfect for every occasion. From delicate everyday pieces to statement jewellery for special moments, find the ideal gift for that someone special."}
-              </p>
-              <Link href="/Pages/Products" className="zj-gifts-btn">{"Shop Gifts"}</Link>
-            </div>
-            <div className="zj-gifts-image zj-animate">
-              <img src="/Home Page/Gift Of The Season/Rectangle 37.png" alt="Gifts" className="zj-gifts-img zj-animate-img" />
-            </div>
-          </section>
-        </div>
 
         {/* Explore Our Collections (New Section) */}
         <section id="collections" className="zj-collections-section">
@@ -1297,76 +1431,59 @@ export default function HomePage() {
           </div>
         )}
 
-        {/* This Month's Best Sellers (New Section) */}
-        <section className="zj-best-sellers-section">
-          <div className="zj-best-sellers-inner">
-            <h2 className="zj-best-sellers-title zj-animate">{"This Month's Best Sellers"}</h2>
-            <p className="zj-best-sellers-subtitle zj-animate">{"Our most coveted designs, curated for their exceptional beauty and demand."}</p>
-            
-            <div className="zj-best-sellers-tabs">
-              {collections.map((col) => (
-                <button
-                  key={col.id}
-                  className={`zj-best-seller-tab-btn ${bestSellerTab === col.id ? 'active' : ''}`}
-                  onClick={() => setBestSellerTab(col.id)}
-                >
-                  {col.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="zj-product-grid">
-              {getBestSellers(bestSellerTab).map((p, pi) => (
-                <div 
-                  key={pi} 
-                  className="zj-product-card zj-animate" 
-                  onClick={() => router.push(`/Pages/Products/${p.id}`)}
-                  style={{ transitionDelay: `${pi * 80}ms` }}
-                >
-                  <div className="zj-product-img-wrap">
-                    {p.images && p.images.length > 0 ? (
-                      <img 
-                        src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
-                        alt={p.name} 
-                        className="zj-animate-img"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div className="zj-product-img-placeholder">💍</div>
-                    )}
-                    <button 
-                      className="zj-product-wishlist" 
-                      onClick={e => { 
-                        e.preventDefault(); 
-                        e.stopPropagation(); 
-                        toggleWishlist(p.id); 
-                      }}
-                      style={{ color: wishlist[p.id] ? '#EAB308' : '#bbbbbb' }}
-                    >
-                      {wishlist[p.id] ? '♥' : '♡'}
-                    </button>
-                  </div>
-                  <div className="zj-product-name">{p.name}</div>
-                  <div className="zj-product-price">
-                    {p.price ? `₹${Number(p.price).toLocaleString()}` : "Price on Request"}
-                  </div>
-                  {p.swatches && p.swatches.length > 0 && (
-                    <div className="zj-product-swatches">
-                      {p.swatches.map((s, i) => (
-                        <span key={i} className="zj-swatch" style={{ background: s }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {getBestSellers(bestSellerTab).length === 0 && (
-                <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '40px', color: '#888', fontSize: '13px' }}>
-                  {"No top sellers available in this category."}
-                </div>
-              )}
-            </div>
+        {/* Curated Masterpieces Section */}
+        <section className="zj-most-loved">
+          <h2 className="zj-most-loved-title zj-animate">{"Curated Masterpieces"}</h2>
+          <p className="zj-curated-intro zj-animate">
+            {"A handpicked selection of our most admired creations, showcasing exceptional craftsmanship, timeless elegance, and modern sophistication."}
+          </p>
+          <div className="zj-most-loved-grid">
+            {MOST_LOVED.map((item, i) => (
+              <div key={item.id} className="zj-most-loved-item zj-animate" style={{ transitionDelay: `${i * 100}ms` }}>
+                <img src={item.img} alt="Curated Masterpiece" className="zj-most-loved-item-img zj-animate-img" />
+              </div>
+            ))}
           </div>
         </section>
+
+        <hr className="zj-divider" />
+
+        {/* Custom Design CTA */}
+        <div className="zj-cta-banner-wrap">
+          <div className="zj-cta-banner">
+            <video 
+              src="/About Page/Craftmentship Video.mp4" 
+              autoPlay 
+              loop 
+              muted 
+              playsInline 
+              className="zj-cta-video"
+            />
+            <div className="zj-cta-content zj-animate">
+              <span className="zj-cta-eyebrow">{"BESPOKE DESIGN"}</span>
+              <h2 className="zj-cta-title">{"Design Your Own Masterpiece"}</h2>
+              <p className="zj-cta-subtitle">{"Bring your dream jewelry to life with our expert craftsmanship."}</p>
+              <Link href="/Pages/custom" className="zj-cta-btn-primary">{"Start Custom Design"}</Link>
+            </div>
+          </div>
+        </div>
+
+        {/* Gifts Section */}
+        <div className="zj-gifts-outer">
+          <section className="zj-gifts-section">
+            <div className="zj-gifts-content zj-animate">
+              <span className="zj-gifts-eyebrow">{"THE GIFTING SUITE"}</span>
+              <h2 className="zj-gifts-title">{"Gifts of the season"}</h2>
+              <p className="zj-gifts-text">
+                {"Discover our carefully curated selection of gifts perfect for every occasion. From delicate everyday pieces to statement jewellery for special moments, find the ideal gift for that someone special."}
+              </p>
+              <Link href="/Pages/Products" className="zj-gifts-btn">{"Shop Gifts"}</Link>
+            </div>
+            <div className="zj-gifts-image zj-animate">
+              <img src="/Home Page/Gift Of The Season/Rectangle 37.png" alt="Gifts" className="zj-gifts-img zj-animate-img" />
+            </div>
+          </section>
+        </div>
 
         {/* Testimonials */}
         <section className="zj-testimonials-section">
@@ -1396,6 +1513,27 @@ export default function HomePage() {
                 ))}
               </div>
             </div>
+          </div>
+        </section>
+
+        {/* General FAQs Section */}
+        <section className="zj-faq-section zj-animate">
+          <h2 className="zj-faq-title">Frequently Asked Questions</h2>
+          <div className="zj-faq-list">
+            {GENERAL_FAQS.map((faq, index) => {
+              const isOpen = activeFaq === index;
+              return (
+                <div key={index} className="zj-faq-item">
+                  <div className="zj-faq-header" onClick={() => setActiveFaq(isOpen ? null : index)}>
+                    <h3 className="zj-faq-question">{faq.q}</h3>
+                    <span className={`zj-faq-icon ${isOpen ? 'active' : ''}`}>+</span>
+                  </div>
+                  <div className={`zj-faq-answer-container ${isOpen ? 'open' : ''}`}>
+                    <p className="zj-faq-answer">{faq.a}</p>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </section>
 

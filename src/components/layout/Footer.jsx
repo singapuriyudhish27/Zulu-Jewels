@@ -1,10 +1,24 @@
 'use client';
+import { useState } from 'react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 import { Instagram, Twitter, Facebook, Youtube, Linkedin, Award, ShieldCheck, Heart, Truck, Sparkles } from 'lucide-react';
 
 export default function Footer() {
   const router = useRouter();
+  const [openSections, setOpenSections] = useState({
+    services: false,
+    about: false,
+    care: false,
+    locations: false,
+  });
+
+  const toggleSection = (section) => {
+    setOpenSections((prev) => ({
+      ...prev,
+      [section]: !prev[section],
+    }));
+  };
 
   const handleTrackOrder = async (e) => {
     e.preventDefault();
@@ -39,28 +53,41 @@ export default function Footer() {
           grid-template-columns: repeat(4, 1fr) 1.4fr;
           gap: 40px;
         }
+        .zj-footer-col-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          margin-bottom: 20px;
+        }
         .zj-footer-col-title {
           font-size: 11px;
           font-weight: 700;
           letter-spacing: 0.14em;
           text-transform: uppercase;
           color: #000;
-          margin-bottom: 20px;
+          margin: 0;
         }
-        .zj-footer-col ul {
+        .zj-footer-toggle-icon {
+          display: none;
+          font-size: 18px;
+          font-weight: 300;
+          color: #000;
+          user-select: none;
+        }
+        .zj-footer-links-list {
           list-style: none;
           display: flex;
           flex-direction: column;
           gap: 10px;
         }
-        .zj-footer-col ul li a {
+        .zj-footer-links-list li a {
           font-size: 13px;
           color: #555;
           text-decoration: none;
           transition: color 0.2s;
           line-height: 1.5;
         }
-        .zj-footer-col ul li a:hover {
+        .zj-footer-links-list li a:hover {
           color: #000;
         }
         .zj-footer-newsletter {
@@ -173,6 +200,39 @@ export default function Footer() {
         @media (max-width: 600px) {
           .zj-footer-grid {
             grid-template-columns: 1fr;
+            gap: 20px;
+          }
+          .zj-footer-col {
+            border-bottom: 1px solid rgba(0,0,0,0.06);
+            padding-bottom: 15px;
+          }
+          .zj-footer-col:last-child {
+            border-bottom: none;
+            padding-bottom: 0;
+          }
+          .zj-footer-col-header {
+            margin-bottom: 0;
+            cursor: pointer;
+            padding: 5px 0;
+          }
+          .zj-footer-col-header.static {
+            cursor: default;
+            pointer-events: none;
+          }
+          .zj-footer-toggle-icon {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            width: 20px;
+            height: 20px;
+          }
+          .zj-footer-links-list {
+            display: none;
+          }
+          .zj-footer-links-list.open {
+            display: flex;
+            margin-top: 15px;
+            animation: zj-footer-fade-in 0.25s ease-out;
           }
           .zj-footer-bottom {
             flex-direction: column;
@@ -180,6 +240,16 @@ export default function Footer() {
           }
           .zj-footer-legal {
             justify-content: center;
+          }
+        }
+        @keyframes zj-footer-fade-in {
+          from {
+            opacity: 0;
+            transform: translateY(-8px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
           }
         }
         .zj-footer-trust-bar {
@@ -244,7 +314,7 @@ export default function Footer() {
 
       <footer className="zj-footer">
         {/* Trust Indicators Bar */}
-        <div className="zj-footer-trust-bar">
+        {/* <div className="zj-footer-trust-bar">
           <div className="zj-footer-trust-inner">
             <div className="zj-footer-trust-item">
               <div className="zj-footer-trust-icon"><Award size={22} /></div>
@@ -282,14 +352,19 @@ export default function Footer() {
               </div>
             </div>
           </div>
-        </div>
+        </div> */}
 
         {/* Main footer grid */}
         <div className="zj-footer-grid">
           {/* Column 1: Customer Services */}
           <div className="zj-footer-col">
-            <h4 className="zj-footer-col-title">Customer Services</h4>
-            <ul>
+            <div className="zj-footer-col-header" onClick={() => toggleSection('services')}>
+              <h4 className="zj-footer-col-title">Customer Services</h4>
+              <span className="zj-footer-toggle-icon">
+                {openSections.services ? '−' : '+'}
+              </span>
+            </div>
+            <ul className={`zj-footer-links-list ${openSections.services ? 'open' : ''}`}>
               <li><Link href="/Pages/contact">Contact Us</Link></li>
               <li><Link href="/Pages/Profile" onClick={handleTrackOrder}>Track your Order</Link></li>
               <li><Link href="#">Shipping &amp; Returns</Link></li>
@@ -300,8 +375,13 @@ export default function Footer() {
 
           {/* Column 2: About Us */}
           <div className="zj-footer-col">
-            <h4 className="zj-footer-col-title">About Us</h4>
-            <ul>
+            <div className="zj-footer-col-header" onClick={() => toggleSection('about')}>
+              <h4 className="zj-footer-col-title">About Us</h4>
+              <span className="zj-footer-toggle-icon">
+                {openSections.about ? '−' : '+'}
+              </span>
+            </div>
+            <ul className={`zj-footer-links-list ${openSections.about ? 'open' : ''}`}>
               <li><Link href="/Pages/about">Origins</Link></li>
               <li><Link href="/Pages/about">Our Purpose</Link></li>
               <li><Link href="#">Careers</Link></li>
@@ -312,8 +392,13 @@ export default function Footer() {
 
           {/* Column 3: Material Care */}
           <div className="zj-footer-col">
-            <h4 className="zj-footer-col-title">Material Care</h4>
-            <ul>
+            <div className="zj-footer-col-header" onClick={() => toggleSection('care')}>
+              <h4 className="zj-footer-col-title">Material Care</h4>
+              <span className="zj-footer-toggle-icon">
+                {openSections.care ? '−' : '+'}
+              </span>
+            </div>
+            <ul className={`zj-footer-links-list ${openSections.care ? 'open' : ''}`}>
               <li><Link href="#">Jewelry Repair</Link></li>
               <li><Link href="#">Ring Sizing</Link></li>
               <li><Link href="#">Metal Allergy Resources</Link></li>
@@ -323,8 +408,13 @@ export default function Footer() {
 
           {/* Column 4: Main Locations */}
           <div className="zj-footer-col">
-            <h4 className="zj-footer-col-title">Main Locations</h4>
-            <ul>
+            <div className="zj-footer-col-header" onClick={() => toggleSection('locations')}>
+              <h4 className="zj-footer-col-title">Main Locations</h4>
+              <span className="zj-footer-toggle-icon">
+                {openSections.locations ? '−' : '+'}
+              </span>
+            </div>
+            <ul className={`zj-footer-links-list ${openSections.locations ? 'open' : ''}`}>
               <li><Link href="/Pages/contact">Surat, GJ</Link></li>
               <li><Link href="/Pages/contact">Mumbai, MH</Link></li>
               <li><Link href="/Pages/contact">Hyderabad, TS</Link></li>
@@ -334,7 +424,9 @@ export default function Footer() {
 
           {/* Column 5: Newsletter */}
           <div className="zj-footer-col">
-            <h4 className="zj-footer-col-title">Stay Connected</h4>
+            <div className="zj-footer-col-header static">
+              <h4 className="zj-footer-col-title">Stay Connected</h4>
+            </div>
             <div className="zj-footer-newsletter">
               <p className="zj-footer-newsletter-title">You can be one step ahead.</p>
               <p className="zj-footer-newsletter-tagline">Sign up for exclusive offers &amp; updates</p>

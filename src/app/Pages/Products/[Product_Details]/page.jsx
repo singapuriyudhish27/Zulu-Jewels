@@ -89,6 +89,7 @@ export default function ProductDetailsPage() {
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('description');
+  const [activeFaq, setActiveFaq] = useState(null);
   const [selectedCarat, setSelectedCarat] = useState(1);
   const [selectedDiamond, setSelectedDiamond] = useState(1); // Lab Grown
   const [activeThumb, setActiveThumb] = useState(0);
@@ -443,7 +444,29 @@ export default function ProductDetailsPage() {
     }
   };
 
-
+  const getProductFAQs = (prod) => {
+    const category = prod.category_name || "Jewelry";
+    const name = prod.name || "piece";
+    
+    return [
+      {
+        q: `Is this ${name} customizable in other precious metals?`,
+        a: `Yes, this ${category.toLowerCase()} can be custom-ordered in 18K Yellow Gold, 18K White Gold, 18K Rose Gold, and Platinum. Please select your preferred metal variant from the options above or contact our concierge team for custom specifications.`
+      },
+      {
+        q: `How do I select the perfect size for this ${name}?`,
+        a: `For all our ${category.toLowerCase()} designs, we offer standard sizing. If you're unsure of your size, please visit our sizing guide or contact customer support. We offer one complimentary resizing within 30 days of purchase.`
+      },
+      {
+        q: `What is the quality of the diamonds in this ${name}?`,
+        a: `We use premium-grade diamonds of VS-VVS clarity and F-G color. All solitaire diamonds above 0.3 carats come with a grading report from GIA or IGI, verifying their cut, clarity, color, and carat weight.`
+      },
+      {
+        q: `Can I add a personalized engraving to this ${name}?`,
+        a: `Most of our ${category.toLowerCase()} collections support custom engraving. Please get in touch with our customer service team immediately after placing your order to specify the message or inscription you'd like.`
+      }
+    ];
+  };
 
   return (
     <>
@@ -694,7 +717,7 @@ export default function ProductDetailsPage() {
           font-family: 'Montserrat', sans-serif;
         }
         .pd-pay-cancel-btn:hover { background: #000000; color: #ffffff; }
-        .pd-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 0px; }
+        .pd-page { font-family: 'Montserrat', sans-serif; background: #ffffff; padding-top: 80px; }
 
         /* General Variables */
         :root {
@@ -707,19 +730,19 @@ export default function ProductDetailsPage() {
 
         /* Breadcrumb */
         .pd-breadcrumb-wrapper {
-          background: #111111;
+          background: #F9F9F9;
           width: 100%;
-          border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+          border-bottom: 1px solid #EFEFEF;
         }
         .pd-breadcrumb {
-          max-width: 1280px; margin: 0 auto; padding: 112px 24px 32px;
-          font-size: 11px; color: rgba(255, 255, 255, 0.6); display: flex; gap: 12px; align-items: center;
+          max-width: 1280px; margin: 0 auto; padding: 16px 24px;
+          font-size: 11px; color: #666666; display: flex; gap: 12px; align-items: center;
           text-transform: uppercase; letter-spacing: 0.05em;
         }
-        .pd-breadcrumb a { color: rgba(255, 255, 255, 0.6); text-decoration: none; transition: color 0.2s ease; }
+        .pd-breadcrumb a { color: #666666; text-decoration: none; transition: color 0.2s ease; }
         .pd-breadcrumb a:hover { color: #CEA268; }
-        .pd-bc-sep { color: rgba(255, 255, 255, 0.3); }
-        .pd-bc-cur { color: #ffffff; font-weight: 600; }
+        .pd-bc-sep { color: #999999; }
+        .pd-bc-cur { color: #1a1a1a; font-weight: 600; }
 
         /* Main Product Area */
         .pd-product-area {
@@ -1006,6 +1029,101 @@ export default function ProductDetailsPage() {
           .pd-btn-wishlist { max-width: 100%; }
           .pd-tab-btn { margin-right: 20px; font-size: 13px; }
         }
+
+        /* FAQ Section styling */
+        .pd-faq-section {
+          max-width: 900px;
+          margin: 0 auto;
+          padding: 80px 24px;
+          font-family: 'Montserrat', sans-serif;
+        }
+        .pd-faq-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: 36px;
+          font-weight: 500;
+          text-align: center;
+          color: #000;
+          margin-bottom: 48px;
+          letter-spacing: 0.02em;
+        }
+        .pd-faq-list {
+          display: flex;
+          flex-direction: column;
+          gap: 16px;
+        }
+        .pd-faq-item {
+          border-bottom: 1px solid rgba(0, 0, 0, 0.08);
+          padding-bottom: 16px;
+          transition: all 0.3s ease;
+        }
+        .pd-faq-header {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          cursor: pointer;
+          padding: 8px 0;
+          gap: 20px;
+        }
+        .pd-faq-question {
+          font-size: 15px;
+          font-weight: 600;
+          color: #1a1a1a;
+          letter-spacing: 0.02em;
+          margin: 0;
+          transition: color 0.2s;
+        }
+        .pd-faq-item:hover .pd-faq-question {
+          color: #EAB308;
+        }
+        .pd-faq-icon {
+          font-size: 24px;
+          font-weight: 300;
+          color: #555;
+          width: 24px;
+          height: 24px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          transition: transform 0.3s ease, color 0.3s;
+          user-select: none;
+        }
+        .pd-faq-icon.active {
+          color: #EAB308;
+          transform: rotate(45deg);
+        }
+        .pd-faq-answer-container {
+          max-height: 0;
+          overflow: hidden;
+          transition: max-height 0.3s ease, opacity 0.3s ease;
+          opacity: 0;
+        }
+        .pd-faq-answer-container.open {
+          max-height: 200px;
+          opacity: 1;
+        }
+        .pd-faq-answer {
+          font-size: 14px;
+          color: #555;
+          line-height: 1.8;
+          font-weight: 300;
+          padding: 12px 0 8px;
+          margin: 0;
+        }
+        @media (max-width: 600px) {
+          .pd-faq-section {
+            padding: 50px 16px;
+          }
+          .pd-faq-title {
+            font-size: 28px;
+            margin-bottom: 32px;
+          }
+          .pd-faq-question {
+            font-size: 14px;
+          }
+          .pd-faq-answer {
+            font-size: 13px;
+          }
+        }
       `}</style>
 
       <Navbar />
@@ -1288,6 +1406,27 @@ export default function ProductDetailsPage() {
           ))}
         </div>
       </div>
+
+      {/* Product Specific FAQs Section (Accordion style) */}
+      <section className="pd-faq-section">
+        <h2 className="pd-faq-title">Frequently Asked Questions</h2>
+        <div className="pd-faq-list">
+          {getProductFAQs(product).map((faq, index) => {
+            const isOpen = activeFaq === index;
+            return (
+              <div key={index} className="pd-faq-item">
+                <div className="pd-faq-header" onClick={() => setActiveFaq(isOpen ? null : index)}>
+                  <h3 className="pd-faq-question">{faq.q}</h3>
+                  <span className={`pd-faq-icon ${isOpen ? 'active' : ''}`}>+</span>
+                </div>
+                <div className={`pd-faq-answer-container ${isOpen ? 'open' : ''}`}>
+                  <p className="pd-faq-answer">{faq.a}</p>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </section>
 
       </div>
 
