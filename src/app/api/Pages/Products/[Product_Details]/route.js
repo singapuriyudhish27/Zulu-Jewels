@@ -64,6 +64,7 @@ export async function GET(request, { params }) {
             price: product.price,
             material: product.material,
             gender: product.gender,
+            craftsmanship_video: product.craftsmanship_video || '',
             is_active: product.is_active,
             created_at: product.created_at,
             updated_at: product.updated_at,

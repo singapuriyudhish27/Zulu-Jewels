@@ -408,7 +408,9 @@
         .modal { 
           background: var(--white); 
           border-radius: 16px; 
-          width: 600px; 
+          width: 90%;
+          max-width: 960px;
+          max-height: 90vh;
           display: flex;
           flex-direction: column;
         }
@@ -445,6 +447,7 @@
         .modal-body { 
           padding: 16px 20px 0; 
           flex: 1;
+          overflow-y: auto;
         }
         .form-group { 
           margin-bottom: 14px; 

@@ -985,6 +985,49 @@ export default function ProductDetailsPage() {
         .pd-rev-page-btn:hover { border-color: #000000; color: #000000; }
         .pd-rev-page-btn.active { background: #000000; color: #ffffff; border-color: #000000; }
 
+        /* Craftsmanship Video Section */
+        .pd-craftsmanship-section {
+          max-width: 1280px;
+          margin: 0 auto;
+          padding: 0 24px 80px;
+        }
+        .pd-craftsmanship-header {
+          text-align: center;
+          margin-bottom: 32px;
+        }
+        .pd-craftsmanship-tag {
+          font-size: 11px;
+          letter-spacing: 0.16em;
+          text-transform: uppercase;
+          color: #CEA268;
+          font-weight: 700;
+          margin-bottom: 8px;
+        }
+        .pd-craftsmanship-title {
+          font-family: 'Cormorant Garamond', serif;
+          font-size: clamp(28px, 3.5vw, 36px);
+          color: #000000;
+          font-weight: 500;
+          margin-bottom: 12px;
+        }
+        .pd-craftsmanship-desc {
+          font-size: 14px;
+          color: #666666;
+          max-width: 640px;
+          margin: 0 auto;
+          line-height: 1.6;
+        }
+        .pd-craftsmanship-video-wrap {
+          position: relative;
+          width: 100%;
+          max-width: 960px;
+          margin: 0 auto;
+          border-radius: 8px;
+          overflow: hidden;
+          box-shadow: 0 16px 40px rgba(0,0,0,0.08);
+          background: #000000;
+        }
+
         /* Related Products */
         .pd-related-section { max-width: 1280px; margin: 0 auto; padding: 0 24px 100px; }
         .pd-related-title {
@@ -1387,6 +1430,30 @@ export default function ProductDetailsPage() {
           </div>
         )}
       </div>
+      {/* Craftsmanship Video Section */}
+      {product?.craftsmanship_video && (
+        <div className="pd-craftsmanship-section">
+          <div className="pd-craftsmanship-header">
+            <p className="pd-craftsmanship-tag">Master Artistry &amp; Heritage</p>
+            <h2 className="pd-craftsmanship-title">Craftsmanship Video</h2>
+            <p className="pd-craftsmanship-desc">
+              Discover the meticulous artistry, hand-finishing, and precision passion that goes into bringing this exquisite piece to life.
+            </p>
+          </div>
+          <div className="pd-craftsmanship-video-wrap">
+            <video 
+              src={product.craftsmanship_video} 
+              autoPlay
+              loop
+              muted
+              controls 
+              preload="metadata"
+              playsInline
+              style={{ width: '100%', maxHeight: '540px', display: 'block' }}
+            />
+          </div>
+        </div>
+      )}
 
       {/* Related Products */}
       <div className="pd-related-section">

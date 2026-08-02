@@ -7,6 +7,7 @@ const ProductSchema = new mongoose.Schema({
   price: { type: Number, required: true },
   material: { type: String },
   gender: { type: String },
+  craftsmanship_video: { type: String, default: '' },
   is_active: { type: Boolean, default: true },
   is_deleted: { type: Boolean, default: false },
   specifications: { type: mongoose.Schema.Types.Mixed, default: {} },

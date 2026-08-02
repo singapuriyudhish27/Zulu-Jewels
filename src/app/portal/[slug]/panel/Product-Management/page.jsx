@@ -37,6 +37,7 @@ import {
   Clock,
   ToggleLeft,
   Settings,
+  Video,
 } from "lucide-react";
 import ConfirmModal from "@/components/common/ConfirmModal";
 
@@ -61,6 +62,8 @@ export default function ProductManagementPage() {
     price: "",
     stock: "",
     description: "",
+    craftsmanship_video: "",
+    craftsmanship_video_file: null,
     is_active: true,
     variants: [], // New collection of material-specific data
     media: [], // Generic product media
@@ -463,6 +466,11 @@ export default function ProductManagementPage() {
         ? [...new Set(mappedVariants.map(v => v.material).filter(m => m))].join(", ")
         : (typeof formData.material === 'string' ? formData.material : formData.material.join(", "));
 
+      let craftsmanshipVideoPayload = formData.craftsmanship_video || "";
+      if (formData.craftsmanship_video_file) {
+        craftsmanshipVideoPayload = await compressImageOrToBase64(formData.craftsmanship_video_file);
+      }
+
       const res = await fetch(url, {
         method: method,
         headers: { "Content-Type": "application/json" },
@@ -475,6 +483,7 @@ export default function ProductManagementPage() {
           price: formData.price,
           stock: formData.stock,
           description: formData.description,
+          craftsmanship_video: craftsmanshipVideoPayload,
           is_active: formData.is_active,
           variants: mappedVariants,
           media: mappedMedia
@@ -777,7 +786,7 @@ export default function ProductManagementPage() {
               <button className="add-btn secondary" onClick={() => setShowAddCategory(true)}><Layers size={18} /> Add Category</button>
               <button className="add-btn" onClick={() => {
                 setEditingProductId(null);
-                setProductForm({ name: "", category_name: "", gender: "Unisex", material: [], price: "", stock: "", description: "", is_active: true, variants: [], media: [], specifications: {} });
+                setProductForm({ name: "", category_name: "", gender: "Unisex", material: [], price: "", stock: "", description: "", craftsmanship_video: "", craftsmanship_video_file: null, is_active: true, variants: [], media: [], specifications: {} });
                 setShowAddProduct(true);
               }}><Plus size={18} /> Add Product</button>
             </div>
@@ -923,31 +932,34 @@ export default function ProductManagementPage() {
                               )}
                             </div>
                             <div className="action-icon" onClick={() => {
-                              setEditingProductId(product.rawId);
-                              setProductForm({
-                                name: product.name,
-                                category_name: product.category,
-                                gender: product.gender,
-                                material: typeof product.material === 'string' ? product.material.split(", ").filter(m => m) : [],
-                                price: product.price.replace(/[^\d]/g, ""),
-                                stock: product.stock,
-                                description: productsData.find(p => p.id === product.rawId)?.description || "", 
-                                is_active: product.status === "Active",
-                                variants: product.variants.map(v => {
-                                  const vId = v._id?.toString() || v.id?.toString();
-                                  return {
-                                    ...v,
-                                    id: vId,
-                                    media: product.allMedia.filter(m => m.variant_id?.toString() === vId).map(m => ({
-                                      ...m,
-                                      preview: m.media_url
-                                    }))
-                                  };
-                                }),
-                                media: product.allMedia.filter(m => !m.variant_id).map(m => ({ ...m, preview: m.media_url })),
-                                specifications: product.specifications || {}
-                              });
-                              setShowAddProduct(true);
+                                const rawProd = productsData.find(p => p.id === product.rawId);
+                                setEditingProductId(product.rawId);
+                                setProductForm({
+                                  name: product.name,
+                                  category_name: product.category,
+                                  gender: product.gender,
+                                  material: typeof product.material === 'string' ? product.material.split(", ").filter(m => m) : [],
+                                  price: product.price.replace(/[^\d]/g, ""),
+                                  stock: product.stock,
+                                  description: rawProd?.description || "", 
+                                  craftsmanship_video: rawProd?.craftsmanship_video || "",
+                                  craftsmanship_video_file: null,
+                                  is_active: product.status === "Active",
+                                  variants: product.variants.map(v => {
+                                    const vId = v._id?.toString() || v.id?.toString();
+                                    return {
+                                      ...v,
+                                      id: vId,
+                                      media: product.allMedia.filter(m => m.variant_id?.toString() === vId).map(m => ({
+                                        ...m,
+                                        preview: m.media_url
+                                      }))
+                                    };
+                                  }),
+                                  media: product.allMedia.filter(m => !m.variant_id).map(m => ({ ...m, preview: m.media_url })),
+                                  specifications: product.specifications || {}
+                                });
+                                setShowAddProduct(true);
                             }}><Edit size={16} /></div>
                             <div
                               className={`action-icon delete ${product.status === "Active" ? "disabled" : ""}`}
@@ -1004,7 +1016,7 @@ export default function ProductManagementPage() {
       {/* Add Product Modal */}
       {showAddProduct && (
         <div className="modal-overlay" onClick={() => setShowAddProduct(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: "800px", width: "90%" }}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
             <div className="modal-header">
               <h2 className="modal-title">{editingProductId ? "Edit Product" : "Add New Product"}</h2>
               <button className="modal-close" onClick={() => setShowAddProduct(false)}><X size={20} /></button>
@@ -1159,6 +1171,55 @@ export default function ProductManagementPage() {
                 <div className="form-group">
                   <label className="form-label">Product Description</label>
                   <textarea className="form-input" rows="3" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} placeholder="Enter product description"></textarea>
+                </div>
+
+                {/* --- Craftsmanship Video Upload Section --- */}
+                <div className="form-group" style={{ marginTop: '16px' }}>
+                  <label className="form-label">Craftsmanship Video (Optional)</label>
+                  <div style={{ border: '2px dashed #ddd', padding: '16px', borderRadius: '8px', textAlign: 'center', background: '#fafafa' }}>
+                    <input 
+                      type="file" 
+                      id="craftsmanship-video-input" 
+                      accept="video/*" 
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          const previewUrl = URL.createObjectURL(file);
+                          setProductForm(prev => ({
+                            ...prev,
+                            craftsmanship_video: previewUrl,
+                            craftsmanship_video_file: file
+                          }));
+                        }
+                      }} 
+                      style={{ display: 'none' }} 
+                    />
+                    <label htmlFor="craftsmanship-video-input" style={{ cursor: 'pointer', color: '#666', fontSize: '13px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                      <Video size={24} color="#888" />
+                      <span>{productForm.craftsmanship_video ? "Change Craftsmanship Video" : "Upload Craftsmanship Video (MP4, WebM, MOV max 15MB)"}</span>
+                    </label>
+                  </div>
+                  {productForm.craftsmanship_video && (
+                    <div style={{ position: 'relative', marginTop: '12px', borderRadius: '8px', overflow: 'hidden', border: '1px solid #ddd', background: '#000' }}>
+                      <video 
+                        src={productForm.craftsmanship_video} 
+                        controls 
+                        style={{ width: '100%', maxHeight: '220px', display: 'block' }} 
+                      />
+                      <button 
+                        type="button" 
+                        onClick={() => setProductForm(prev => ({ ...prev, craftsmanship_video: '', craftsmanship_video_file: null }))}
+                        style={{
+                          position: 'absolute', top: '8px', right: '8px', background: 'rgba(255,255,255,0.9)',
+                          border: 'none', borderRadius: '50%', width: '28px', height: '28px', cursor: 'pointer',
+                          display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 2px 4px rgba(0,0,0,0.2)'
+                        }}
+                        title="Remove Video"
+                      >
+                        <X size={16} color="#e74c3c" />
+                      </button>
+                    </div>
+                  )}
                 </div>
               </div>
               <div className="modal-footer">

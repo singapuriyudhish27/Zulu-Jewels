@@ -76,6 +76,7 @@ export async function GET(request) {
                 price: p.price,
                 material: p.material,
                 gender: p.gender,
+                craftsmanship_video: p.craftsmanship_video || '',
                 is_active: p.is_active,
                 created_at: p.created_at,
                 category: category ? {
@@ -122,6 +123,7 @@ export async function POST(request) {
             price,
             material,
             gender,
+            craftsmanship_video,
             is_active,
             variants = [],
             media = [],
@@ -141,6 +143,11 @@ export async function POST(request) {
             finalMaterial = [...new Set(variants.map(v => v.material).filter(m => m))].join(", ");
         }
 
+        let craftsmanshipVideoUrl = "";
+        if (craftsmanship_video) {
+            craftsmanshipVideoUrl = await saveFile(craftsmanship_video, "craftsmanship_videos");
+        }
+
         const newProduct = await Product.create({
             category_id: categoryId,
             name,
@@ -148,6 +155,7 @@ export async function POST(request) {
             price: Number(price),
             material: finalMaterial,
             gender,
+            craftsmanship_video: craftsmanshipVideoUrl,
             is_active,
             specifications
         });
@@ -262,6 +270,7 @@ export async function PUT(request) {
             price,
             material,
             gender,
+            craftsmanship_video,
             is_active,
             variants = [],
             media = [],
@@ -295,6 +304,13 @@ export async function PUT(request) {
         }
         if (finalMaterial !== undefined) updateFields.material = finalMaterial;
         if (gender !== undefined) updateFields.gender = gender;
+        if (craftsmanship_video !== undefined) {
+            if (craftsmanship_video) {
+                updateFields.craftsmanship_video = await saveFile(craftsmanship_video, "craftsmanship_videos");
+            } else {
+                updateFields.craftsmanship_video = "";
+            }
+        }
         if (is_active !== undefined) updateFields.is_active = is_active;
         if (specifications !== undefined) updateFields.specifications = specifications;
 
