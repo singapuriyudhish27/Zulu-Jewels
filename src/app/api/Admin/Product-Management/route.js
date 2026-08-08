@@ -177,7 +177,8 @@ export async function POST(request) {
                         variant_id: variantId,
                         media_url: uploadedUrl,
                         media_type: mediaType,
-                        is_primary: Boolean(vm.is_primary)
+                        is_primary: Boolean(vm.is_primary),
+                        is_hover: Boolean(vm.is_hover)
                     };
                 }
                 return null;
@@ -222,7 +223,8 @@ export async function POST(request) {
                     variant_id: null,
                     media_url: uploadedUrl,
                     media_type: mediaType,
-                    is_primary: Boolean(gm.is_primary)
+                    is_primary: Boolean(gm.is_primary),
+                    is_hover: Boolean(gm.is_hover)
                 };
             }
             return null;
@@ -356,7 +358,8 @@ export async function PUT(request) {
                         variant_id: variantId,
                         media_url: uploadedUrl,
                         media_type: mediaType,
-                        is_primary: Boolean(vm.is_primary)
+                        is_primary: Boolean(vm.is_primary),
+                        is_hover: Boolean(vm.is_hover)
                     };
                 }
                 return null;
@@ -401,7 +404,8 @@ export async function PUT(request) {
                     variant_id: null,
                     media_url: uploadedUrl,
                     media_type: mediaType,
-                    is_primary: Boolean(gm.is_primary)
+                    is_primary: Boolean(gm.is_primary),
+                    is_hover: Boolean(gm.is_hover)
                 };
             }
             return null;

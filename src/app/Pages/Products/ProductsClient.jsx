@@ -34,6 +34,7 @@ function ProductsContent({ initialCategories }) {
   const [sortBy, setSortBy] = useState('default');
   const [genderFilter, setGenderFilter] = useState('all');
   const [wishlist, setWishlist] = useState({});
+  const [hoveredProductId, setHoveredProductId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
   const itemsPerPage = 12;
 
@@ -82,6 +83,13 @@ function ProductsContent({ initialCategories }) {
     e.preventDefault();
     e.stopPropagation();
     setWishlist(prev => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const getProductImage = (product) => {
+    const images = product.images || [];
+    const primaryImage = images.find(img => img.is_primary)?.image_url || images[0]?.image_url || null;
+    const hoverImage = images.find(img => img.is_hover)?.image_url || images.find(img => !img.is_primary)?.image_url || primaryImage;
+    return hoveredProductId === product.id ? (hoverImage || primaryImage) : (primaryImage || null);
   };
 
   // Filtering implementation
@@ -201,16 +209,25 @@ function ProductsContent({ initialCategories }) {
           grid-template-columns: repeat(4, 1fr);
           gap: 32px;
         }
-        .pr-product-card { cursor: pointer; }
+        .pr-product-card {
+          cursor: pointer;
+          transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .pr-product-card:hover {
+          transform: translateY(-4px);
+        }
         .pr-product-img-wrap {
           position: relative;
           background: #F9F9F9;
           aspect-ratio: 1;
           overflow: hidden;
           margin-bottom: 16px;
-          transition: box-shadow 0.3s ease;
+          transition: box-shadow 0.3s ease, transform 0.3s ease;
         }
-        .pr-product-card:hover .pr-product-img-wrap { box-shadow: 0 8px 24px rgba(0,0,0,0.06); }
+        .pr-product-card:hover .pr-product-img-wrap {
+          box-shadow: 0 8px 24px rgba(0,0,0,0.06);
+          transform: scale(1.01);
+        }
         .pr-product-img {
           width: 100%;
           height: 100%;
@@ -218,9 +235,10 @@ function ProductsContent({ initialCategories }) {
           align-items: center;
           justify-content: center;
           font-size: 80px;
-          transition: transform 0.4s ease;
+          transition: transform 0.35s ease, opacity 0.25s ease;
+          will-change: transform;
         }
-        .pr-product-card:hover .pr-product-img { transform: scale(1.05); }
+        .pr-product-card:hover .pr-product-img { transform: scale(1.04); }
         .pr-wishlist-btn {
           position: absolute;
           top: 12px;
@@ -338,12 +356,12 @@ function ProductsContent({ initialCategories }) {
       <div className="pr-grid-section">
         <div className="pr-product-grid">
           {paginated.map(p => (
-            <div key={p.id} className="pr-product-card">
+            <div key={p.id} className="pr-product-card" onMouseEnter={() => setHoveredProductId(p.id)} onMouseLeave={() => setHoveredProductId(null)}>
               <Link href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="pr-product-img-wrap">
                   {p.images && p.images.length > 0 ? (
                     <img 
-                      src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
+                      src={getProductImage(p)} 
                       alt={p.name} 
                       className="pr-product-img"
                       style={{ objectFit: 'cover' }}

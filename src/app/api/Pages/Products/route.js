@@ -84,7 +84,8 @@ export async function GET(request) {
                     id: img._id,
                     variant_id: img.variant_id,
                     image_url: img.media_url,
-                    is_primary: img.is_primary,
+                    is_primary: Boolean(img.is_primary),
+                    is_hover: Boolean(img.is_hover),
                 })),
                 swatches: []
             });

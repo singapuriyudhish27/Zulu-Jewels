@@ -51,6 +51,7 @@ export async function GET() {
                     id: img._id,
                     image_url: img.media_url,
                     is_primary: Boolean(img.is_primary),
+                    is_hover: Boolean(img.is_hover),
                 })),
             });
         }

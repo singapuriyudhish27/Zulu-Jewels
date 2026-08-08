@@ -92,7 +92,15 @@ export default function HomePage() {
   const [activeCategory, setActiveCategory] = useState(null);
   const [bestSellerTab, setBestSellerTab] = useState(null);
   const [activeFaq, setActiveFaq] = useState(null);
+  const [hoveredProductId, setHoveredProductId] = useState(null);
   const productSectionRef = useRef(null);
+
+  const getProductImage = (product) => {
+    const images = product.images || [];
+    const primaryImage = images.find(img => img.is_primary)?.image_url || images[0]?.image_url || null;
+    const hoverImage = images.find(img => img.is_hover)?.image_url || images.find(img => !img.is_primary)?.image_url || primaryImage;
+    return hoveredProductId === product.id ? (hoverImage || primaryImage) : (primaryImage || null);
+  };
 
   useEffect(() => {
     const fetchPageData = async () => {
@@ -1272,12 +1280,14 @@ export default function HomePage() {
                   key={pi} 
                   className="zj-product-card zj-animate" 
                   onClick={() => router.push(`/Pages/Products/${p.id}`)}
+                  onMouseEnter={() => setHoveredProductId(p.id)}
+                  onMouseLeave={() => setHoveredProductId(null)}
                   style={{ transitionDelay: `${pi * 80}ms` }}
                 >
                   <div className="zj-product-img-wrap">
                     {p.images && p.images.length > 0 ? (
                       <img 
-                        src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
+                        src={getProductImage(p)} 
                         alt={p.name} 
                         className="zj-animate-img"
                         style={{ width: '100%', height: '100%', objectFit: 'cover' }}
@@ -1375,12 +1385,14 @@ export default function HomePage() {
                       key={pi} 
                       className="zj-product-card zj-animate" 
                       onClick={() => router.push(`/Pages/Products/${p.id}`)}
+                      onMouseEnter={() => setHoveredProductId(p.id)}
+                      onMouseLeave={() => setHoveredProductId(null)}
                       style={{ transitionDelay: `${pi * 80}ms` }}
                     >
                       <div className="zj-product-img-wrap">
                         {p.images && p.images.length > 0 ? (
                           <img 
-                            src={p.images.find(img => img.is_primary)?.image_url || p.images[0].image_url} 
+                            src={getProductImage(p)} 
                             alt={p.name} 
                             className="zj-animate-img"
                             style={{ width: '100%', height: '100%', objectFit: 'cover' }}

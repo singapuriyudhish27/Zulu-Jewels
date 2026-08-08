@@ -6,6 +6,7 @@ const ProductImageSchema = new mongoose.Schema({
   media_url: { type: String, required: true },
   media_type: { type: String, enum: ['image', 'video'], default: 'image' },
   is_primary: { type: Boolean, default: false },
+  is_hover: { type: Boolean, default: false },
 });
 
 ProductImageSchema.index({ product_id: 1 });

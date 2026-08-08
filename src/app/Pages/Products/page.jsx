@@ -50,6 +50,7 @@ async function getProductsData(categoryId, search) {
             variant_id: img.variant_id?.toString() || null,
             image_url: img.media_url,
             is_primary: Boolean(img.is_primary),
+            is_hover: Boolean(img.is_hover),
           })),
           swatches: []
         });

@@ -419,9 +419,9 @@ export default function ProductManagementPage() {
       for (const m of formData.media) {
         if (m.file) {
           const base64 = await compressImageOrToBase64(m.file);
-          mappedMedia.push({ fileData: base64, fileName: m.file.name, fileType: m.file.type, is_primary: Boolean(m.is_primary) });
+          mappedMedia.push({ fileData: base64, fileName: m.file.name, fileType: m.file.type, is_primary: Boolean(m.is_primary), is_hover: Boolean(m.is_hover) });
         } else {
-          mappedMedia.push({ id: m._id || m.id, media_url: m.media_url || m.preview || m.url, media_type: m.media_type || "image", is_primary: Boolean(m.is_primary) });
+          mappedMedia.push({ id: m._id || m.id, media_url: m.media_url || m.preview || m.url, media_type: m.media_type || "image", is_primary: Boolean(m.is_primary), is_hover: Boolean(m.is_hover) });
         }
       }
 
@@ -432,9 +432,9 @@ export default function ProductManagementPage() {
           for (const m of v.media) {
             if (m.file) {
               const base64 = await compressImageOrToBase64(m.file);
-              variantMedia.push({ fileData: base64, fileName: m.file.name, fileType: m.file.type, is_primary: Boolean(m.is_primary) });
+              variantMedia.push({ fileData: base64, fileName: m.file.name, fileType: m.file.type, is_primary: Boolean(m.is_primary), is_hover: Boolean(m.is_hover) });
             } else {
-              variantMedia.push({ id: m._id || m.id, media_url: m.media_url || m.preview || m.url, media_type: m.media_type || "image", is_primary: Boolean(m.is_primary) });
+              variantMedia.push({ id: m._id || m.id, media_url: m.media_url || m.preview || m.url, media_type: m.media_type || "image", is_primary: Boolean(m.is_primary), is_hover: Boolean(m.is_hover) });
             }
           }
         }
@@ -608,7 +608,8 @@ export default function ProductManagementPage() {
       file,
       preview: URL.createObjectURL(file),
       media_type: file.type.startsWith("video/") ? "video" : "image",
-      is_primary: variantDraft.media.length === 0
+      is_primary: variantDraft.media.length === 0,
+      is_hover: false
     }));
     setVariantDraft(prev => ({ ...prev, media: [...prev.media, ...newMedia] }));
   };
@@ -624,6 +625,10 @@ export default function ProductManagementPage() {
 
   const setVariantDraftPrimaryMedia = (mIdx) => {
     setVariantDraft(prev => ({ ...prev, media: prev.media.map((m, i) => ({ ...m, is_primary: i === mIdx })) }));
+  };
+
+  const setVariantDraftHoverMedia = (mIdx) => {
+    setVariantDraft(prev => ({ ...prev, media: prev.media.map((m, i) => ({ ...m, is_hover: i === mIdx })) }));
   };
 
   const saveVariantAndProduct = async () => {
@@ -756,7 +761,8 @@ export default function ProductManagementPage() {
       file,
       preview: URL.createObjectURL(file),
       media_type: file.type.startsWith("video/") ? "video" : "image",
-      is_primary: productForm.media.length === 0
+      is_primary: productForm.media.length === 0,
+      is_hover: false
     }));
     setProductForm(prev => ({ ...prev, media: [...prev.media, ...newMedia] }));
   };
@@ -772,6 +778,10 @@ export default function ProductManagementPage() {
 
   const setPrimaryMedia = (index) => {
     setProductForm(prev => ({ ...prev, media: prev.media.map((m, i) => ({ ...m, is_primary: i === index })) }));
+  };
+
+  const setHoverMedia = (index) => {
+    setProductForm(prev => ({ ...prev, media: prev.media.map((m, i) => ({ ...m, is_hover: i === index })) }));
   };
 
   return (
@@ -1173,6 +1183,45 @@ export default function ProductManagementPage() {
                   <textarea className="form-input" rows="3" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} placeholder="Enter product description"></textarea>
                 </div>
 
+                <div className="form-group">
+                  <label className="form-label">Product Images</label>
+                  <div style={{ border: '2px dashed #ddd', padding: '16px', borderRadius: '8px', textAlign: 'center', background: '#fafafa' }}>
+                    <input type="file" id="product-media-input" multiple accept="image/*,video/*" onChange={handleMediaChange} style={{ display: 'none' }} />
+                    <label htmlFor="product-media-input" style={{ cursor: 'pointer', color: '#666', fontSize: '13px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
+                      <ImageIcon size={24} color="#888" />
+                      <span>Upload main + hover images for this product</span>
+                    </label>
+                  </div>
+                  {productForm.media.length > 0 && (
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '8px', marginTop: '10px' }}>
+                      {productForm.media.map((item, index) => (
+                        <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: item.is_primary ? '2px solid #d4af37' : (item.is_hover ? '2px solid #0284c7' : '1px solid #ddd') }}>
+                          {item.media_type === 'video' ? (
+                            <div style={{ width: '100%', height: '84px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Video size={18} color="#666" />
+                            </div>
+                          ) : (
+                            <img src={item.preview} alt="preview" style={{ width: '100%', height: '84px', objectFit: 'cover' }} />
+                          )}
+                          <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '2px' }}>
+                            <button type="button" onClick={() => setPrimaryMedia(index)} title="Set as main image" style={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <Star size={10} color={item.is_primary ? '#d4af37' : '#888'} fill={item.is_primary ? '#d4af37' : 'none'} />
+                            </button>
+                            <button type="button" onClick={() => setHoverMedia(index)} title="Set as hover image" style={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <ImageIcon size={10} color={item.is_hover ? '#0284c7' : '#888'} />
+                            </button>
+                            <button type="button" onClick={() => removeMedia(index)} style={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                              <X size={10} color="#e74c3c" />
+                            </button>
+                          </div>
+                          {item.is_primary && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#d4af37', color: 'white', fontSize: '8px', textAlign: 'center', padding: '2px 0' }}>MAIN</div>}
+                          {item.is_hover && !item.is_primary && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#0284c7', color: 'white', fontSize: '8px', textAlign: 'center', padding: '2px 0' }}>HOVER</div>}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
                 {/* --- Craftsmanship Video Upload Section --- */}
                 <div className="form-group" style={{ marginTop: '16px' }}>
                   <label className="form-label">Craftsmanship Video (Optional)</label>
@@ -1494,7 +1543,7 @@ export default function ProductManagementPage() {
                 {variantDraft.media.length > 0 && (
                   <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fill, minmax(76px, 1fr))", gap: "8px" }}>
                     {variantDraft.media.map((item, mIdx) => (
-                      <div key={mIdx} style={{ position: "relative", borderRadius: "6px", overflow: "hidden", border: item.is_primary ? "2px solid #d4af37" : "1px solid #ddd" }}>
+                      <div key={mIdx} style={{ position: "relative", borderRadius: "6px", overflow: "hidden", border: item.is_primary ? "2px solid #d4af37" : (item.is_hover ? "2px solid #0284c7" : "1px solid #ddd") }}>
                         {item.media_type === "video" ? (
                           <div style={{ width: "100%", height: "62px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={16} color="#666" /></div>
                         ) : (
@@ -1502,9 +1551,11 @@ export default function ProductManagementPage() {
                         )}
                         <div style={{ position: "absolute", top: "2px", right: "2px", display: "flex", gap: "2px" }}>
                           <button type="button" onClick={() => setVariantDraftPrimaryMedia(mIdx)} title="Set Primary" style={{ background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><Star size={9} color={item.is_primary ? "#d4af37" : "#aaa"} /></button>
+                          <button type="button" onClick={() => setVariantDraftHoverMedia(mIdx)} title="Set Hover" style={{ background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><ImageIcon size={9} color={item.is_hover ? "#0284c7" : "#aaa"} /></button>
                           <button type="button" onClick={() => removeVariantDraftMedia(mIdx)} style={{ background: "rgba(255,255,255,0.92)", border: "none", borderRadius: "50%", width: "20px", height: "20px", cursor: "pointer", display: 'flex', alignItems: 'center', justifyContent: 'center' }}><X size={9} color="#e74c3c" /></button>
                         </div>
                         {item.is_primary && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "#d4af37", color: "white", fontSize: "8px", textAlign: "center", padding: "1px" }}>PRIMARY</div>}
+                        {item.is_hover && !item.is_primary && <div style={{ position: "absolute", bottom: 0, left: 0, right: 0, background: "#0284c7", color: "white", fontSize: "8px", textAlign: "center", padding: "1px" }}>HOVER</div>}
                       </div>
                     ))}
                   </div>
