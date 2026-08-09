@@ -7,6 +7,7 @@ import Navbar from '@/components/layout/Navbar';
 import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
 import toast from 'react-hot-toast';
+import PageLoader from '@/components/common/PageLoader';
 
 const MOST_LOVED = [
   { id: 101, img: "/Home Page/Most Loved Pieces/Frame 122.png" },
@@ -207,6 +208,11 @@ export default function HomePage() {
     return [];
   };
 
+  const goToProduct = (productId, categoryId) => {
+    const categoryQuery = categoryId ? `?category=${encodeURIComponent(categoryId)}` : '';
+    router.push(`/Pages/Products/${productId}${categoryQuery}`);
+  };
+
   const activeSection = sections.find(s => s.id === activeCategory);
 
   const toggleWishlist = async (productId) => {
@@ -243,6 +249,8 @@ export default function HomePage() {
       toast.error(error.message || "An error occurred");
     }
   };
+
+  if (loading) return <PageLoader label="Loading Zulu Jewels" />;
 
   return (
     <>
@@ -1279,7 +1287,7 @@ export default function HomePage() {
                 <div 
                   key={pi} 
                   className="zj-product-card zj-animate" 
-                  onClick={() => router.push(`/Pages/Products/${p.id}`)}
+                  onClick={() => goToProduct(p.id, bestSellerTab)}
                   onMouseEnter={() => setHoveredProductId(p.id)}
                   onMouseLeave={() => setHoveredProductId(null)}
                   style={{ transitionDelay: `${pi * 80}ms` }}
@@ -1384,7 +1392,7 @@ export default function HomePage() {
                     <div 
                       key={pi} 
                       className="zj-product-card zj-animate" 
-                      onClick={() => router.push(`/Pages/Products/${p.id}`)}
+                      onClick={() => goToProduct(p.id, activeSection.id)}
                       onMouseEnter={() => setHoveredProductId(p.id)}
                       onMouseLeave={() => setHoveredProductId(null)}
                       style={{ transitionDelay: `${pi * 80}ms` }}

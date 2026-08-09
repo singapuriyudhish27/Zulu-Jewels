@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { useRouter, usePathname, useParams } from 'next/navigation';
+import { useRouter, usePathname, useParams, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
 import toast from 'react-hot-toast';
@@ -11,6 +11,7 @@ import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
 import { Heart, Share2, ShoppingBag, CreditCard, ChevronLeft, ChevronRight, Star, ThumbsUp, ThumbsDown, Plus, ShoppingCart } from 'lucide-react';
 import PriceDisplay from '@/components/price/PriceDisplay';
+import PageLoader from '@/components/common/PageLoader';
 import { useCurrency } from '@/context/CurrencyContext';
 
 const LocationMap = dynamic(() => import('@/components/map/LocationMap'), { ssr: false });
@@ -51,12 +52,6 @@ function StripeCheckoutForm({ onSuccess, onClose }) {
   );
 }
 
-// Removed hardcoded PRODUCT constant for dynamic fetching
-const MOCKUP_OPTIONS = {
-  carats: ["0.25 ct", "0.50 ct", "0.75 ct", "1.00 ct", "1.25 ct", "1.50 ct"],
-  diamonds: ["Natural", "Lab Grown"]
-};
-
 const REVIEWS = [
   { id: 1, name: "Priya Sharma", rating: 5, date: "2 days ago", text: "This ring is absolutely gorgeous! The diamond sparkles beautifully and the quality is exceptional. Received so many compliments already.", helpful: 128, avatar: "PS" },
   { id: 2, name: "Raj Patel", rating: 5, date: "1 week ago", text: "Bought this as an engagement ring — she said YES! The packaging was beautiful and delivery was earlier than expected.", helpful: 94, avatar: "RP" },
@@ -83,15 +78,20 @@ export default function ProductDetailsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { formatPrice } = useCurrency();
+  const categoryId = searchParams.get('category');
+  const productsHref = categoryId
+    ? `/Pages/Products?category=${encodeURIComponent(categoryId)}`
+    : '/Pages/Products';
+  const productDetailsHref = (productId) =>
+    `/Pages/Products/${productId}${categoryId ? `?category=${encodeURIComponent(categoryId)}` : ''}`;
 
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('description');
   const [activeFaq, setActiveFaq] = useState(null);
-  const [selectedCarat, setSelectedCarat] = useState(1);
-  const [selectedDiamond, setSelectedDiamond] = useState(1); // Lab Grown
   const [activeThumb, setActiveThumb] = useState(0);
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [inCartVariantIds, setInCartVariantIds] = useState([]);
@@ -154,7 +154,7 @@ export default function ProductDetailsPage() {
   }, [params.Product_Details]);
 
 
-  if (loading) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Loading...</div>;
+  if (loading) return <PageLoader label="Preparing your jewellery" />;
   if (!product) return <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>Product not found</div>;
 
   // Derived Values
@@ -173,6 +173,50 @@ export default function ProductDetailsPage() {
     url: img.media_url,
     type: img.media_type || (img.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? 'video' : 'image')
   }));
+
+  const hasSpecificationValue = (value) => value !== undefined && value !== null && value !== '' && value !== false;
+  const formatSpecificationLabel = (key) => {
+    const labels = {
+      tcw: 'Total Carat Weight (TCW)',
+      custom_fields: 'Custom Specifications',
+      template_type: 'Product Type'
+    };
+    return labels[key] || key.replace(/_/g, ' ').replace(/\b\w/g, (letter) => letter.toUpperCase());
+  };
+  const formatSpecificationValue = (value) => Array.isArray(value) ? value.join(', ') : String(value);
+  const metalSpecifications = [
+    ['Metal Type', selectedVariant?.metal_type],
+    ['Metal Purity', selectedVariant?.metal_purity],
+    ['Metal Color', selectedVariant?.metal_color],
+    ['Metal Weight', selectedVariant?.metal_weight ? `${selectedVariant.metal_weight} g` : null]
+  ].filter(([, value]) => hasSpecificationValue(value));
+  const productGemstone = product.variants?.find((variant) => variant.gemstone_type && variant.gemstone_type !== 'None');
+  const gemstoneSpecifications = productGemstone
+    ? [
+        ['Gemstone Type', productGemstone.gemstone_type],
+        ['Total Carat Weight (TCW)', productGemstone.gemstone_tcw ? `${productGemstone.gemstone_tcw} ct` : null],
+        ['Center Stone Carat', productGemstone.gemstone_center_carat ? `${productGemstone.gemstone_center_carat} ct` : null],
+        ['Color', productGemstone.gemstone_color],
+        ['Clarity', productGemstone.gemstone_clarity],
+        ['Cut', productGemstone.gemstone_cut],
+        ['Shape', productGemstone.gemstone_shape],
+        ['Setting', productGemstone.gemstone_setting],
+        ['Certification Agency', productGemstone.gemstone_cert_agency],
+        ['Certification Number', productGemstone.gemstone_cert_number]
+      ].filter(([, value]) => hasSpecificationValue(value))
+    : [];
+  const productSpecifications = Object.entries(product.specifications || {})
+    .filter(([key, value]) => key !== 'custom_fields' && hasSpecificationValue(value))
+    .map(([key, value]) => [formatSpecificationLabel(key), formatSpecificationValue(value)]);
+  const customSpecifications = (product.specifications?.custom_fields || [])
+    .filter((field) => field?.label && hasSpecificationValue(field.value))
+    .map((field) => [field.label, formatSpecificationValue(field.value)]);
+  const quickSpecifications = [
+    ['Category', product.category_name],
+    ['Material', selectedVariant?.material || product.material],
+    ...metalSpecifications,
+    ...gemstoneSpecifications.slice(0, 2)
+  ].filter(([, value]) => hasSpecificationValue(value)).slice(0, 6);
 
   const addToCart = async () => {
     try {
@@ -820,8 +864,16 @@ export default function ProductDetailsPage() {
         .pd-meta-row { display: flex; align-items: center; gap: 16px; margin-bottom: 24px; font-size: 13px; color: #666666; }
         .pd-rating-pill { display: flex; align-items: center; gap: 6px; color: #EAB308; font-weight: 600; }
         .pd-divider { border: none; border-top: 1px solid #EFEFEF; margin: 24px 0; }
-        .pd-emi-text { font-size: 13px; color: #000000; font-weight: 500; margin-bottom: 20px; }
-        .pd-emi-text a { color: inherit; text-decoration: underline; }
+         .pd-emi-text { font-size: 13px; color: #000000; font-weight: 500; margin-bottom: 20px; }
+         .pd-emi-text a { color: inherit; text-decoration: underline; }
+         .pd-info-summary { margin: 20px 0 4px; border: 1px solid #EFEFEF; background: #FCFCFC; }
+         .pd-info-summary-title { margin: 0; padding: 12px 16px; border-bottom: 1px solid #EFEFEF; font-size: 11px; font-weight: 700; letter-spacing: 0.12em; text-transform: uppercase; }
+         .pd-info-summary-grid { display: grid; grid-template-columns: repeat(2, 1fr); }
+         .pd-info-summary-item { padding: 12px 16px; border-right: 1px solid #EFEFEF; border-bottom: 1px solid #EFEFEF; }
+         .pd-info-summary-item:nth-child(2n) { border-right: none; }
+         .pd-info-summary-item:nth-last-child(-n+2) { border-bottom: none; }
+         .pd-info-summary-label { display: block; color: #777; font-size: 10px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 5px; }
+         .pd-info-summary-value { color: #111; font-size: 13px; font-weight: 500; line-height: 1.35; }
 
         /* Options */
         .pd-option-group { margin-bottom: 24px; }
@@ -909,7 +961,8 @@ export default function ProductDetailsPage() {
         .pd-benefit-row { display: flex; border-bottom: 1px solid #EFEFEF; }
         .pd-benefit-row:nth-last-child(-n+3) { border-bottom: none; }
         .pd-benefit-label { padding: 16px 20px; background: #F9F9F9; font-size: 11px; font-weight: 700; color: #666666; min-width: 160px; text-transform: uppercase; letter-spacing: 0.1em; border-right: 1px solid #EFEFEF; }
-        .pd-benefit-val { padding: 16px 20px; font-size: 14px; color: #000000; font-weight: 500; }
+          .pd-benefit-val { padding: 16px 20px; font-size: 14px; color: #000000; font-weight: 500; }
+         .pd-description-lead { max-width: 800px; color: #666; font-size: 14px; line-height: 1.7; margin: -8px 0 28px; }
 
         /* Reviews Tab */
         .pd-reviews-layout { display: grid; grid-template-columns: 280px 1fr; gap: 64px; }
@@ -1071,6 +1124,10 @@ export default function ProductDetailsPage() {
           .pd-price { font-size: 26px; }
           .pd-btn-wishlist { max-width: 100%; }
           .pd-tab-btn { margin-right: 20px; font-size: 13px; }
+          .pd-info-summary-grid { grid-template-columns: 1fr; }
+          .pd-info-summary-item { border-right: none; }
+          .pd-info-summary-item:nth-last-child(-n+2) { border-bottom: 1px solid #EFEFEF; }
+          .pd-info-summary-item:last-child { border-bottom: none; }
         }
 
         /* FAQ Section styling */
@@ -1177,7 +1234,7 @@ export default function ProductDetailsPage() {
         <div className="pd-breadcrumb">
           <Link href="/Pages">Home</Link>
           <span className="pd-bc-sep">›</span>
-          <Link href="/Pages/Products">Rings</Link>
+          <Link href={productsHref}>{product.category_name || 'Products'}</Link>
           <span className="pd-bc-sep">›</span>
           <span className="pd-bc-cur">{product.name}</span>
         </div>
@@ -1243,8 +1300,21 @@ export default function ProductDetailsPage() {
             <span>·</span>
             <span>1,238 sold</span>
           </div>
-          <p className="pd-emi-text">EMI Starting at <PriceDisplay amountInINR={currentPrice / 24} />/month</p>
-          <p style={{ fontSize: '14px', color: '#556', marginTop: '16px', lineHeight: '1.6' }}>{product.description}</p>
+           <p className="pd-emi-text">EMI Starting at <PriceDisplay amountInINR={currentPrice / 24} />/month</p>
+           <p style={{ fontSize: '14px', color: '#556', marginTop: '16px', lineHeight: '1.6' }}>{product.description}</p>
+           {quickSpecifications.length > 0 && (
+             <div className="pd-info-summary">
+               <p className="pd-info-summary-title">Product Details</p>
+               <div className="pd-info-summary-grid">
+                 {quickSpecifications.map(([label, value]) => (
+                   <div className="pd-info-summary-item" key={label}>
+                     <span className="pd-info-summary-label">{label}</span>
+                     <span className="pd-info-summary-value">{value}</span>
+                   </div>
+                 ))}
+               </div>
+             </div>
+           )}
 
 
           <hr className="pd-divider" />
@@ -1263,26 +1333,6 @@ export default function ProductDetailsPage() {
               </div>
             </div>
           )}
-
-          {/* Diamond Carat (Mockup) */}
-          <div className="pd-option-group">
-            <p className="pd-option-label">Diamond Carat Weight: <span>{MOCKUP_OPTIONS.carats[selectedCarat]}</span></p>
-            <div className="pd-option-pills">
-              {MOCKUP_OPTIONS.carats.map((c, i) => (
-                <button key={i} className={`pd-pill ${selectedCarat === i ? 'active' : ''}`} onClick={() => setSelectedCarat(i)}>{c}</button>
-              ))}
-            </div>
-          </div>
-
-          {/* Diamond Type (Mockup) */}
-          <div className="pd-option-group">
-            <p className="pd-option-label">Diamond Type: <span>{MOCKUP_OPTIONS.diamonds[selectedDiamond]}</span></p>
-            <div className="pd-option-pills">
-              {MOCKUP_OPTIONS.diamonds.map((d, i) => (
-                <button key={i} className={`pd-pill ${selectedDiamond === i ? 'active' : ''}`} onClick={() => setSelectedDiamond(i)}>{d}</button>
-              ))}
-            </div>
-          </div>
 
           <hr className="pd-divider" />
 
@@ -1311,7 +1361,7 @@ export default function ProductDetailsPage() {
       {/* Tabs */}
       <div className="pd-tabs-section">
         <div className="pd-tab-nav">
-          <button className={`pd-tab-btn ${activeTab === 'description' ? 'active' : ''}`} onClick={() => setActiveTab('description')}>Description</button>
+          <button className={`pd-tab-btn ${activeTab === 'description' ? 'active' : ''}`} onClick={() => setActiveTab('description')}>Description &amp; Specifications</button>
           <button className={`pd-tab-btn ${activeTab === 'reviews' ? 'active' : ''}`} onClick={() => setActiveTab('reviews')}>
             Reviews (2,823)
           </button>
@@ -1322,6 +1372,7 @@ export default function ProductDetailsPage() {
           <div>
             <h2 className="pd-desc-title">Product Description</h2>
             <p className="pd-desc-text">{currentDesc || product.description}</p>
+            <p className="pd-description-lead">Metal specifications update with the selected variant. Gemstone and diamond specifications apply consistently to this product across all metal variants.</p>
             <p className="pd-benefits-title">Benefits &amp; Specifications</p>
             <div className="pd-benefits-grid" style={{ display: 'flex', flexDirection: 'column' }}>
                 <div className="pd-benefit-row">
@@ -1337,6 +1388,58 @@ export default function ProductDetailsPage() {
                   <span className="pd-benefit-val">{product.category_name || "Jewelry"}</span>
                 </div>
             </div>
+            {metalSpecifications.length > 0 && (
+              <>
+                <p className="pd-benefits-title">Metal Specifications</p>
+                <div className="pd-benefits-grid" style={{ display: 'flex', flexDirection: 'column' }}>
+                  {metalSpecifications.map(([label, value]) => (
+                    <div className="pd-benefit-row" key={label}>
+                      <span className="pd-benefit-label">{label}</span>
+                      <span className="pd-benefit-val">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {gemstoneSpecifications.length > 0 && (
+              <>
+                <p className="pd-benefits-title">Gemstone Specifications</p>
+                <div className="pd-benefits-grid" style={{ display: 'flex', flexDirection: 'column' }}>
+                  {gemstoneSpecifications.map(([label, value]) => (
+                    <div className="pd-benefit-row" key={label}>
+                      <span className="pd-benefit-label">{label}</span>
+                      <span className="pd-benefit-val">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {productSpecifications.length > 0 && (
+              <>
+                <p className="pd-benefits-title">Product Specifications</p>
+                <div className="pd-benefits-grid" style={{ display: 'flex', flexDirection: 'column' }}>
+                  {productSpecifications.map(([label, value]) => (
+                    <div className="pd-benefit-row" key={label}>
+                      <span className="pd-benefit-label">{label}</span>
+                      <span className="pd-benefit-val">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
+            {customSpecifications.length > 0 && (
+              <>
+                <p className="pd-benefits-title">Additional Specifications</p>
+                <div className="pd-benefits-grid" style={{ display: 'flex', flexDirection: 'column' }}>
+                  {customSpecifications.map(([label, value]) => (
+                    <div className="pd-benefit-row" key={label}>
+                      <span className="pd-benefit-label">{label}</span>
+                      <span className="pd-benefit-val">{value}</span>
+                    </div>
+                  ))}
+                </div>
+              </>
+            )}
           </div>
         )}
 
@@ -1460,7 +1563,7 @@ export default function ProductDetailsPage() {
         <h2 className="pd-related-title">You May Also Like</h2>
         <div className="pd-related-grid">
           {RELATED_PRODUCTS.map(p => (
-            <Link key={p.id} href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+            <Link key={p.id} href={productDetailsHref(p.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
               <div className="pd-rel-card">
                 <div className="pd-rel-img">💍</div>
                 <p className="pd-rel-name">{p.name}</p>
@@ -1672,7 +1775,7 @@ export default function ProductDetailsPage() {
                           <p className="pd-om-product-variant" style={{ fontSize: '10px', marginBottom: '2px' }}>Metal: {selectedVariant.material}</p>
                         )}
                         <p style={{ fontSize: 10, color: '#888888', marginBottom: 2, fontFamily: 'Montserrat, sans-serif' }}>
-                          Qty: 1 &nbsp;·&nbsp; {MOCKUP_OPTIONS.carats[selectedCarat]} &nbsp;·&nbsp; {MOCKUP_OPTIONS.diamonds[selectedDiamond]}
+                          Qty: 1 &nbsp;·&nbsp; {productGemstone?.gemstone_tcw ? `${productGemstone.gemstone_tcw} ct` : 'Selected variant'} &nbsp;·&nbsp; {productGemstone?.gemstone_type || 'Jewellery'}
                         </p>
                         <p className="pd-om-product-price" style={{ fontSize: '13px' }}><PriceDisplay amountInINR={price} /></p>
                       </div>

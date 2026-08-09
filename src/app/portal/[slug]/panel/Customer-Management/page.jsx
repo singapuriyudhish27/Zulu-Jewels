@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { useAdminBase } from "@/hooks/useAdminBase";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import PageLoader from "@/components/common/PageLoader";
 import {
   LayoutDashboard,
   Package,
@@ -203,6 +204,8 @@ export default function CustomerManagementPage() {
       setSendingEmail(false);
     }
   };
+
+  if (loading) return <PageLoader admin label="Loading customers" />;
 
   return (
     <>

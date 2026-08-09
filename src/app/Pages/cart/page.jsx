@@ -11,6 +11,7 @@ import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
 import { Trash2, Minus, Plus, ShoppingBag, Tag } from 'lucide-react';
 import PriceDisplay from '@/components/price/PriceDisplay';
+import PageLoader from '@/components/common/PageLoader';
 import { useCurrency } from '@/context/CurrencyContext';
 
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
@@ -60,6 +61,7 @@ export default function CartPage() {
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [cartLoading, setCartLoading] = useState(true);
 
   const fetchCart = async () => {
     try {
@@ -81,6 +83,7 @@ export default function CartPage() {
       toast.error('Could not load cart items');
     } finally {
       setLoading(false);
+      setCartLoading(false);
     }
   };
 
@@ -93,6 +96,8 @@ export default function CartPage() {
   const shipping = subtotal > 50000 ? 0 : 999;
   const tax = Math.round((subtotal - discountAmt) * 0.03);
   const total = subtotal - discountAmt + shipping + tax;
+
+  if (cartLoading) return <PageLoader label="Loading your bag" />;
 
   const updateQty = async (cartItemId, newQty) => {
     if (newQty < 1) return;

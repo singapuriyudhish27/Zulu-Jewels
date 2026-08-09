@@ -23,7 +23,7 @@ const ALLOWED_MIME_TYPES = [
   'video/webm',
   'video/quicktime'
 ];
-const MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+const MAX_FILE_SIZE = 100 * 1024 * 1024; // 15MB
 
 /**
  * Uploads a file to Cloudinary.

@@ -6,6 +6,7 @@ import { useSearchParams } from "next/navigation";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import PageLoader from "@/components/common/PageLoader";
 import {
   LayoutDashboard,
   Package,
@@ -555,6 +556,8 @@ export default function OrderManagementPage() {
       </div>
     ), { id: 'delete-confirm', duration: 8000 });
   };
+
+  if (loading) return <PageLoader admin label="Loading orders" />;
 
   return (
     <>

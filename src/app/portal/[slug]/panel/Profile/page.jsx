@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { Settings, RefreshCw, Copy, Wrench } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
+import PageLoader from '@/components/common/PageLoader';
 import ConfirmModal from '@/components/common/ConfirmModal';
 
 export default function ProfilePage() {
@@ -165,6 +166,8 @@ export default function ProfilePage() {
       setProfileSaving(false);
     }
   }
+
+  if (loading) return <PageLoader admin label="Loading admin profile" />;
 
   return (
     <>      <style dangerouslySetInnerHTML={{__html: `

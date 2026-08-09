@@ -8,6 +8,7 @@ import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import dynamic from 'next/dynamic';
+import PageLoader from '@/components/common/PageLoader';
 
 const LocationMap = dynamic(() => import('@/components/map/LocationMap'), { ssr: false });
 
@@ -376,6 +377,8 @@ export default function ProfilePage() {
       </div>
     ), { id: 'logout-confirm', duration: 8000 });
   };
+
+  if (loading) return <PageLoader label="Loading your profile" />;
 
   return (
     <>

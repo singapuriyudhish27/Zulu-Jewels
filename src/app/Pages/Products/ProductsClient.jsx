@@ -6,6 +6,7 @@ import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react';
 import PriceDisplay from '@/components/price/PriceDisplay';
+import PageLoader from '@/components/common/PageLoader';
 
 
 function ProductsContent({ initialCategories }) {
@@ -13,6 +14,11 @@ function ProductsContent({ initialCategories }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const categoryId = searchParams.get('category');
+  const productDetailsHref = (productId) => {
+    const params = new URLSearchParams();
+    if (categoryId) params.set('category', categoryId);
+    return `/Pages/Products/${productId}${params.size ? `?${params.toString()}` : ''}`;
+  };
 
   const [activeCategory, setActiveCategory] = useState(() => {
     if (initialCategories && categoryId) {
@@ -109,7 +115,7 @@ function ProductsContent({ initialCategories }) {
   if (sortBy === 'name') filtered.sort((a, b) => a.name.localeCompare(b.name));
   if (sortBy === 'newest') filtered.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-  if (loading) return <div style={{ padding: '80px', textAlign: 'center', color: '#888' }}>Loading products...</div>;
+  if (loading) return <PageLoader label="Loading collections" />;
 
   const totalPages = Math.ceil(filtered.length / itemsPerPage);
   const paginated = filtered.slice((currentPage - 1) * itemsPerPage, currentPage * itemsPerPage);
@@ -357,7 +363,7 @@ function ProductsContent({ initialCategories }) {
         <div className="pr-product-grid">
           {paginated.map(p => (
             <div key={p.id} className="pr-product-card" onMouseEnter={() => setHoveredProductId(p.id)} onMouseLeave={() => setHoveredProductId(null)}>
-              <Link href={`/Pages/Products/${p.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+              <Link href={productDetailsHref(p.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="pr-product-img-wrap">
                   {p.images && p.images.length > 0 ? (
                     <img 

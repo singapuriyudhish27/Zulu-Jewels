@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { connectDB } from "@/lib/db";
 import Product from "@/lib/models/Product";
+import Category from "@/lib/models/Category";
 import ProductVariant from "@/lib/models/ProductVariant";
 import ProductImage from "@/lib/models/ProductImage";
 import CartItem from "@/lib/models/CartItem";
@@ -39,6 +40,10 @@ export async function GET(request, { params }) {
             return NextResponse.json({ success: false, message: "Product Not Found" }, { status: 404 });
         }
 
+        const category = product.category_id
+            ? await Category.findById(product.category_id).select('name').lean()
+            : null;
+
         const variants = await ProductVariant.find({ product_id: id });
         const images = await ProductImage.find({ product_id: id });
 
@@ -59,6 +64,8 @@ export async function GET(request, { params }) {
         const result = {
             id: product._id,
             category_id: product.category_id,
+            category_name: category?.name || "Products",
+            specifications: product.specifications || {},
             name: product.name,
             description: product.description,
             price: product.price,

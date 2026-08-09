@@ -5,6 +5,7 @@ import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import PageLoader from "@/components/common/PageLoader";
 import {
   LayoutDashboard,
   Package,
@@ -67,7 +68,17 @@ export default function ProductManagementPage() {
     is_active: true,
     variants: [], // New collection of material-specific data
     media: [], // Generic product media
-    specifications: {} // Category-specific specifications
+    specifications: {}, // Category-specific specifications
+    gemstone_type: "None",
+    gemstone_tcw: "",
+    gemstone_color: "",
+    gemstone_clarity: "",
+    gemstone_cut: "",
+    gemstone_shape: "",
+    gemstone_setting: "",
+    gemstone_center_carat: "",
+    gemstone_cert_agency: "",
+    gemstone_cert_number: ""
   });
   const [editingProductId, setEditingProductId] = useState(null);
   const [editingCategoryId, setEditingCategoryId] = useState(null);
@@ -485,6 +496,17 @@ export default function ProductManagementPage() {
           description: formData.description,
           craftsmanship_video: craftsmanshipVideoPayload,
           is_active: formData.is_active,
+          specifications: formData.specifications,
+          gemstone_type: formData.gemstone_type || "None",
+          gemstone_tcw: formData.gemstone_tcw || "",
+          gemstone_color: formData.gemstone_color || "",
+          gemstone_clarity: formData.gemstone_clarity || "",
+          gemstone_cut: formData.gemstone_cut || "",
+          gemstone_shape: formData.gemstone_shape || "",
+          gemstone_setting: formData.gemstone_setting || "",
+          gemstone_center_carat: formData.gemstone_center_carat || "",
+          gemstone_cert_agency: formData.gemstone_cert_agency || "",
+          gemstone_cert_number: formData.gemstone_cert_number || "",
           variants: mappedVariants,
           media: mappedMedia
         }),
@@ -667,27 +689,24 @@ export default function ProductManagementPage() {
     setShowVariantModal(false);
   };
 
-  const openGemstoneModal = (idx) => {
-    const variant = productForm.variants[idx];
+  const openProductGemstoneModal = () => {
     setGemstoneDraft({
-      gemstone_type: variant.gemstone_type || "None",
-      gemstone_tcw: variant.gemstone_tcw || "",
-      gemstone_color: variant.gemstone_color || "",
-      gemstone_clarity: variant.gemstone_clarity || "",
-      gemstone_cut: variant.gemstone_cut || "",
-      gemstone_shape: variant.gemstone_shape || "",
-      gemstone_setting: variant.gemstone_setting || "",
-      gemstone_center_carat: variant.gemstone_center_carat || "",
-      gemstone_cert_agency: variant.gemstone_cert_agency || "",
-      gemstone_cert_number: variant.gemstone_cert_number || ""
+      gemstone_type: productForm.gemstone_type || "None",
+      gemstone_tcw: productForm.gemstone_tcw || "",
+      gemstone_color: productForm.gemstone_color || "",
+      gemstone_clarity: productForm.gemstone_clarity || "",
+      gemstone_cut: productForm.gemstone_cut || "",
+      gemstone_shape: productForm.gemstone_shape || "",
+      gemstone_setting: productForm.gemstone_setting || "",
+      gemstone_center_carat: productForm.gemstone_center_carat || "",
+      gemstone_cert_agency: productForm.gemstone_cert_agency || "",
+      gemstone_cert_number: productForm.gemstone_cert_number || ""
     });
-    setEditingGemstoneVariantIdx(idx);
     setShowGemstoneModal(true);
   };
 
   const saveGemstoneDetails = async (e) => {
     e.preventDefault();
-    if (editingGemstoneVariantIdx === null) return;
     
     // Validate: Enforce TCW is required only if Gemstone Type is not "None"
     if (gemstoneDraft.gemstone_type !== "None" && !gemstoneDraft.gemstone_tcw) {
@@ -695,18 +714,7 @@ export default function ProductManagementPage() {
       return;
     }
 
-    const updatedVariants = productForm.variants.map((v, i) => {
-      if (i === editingGemstoneVariantIdx) {
-        return {
-          ...v,
-          ...gemstoneDraft
-        };
-      }
-      return v;
-    });
-
-    const updatedForm = { ...productForm, variants: updatedVariants };
-    setProductForm(updatedForm);
+    setProductForm(prev => ({ ...prev, ...gemstoneDraft }));
     setShowGemstoneModal(false);
   };
 
@@ -784,6 +792,8 @@ export default function ProductManagementPage() {
     setProductForm(prev => ({ ...prev, media: prev.media.map((m, i) => ({ ...m, is_hover: i === index })) }));
   };
 
+  if (loading) return <PageLoader admin label="Loading products" />;
+
   return (
     <>
           {/* Page Header */}
@@ -796,7 +806,7 @@ export default function ProductManagementPage() {
               <button className="add-btn secondary" onClick={() => setShowAddCategory(true)}><Layers size={18} /> Add Category</button>
               <button className="add-btn" onClick={() => {
                 setEditingProductId(null);
-                setProductForm({ name: "", category_name: "", gender: "Unisex", material: [], price: "", stock: "", description: "", craftsmanship_video: "", craftsmanship_video_file: null, is_active: true, variants: [], media: [], specifications: {} });
+                setProductForm({ name: "", category_name: "", gender: "Unisex", material: [], price: "", stock: "", description: "", craftsmanship_video: "", craftsmanship_video_file: null, is_active: true, variants: [], media: [], specifications: {}, gemstone_type: "None", gemstone_tcw: "", gemstone_color: "", gemstone_clarity: "", gemstone_cut: "", gemstone_shape: "", gemstone_setting: "", gemstone_center_carat: "", gemstone_cert_agency: "", gemstone_cert_number: "" });
                 setShowAddProduct(true);
               }}><Plus size={18} /> Add Product</button>
             </div>
@@ -967,7 +977,17 @@ export default function ProductManagementPage() {
                                     };
                                   }),
                                   media: product.allMedia.filter(m => !m.variant_id).map(m => ({ ...m, preview: m.media_url })),
-                                  specifications: product.specifications || {}
+                                  specifications: product.specifications || {},
+                                  gemstone_type: rawProd?.gemstone_type || "None",
+                                  gemstone_tcw: rawProd?.gemstone_tcw || "",
+                                  gemstone_color: rawProd?.gemstone_color || "",
+                                  gemstone_clarity: rawProd?.gemstone_clarity || "",
+                                  gemstone_cut: rawProd?.gemstone_cut || "",
+                                  gemstone_shape: rawProd?.gemstone_shape || "",
+                                  gemstone_setting: rawProd?.gemstone_setting || "",
+                                  gemstone_center_carat: rawProd?.gemstone_center_carat || "",
+                                  gemstone_cert_agency: rawProd?.gemstone_cert_agency || "",
+                                  gemstone_cert_number: rawProd?.gemstone_cert_number || ""
                                 });
                                 setShowAddProduct(true);
                             }}><Edit size={16} /></div>
@@ -1067,26 +1087,7 @@ export default function ProductManagementPage() {
                             {v.media?.length > 0 && <span style={{ fontSize: '11px', color: '#aaa' }}>{v.media.length} photo{v.media.length !== 1 ? 's' : ''}</span>}
                           </div>
                           <div style={{ display: 'flex', gap: '5px', flexShrink: 0 }}>
-                            <button 
-                              type="button" 
-                              onClick={() => openGemstoneModal(vIdx)} 
-                              style={{ 
-                                background: 'none', 
-                                border: v.gemstone_type && v.gemstone_type !== "None" ? '1px solid #d4af37' : '1px solid #ddd', 
-                                borderRadius: '6px', 
-                                padding: '3px 9px', 
-                                cursor: 'pointer', 
-                                fontSize: '11px', 
-                                display: 'flex', 
-                                alignItems: 'center', 
-                                gap: '3px', 
-                                color: v.gemstone_type && v.gemstone_type !== "None" ? '#d4af37' : '#4a4a4a',
-                                fontWeight: v.gemstone_type && v.gemstone_type !== "None" ? '600' : 'normal'
-                              }}
-                              title="Configure Gemstone & Diamond Details"
-                            >
-                              <Gem size={11} /> Gemstone
-                            </button>
+
                             <button type="button" onClick={() => openEditVariant(vIdx)} style={{ background: 'none', border: '1px solid #ddd', borderRadius: '6px', padding: '3px 9px', cursor: 'pointer', fontSize: '11px', display: 'flex', alignItems: 'center', gap: '3px', color: '#4a4a4a' }}><Edit size={11} /> Edit</button>
                             <button type="button" onClick={() => removeVariant(vIdx)} style={{ background: 'none', border: '1px solid #fde8e8', borderRadius: '6px', padding: '3px 8px', cursor: 'pointer', display: 'flex', alignItems: 'center', color: '#e74c3c' }}><Trash2 size={11} /></button>
                           </div>
@@ -1153,6 +1154,31 @@ export default function ProductManagementPage() {
                           <Settings size={20} />
                         </button>
                       )}
+
+                      {/* Product-level Gemstone Details button */}
+                      <button
+                        type="button"
+                        onClick={openProductGemstoneModal}
+                        title="Configure Gemstone & Diamond Details for this product"
+                        style={{
+                          padding: '0 12px',
+                          height: '42px',
+                          background: (productForm.gemstone_type && productForm.gemstone_type !== 'None') ? '#fffbeb' : '#f8fafc',
+                          color: (productForm.gemstone_type && productForm.gemstone_type !== 'None') ? '#d4af37' : '#64748b',
+                          border: (productForm.gemstone_type && productForm.gemstone_type !== 'None') ? '1px solid #d4af37' : '1px solid #cbd5e1',
+                          borderRadius: '8px',
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '6px',
+                          fontSize: '12px',
+                          fontWeight: (productForm.gemstone_type && productForm.gemstone_type !== 'None') ? '600' : 'normal',
+                          flexShrink: 0,
+                          cursor: 'pointer'
+                        }}
+                      >
+                        <Gem size={16} />
+                        {(productForm.gemstone_type && productForm.gemstone_type !== 'None') ? `${productForm.gemstone_type}${productForm.gemstone_tcw ? ` (${productForm.gemstone_tcw}ct)` : ''}` : 'Gemstone'}
+                      </button>
                     </div>
                   </div>
                   <div className="form-group">
@@ -1183,44 +1209,7 @@ export default function ProductManagementPage() {
                   <textarea className="form-input" rows="3" value={productForm.description} onChange={(e) => setProductForm({ ...productForm, description: e.target.value })} placeholder="Enter product description"></textarea>
                 </div>
 
-                <div className="form-group">
-                  <label className="form-label">Product Images</label>
-                  <div style={{ border: '2px dashed #ddd', padding: '16px', borderRadius: '8px', textAlign: 'center', background: '#fafafa' }}>
-                    <input type="file" id="product-media-input" multiple accept="image/*,video/*" onChange={handleMediaChange} style={{ display: 'none' }} />
-                    <label htmlFor="product-media-input" style={{ cursor: 'pointer', color: '#666', fontSize: '13px', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '6px' }}>
-                      <ImageIcon size={24} color="#888" />
-                      <span>Upload main + hover images for this product</span>
-                    </label>
-                  </div>
-                  {productForm.media.length > 0 && (
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(92px, 1fr))', gap: '8px', marginTop: '10px' }}>
-                      {productForm.media.map((item, index) => (
-                        <div key={index} style={{ position: 'relative', borderRadius: '8px', overflow: 'hidden', border: item.is_primary ? '2px solid #d4af37' : (item.is_hover ? '2px solid #0284c7' : '1px solid #ddd') }}>
-                          {item.media_type === 'video' ? (
-                            <div style={{ width: '100%', height: '84px', background: '#f0f0f0', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Video size={18} color="#666" />
-                            </div>
-                          ) : (
-                            <img src={item.preview} alt="preview" style={{ width: '100%', height: '84px', objectFit: 'cover' }} />
-                          )}
-                          <div style={{ position: 'absolute', top: '4px', right: '4px', display: 'flex', gap: '2px' }}>
-                            <button type="button" onClick={() => setPrimaryMedia(index)} title="Set as main image" style={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <Star size={10} color={item.is_primary ? '#d4af37' : '#888'} fill={item.is_primary ? '#d4af37' : 'none'} />
-                            </button>
-                            <button type="button" onClick={() => setHoverMedia(index)} title="Set as hover image" style={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <ImageIcon size={10} color={item.is_hover ? '#0284c7' : '#888'} />
-                            </button>
-                            <button type="button" onClick={() => removeMedia(index)} style={{ background: 'rgba(255,255,255,0.95)', border: 'none', borderRadius: '50%', width: '22px', height: '22px', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <X size={10} color="#e74c3c" />
-                            </button>
-                          </div>
-                          {item.is_primary && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#d4af37', color: 'white', fontSize: '8px', textAlign: 'center', padding: '2px 0' }}>MAIN</div>}
-                          {item.is_hover && !item.is_primary && <div style={{ position: 'absolute', bottom: 0, left: 0, right: 0, background: '#0284c7', color: 'white', fontSize: '8px', textAlign: 'center', padding: '2px 0' }}>HOVER</div>}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
+
 
                 {/* --- Craftsmanship Video Upload Section --- */}
                 <div className="form-group" style={{ marginTop: '16px' }}>

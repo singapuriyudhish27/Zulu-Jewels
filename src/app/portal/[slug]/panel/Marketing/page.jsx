@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from "react";
 import { useRouter } from "next/navigation";
 import NextImage from "next/image";
 import toast from "react-hot-toast";
+import PageLoader from "@/components/common/PageLoader";
 import {
     LayoutDashboard,
     Package,
@@ -362,6 +363,8 @@ export default function MarketingPage() {
     ];
 
 
+
+    if (loading) return <PageLoader admin label="Loading marketing" />;
 
     return (
         <>

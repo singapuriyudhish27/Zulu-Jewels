@@ -6,6 +6,7 @@ import { useAdminBase } from "@/hooks/useAdminBase";
 import { useEffect, useState } from "react";
 import Image from "next/image";
 import toast from "react-hot-toast";
+import PageLoader from "@/components/common/PageLoader";
 import {
     LayoutDashboard,
     Package,
@@ -510,6 +511,8 @@ export default function ShippingPaymentPage() {
         : "0.0";
     const processingFees = (totalRevenue * 0.02).toFixed(0); // Estimated 2%
 
+
+    if (loading) return <PageLoader admin label="Loading shipping settings" />;
 
     return (
         <>
