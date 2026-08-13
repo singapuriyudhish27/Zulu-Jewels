@@ -42,7 +42,7 @@ function ProductsContent({ initialCategories }) {
   const [wishlist, setWishlist] = useState({});
   const [hoveredProductId, setHoveredProductId] = useState(null);
   const [currentPage, setCurrentPage] = useState(1);
-  const itemsPerPage = 12;
+  const itemsPerPage = 20;
 
   useEffect(() => {
     if (initialCategories) {

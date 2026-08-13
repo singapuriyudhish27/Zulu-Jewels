@@ -61,6 +61,49 @@ export async function GET(request, { params }) {
             isWishlisted = likeCount > 0;
         }
 
+        // Fetch up to 10 related products from the same category
+        let related_products = [];
+        if (product.category_id) {
+            const relatedProductsDocs = await Product.find({
+                category_id: product.category_id,
+                _id: { $ne: product._id },
+                is_deleted: { $ne: true },
+                is_active: true
+            })
+            .limit(10)
+            .sort({ _id: -1 })
+            .lean();
+
+            if (relatedProductsDocs.length > 0) {
+                const relatedIds = relatedProductsDocs.map(p => p._id);
+                const relatedImages = await ProductImage.find({ product_id: { $in: relatedIds } }).lean();
+
+                const relatedImagesMap = {};
+                for (const img of relatedImages) {
+                    const pid = img.product_id.toString();
+                    if (!relatedImagesMap[pid]) relatedImagesMap[pid] = [];
+                    relatedImagesMap[pid].push(img);
+                }
+
+                related_products = relatedProductsDocs.map(p => {
+                    const pImgs = relatedImagesMap[p._id.toString()] || [];
+                    const primaryImg = pImgs.find(i => i.is_primary)?.media_url || pImgs[0]?.media_url || null;
+                    return {
+                        id: p._id,
+                        name: p.name,
+                        price: p.price,
+                        image: primaryImg,
+                        images: pImgs.map(img => ({
+                            image_url: img.media_url,
+                            is_primary: Boolean(img.is_primary),
+                            is_hover: Boolean(img.is_hover)
+                        })),
+                        category_id: p.category_id
+                    };
+                });
+            }
+        }
+
         const result = {
             id: product._id,
             category_id: product.category_id,
@@ -78,7 +121,8 @@ export async function GET(request, { params }) {
             is_wishlisted: isWishlisted,
             cart_variants: cartVariants,
             variants: variants,
-            images: images
+            images: images,
+            related_products: related_products
         }
 
         return NextResponse.json({

@@ -95,6 +95,13 @@ export default function HomePage() {
   const [activeFaq, setActiveFaq] = useState(null);
   const [hoveredProductId, setHoveredProductId] = useState(null);
   const productSectionRef = useRef(null);
+  const testimonialsTrackRef = useRef(null);
+
+  const scrollTestimonials = (dir) => {
+    const track = testimonialsTrackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: dir * 360, behavior: 'smooth' });
+  };
 
   const getProductImage = (product) => {
     const images = product.images || [];
@@ -162,6 +169,9 @@ export default function HomePage() {
   }, []);
 
   useEffect(() => {
+    if (loading) return;
+
+    let timerId;
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
         if (entry.isIntersecting) {
@@ -170,11 +180,17 @@ export default function HomePage() {
       });
     }, { threshold: 0.05, rootMargin: '0px 0px -50px 0px' });
 
-    document.querySelectorAll('.zj-animate').forEach(el => {
-      observer.observe(el);
-    });
-    return () => observer.disconnect();
-  }, [sections, activeCategory, bestSellerTab]);
+    timerId = setTimeout(() => {
+      document.querySelectorAll('.zj-animate').forEach(el => {
+        observer.observe(el);
+      });
+    }, 50);
+
+    return () => {
+      clearTimeout(timerId);
+      observer.disconnect();
+    };
+  }, [loading, sections, activeCategory, bestSellerTab]);
 
   useEffect(() => {
     if (activeCategory !== null && productSectionRef.current) {
@@ -966,6 +982,41 @@ export default function HomePage() {
           right: 0;
           background: linear-gradient(to left, #FAF8F6 20%, transparent);
         }
+        .zj-testimonials-outer {
+          position: relative;
+        }
+        .zj-testimonials-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-50%);
+          z-index: 10;
+          background: #ffffff;
+          border: 1px solid rgba(232, 224, 216, 0.6);
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+          transition: background 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+          color: #1a1a1a;
+          font-size: 18px;
+          line-height: 1;
+        }
+        .zj-testimonials-arrow:hover {
+          background: #000000;
+          color: #ffffff;
+          border-color: #000000;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        }
+        .zj-testimonials-arrow-prev { left: -20px; }
+        .zj-testimonials-arrow-next { right: -20px; }
+        @media (max-width: 900px) {
+          .zj-testimonials-arrow-prev { left: 8px; }
+          .zj-testimonials-arrow-next { right: 8px; }
+        }
         .zj-testimonials-track::-webkit-scrollbar { 
           display: none; 
         }
@@ -1264,79 +1315,6 @@ export default function HomePage() {
           </div>
         </section>
 
-        {/* This Month's Best Sellers (New Section) */}
-        <section className="zj-best-sellers-section">
-          <div className="zj-best-sellers-inner">
-            <h2 className="zj-best-sellers-title zj-animate">{"This Month's Best Sellers"}</h2>
-            <p className="zj-best-sellers-subtitle zj-animate">{"Our most coveted designs, curated for their exceptional beauty and demand."}</p>
-            
-            <div className="zj-best-sellers-tabs">
-              {collections.map((col) => (
-                <button
-                  key={col.id}
-                  className={`zj-best-seller-tab-btn ${bestSellerTab === col.id ? 'active' : ''}`}
-                  onClick={() => setBestSellerTab(col.id)}
-                >
-                  {col.name}
-                </button>
-              ))}
-            </div>
-
-            <div className="zj-product-grid">
-              {getBestSellers(bestSellerTab).map((p, pi) => (
-                <div 
-                  key={pi} 
-                  className="zj-product-card zj-animate" 
-                  onClick={() => goToProduct(p.id, bestSellerTab)}
-                  onMouseEnter={() => setHoveredProductId(p.id)}
-                  onMouseLeave={() => setHoveredProductId(null)}
-                  style={{ transitionDelay: `${pi * 80}ms` }}
-                >
-                  <div className="zj-product-img-wrap">
-                    {p.images && p.images.length > 0 ? (
-                      <img 
-                        src={getProductImage(p)} 
-                        alt={p.name} 
-                        className="zj-animate-img"
-                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div className="zj-product-img-placeholder">💍</div>
-                    )}
-                    <button 
-                      className="zj-product-wishlist" 
-                      onClick={e => { 
-                        e.preventDefault(); 
-                        e.stopPropagation(); 
-                        toggleWishlist(p.id); 
-                      }}
-                      style={{ color: wishlist[p.id] ? '#EAB308' : '#bbbbbb' }}
-                    >
-                      {wishlist[p.id] ? '♥' : '♡'}
-                    </button>
-                  </div>
-                  <div className="zj-product-name">{p.name}</div>
-                  <div className="zj-product-price">
-                    {p.price ? `₹${Number(p.price).toLocaleString()}` : "Price on Request"}
-                  </div>
-                  {p.swatches && p.swatches.length > 0 && (
-                    <div className="zj-product-swatches">
-                      {p.swatches.map((s, i) => (
-                        <span key={i} className="zj-swatch" style={{ background: s }} />
-                      ))}
-                    </div>
-                  )}
-                </div>
-              ))}
-              {getBestSellers(bestSellerTab).length === 0 && (
-                <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '40px', color: '#888', fontSize: '13px' }}>
-                  {"No top sellers available in this category."}
-                </div>
-              )}
-            </div>
-          </div>
-        </section>
-
         {/* Explore Our Collections (New Section) */}
         <section id="collections" className="zj-collections-section">
           <h2 className="zj-collections-title zj-animate">{"Explore Our Collections"}</h2>
@@ -1488,6 +1466,79 @@ export default function HomePage() {
           </div>
         </div>
 
+        {/* This Month's Best Sellers (New Section) */}
+        <section className="zj-best-sellers-section">
+          <div className="zj-best-sellers-inner">
+            <h2 className="zj-best-sellers-title zj-animate">{"This Month's Best Sellers"}</h2>
+            <p className="zj-best-sellers-subtitle zj-animate">{"Our most coveted designs, curated for their exceptional beauty and demand."}</p>
+            
+            <div className="zj-best-sellers-tabs">
+              {collections.map((col) => (
+                <button
+                  key={col.id}
+                  className={`zj-best-seller-tab-btn ${bestSellerTab === col.id ? 'active' : ''}`}
+                  onClick={() => setBestSellerTab(col.id)}
+                >
+                  {col.name}
+                </button>
+              ))}
+            </div>
+
+            <div className="zj-product-grid">
+              {getBestSellers(bestSellerTab).map((p, pi) => (
+                <div 
+                  key={pi} 
+                  className="zj-product-card zj-animate" 
+                  onClick={() => goToProduct(p.id, bestSellerTab)}
+                  onMouseEnter={() => setHoveredProductId(p.id)}
+                  onMouseLeave={() => setHoveredProductId(null)}
+                  style={{ transitionDelay: `${pi * 80}ms` }}
+                >
+                  <div className="zj-product-img-wrap">
+                    {p.images && p.images.length > 0 ? (
+                      <img 
+                        src={getProductImage(p)} 
+                        alt={p.name} 
+                        className="zj-animate-img"
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div className="zj-product-img-placeholder">💍</div>
+                    )}
+                    <button 
+                      className="zj-product-wishlist" 
+                      onClick={e => { 
+                        e.preventDefault(); 
+                        e.stopPropagation(); 
+                        toggleWishlist(p.id); 
+                      }}
+                      style={{ color: wishlist[p.id] ? '#EAB308' : '#bbbbbb' }}
+                    >
+                      {wishlist[p.id] ? '♥' : '♡'}
+                    </button>
+                  </div>
+                  <div className="zj-product-name">{p.name}</div>
+                  <div className="zj-product-price">
+                    {p.price ? `₹${Number(p.price).toLocaleString()}` : "Price on Request"}
+                  </div>
+                  {p.swatches && p.swatches.length > 0 && (
+                    <div className="zj-product-swatches">
+                      {p.swatches.map((s, i) => (
+                        <span key={i} className="zj-swatch" style={{ background: s }} />
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ))}
+              {getBestSellers(bestSellerTab).length === 0 && (
+                <div style={{ gridColumn: 'span 4', textAlign: 'center', padding: '40px', color: '#888', fontSize: '13px' }}>
+                  {"No top sellers available in this category."}
+                </div>
+              )}
+            </div>
+          </div>
+        </section>
+
         {/* Gifts Section */}
         <div className="zj-gifts-outer">
           <section className="zj-gifts-section">
@@ -1519,19 +1570,35 @@ export default function HomePage() {
                 {"Loved by Our Customers"}
               </h2>
             </div>
-            <div className="zj-testimonials-carousel">
-              <div className="zj-testimonials-track">
-                {TESTIMONIALS.map((t, i) => (
-                  <div key={i} className="zj-testimonial-card zj-animate" style={{ transitionDelay: `${i * 80}ms` }}>
-                    <div className="zj-testimonial-stars">{'★'.repeat(t.rating)}</div>
-                    <div className="zj-testimonial-header">
-                      <span className="zj-testimonial-name">{t.name}</span>
-                      <span className="zj-testimonial-verified-badge">✓</span>
+            <div className="zj-testimonials-outer">
+              <button
+                className="zj-testimonials-arrow zj-testimonials-arrow-prev"
+                onClick={() => scrollTestimonials(-1)}
+                aria-label="Previous reviews"
+              >
+                &#8249;
+              </button>
+              <div className="zj-testimonials-carousel">
+                <div className="zj-testimonials-track" ref={testimonialsTrackRef}>
+                  {TESTIMONIALS.map((t, i) => (
+                    <div key={i} className="zj-testimonial-card zj-animate" style={{ transitionDelay: `${i * 80}ms` }}>
+                      <div className="zj-testimonial-stars">{'★'.repeat(t.rating)}</div>
+                      <div className="zj-testimonial-header">
+                        <span className="zj-testimonial-name">{t.name}</span>
+                        <span className="zj-testimonial-verified-badge">✓</span>
+                      </div>
+                      <p className="zj-testimonial-text">&ldquo;{t.text}&rdquo;</p>
                     </div>
-                    <p className="zj-testimonial-text">&ldquo;{t.text}&rdquo;</p>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
+              <button
+                className="zj-testimonials-arrow zj-testimonials-arrow-next"
+                onClick={() => scrollTestimonials(1)}
+                aria-label="Next reviews"
+              >
+                &#8250;
+              </button>
             </div>
           </div>
         </section>

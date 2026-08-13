@@ -1,5 +1,5 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname, useParams, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
@@ -84,12 +84,29 @@ export default function ProductDetailsPage() {
   const productsHref = categoryId
     ? `/Pages/Products?category=${encodeURIComponent(categoryId)}`
     : '/Pages/Products';
-  const productDetailsHref = (productId) =>
-    `/Pages/Products/${productId}${categoryId ? `?category=${encodeURIComponent(categoryId)}` : ''}`;
+  const productDetailsHref = (productId, catId) =>
+    `/Pages/Products/${productId}${catId || categoryId ? `?category=${encodeURIComponent(catId || categoryId)}` : ''}`;
 
   const [product, setProduct] = useState(null);
   const [selectedVariant, setSelectedVariant] = useState(null);
+  const [relatedProducts, setRelatedProducts] = useState([]);
+  const [hoveredRelatedId, setHoveredRelatedId] = useState(null);
+  const relatedTrackRef = useRef(null);
   const [loading, setLoading] = useState(true);
+
+  const scrollRelated = (dir) => {
+    const track = relatedTrackRef.current;
+    if (!track) return;
+    track.scrollBy({ left: dir * 300, behavior: 'smooth' });
+  };
+
+  const getRelatedProductImage = (relProduct) => {
+    const images = relProduct.images || [];
+    if (images.length === 0) return relProduct.image || null;
+    const primaryImage = images.find(img => img.is_primary)?.image_url || images[0]?.image_url || relProduct.image;
+    const hoverImage = images.find(img => img.is_hover)?.image_url || images.find(img => !img.is_primary)?.image_url || primaryImage;
+    return hoveredRelatedId === relProduct.id ? (hoverImage || primaryImage) : (primaryImage || null);
+  };
   const [activeTab, setActiveTab] = useState('description');
   const [activeFaq, setActiveFaq] = useState(null);
   const [activeThumb, setActiveThumb] = useState(0);
@@ -125,6 +142,7 @@ export default function ProductDetailsPage() {
         const data = await res.json();
         if (data.success) {
           setProduct(data.product);
+          if (data.product.related_products) setRelatedProducts(data.product.related_products);
           if (data.product.is_wishlisted) setIsWishlisted(true);
           if (data.product.cart_variants) setInCartVariantIds(data.product.cart_variants.map(id => id === 'base' ? null : id));
           
@@ -1082,20 +1100,94 @@ export default function ProductDetailsPage() {
         }
 
         /* Related Products */
-        .pd-related-section { max-width: 1280px; margin: 0 auto; padding: 0 24px 100px; }
+        .pd-related-section { max-width: 1280px; margin: 0 auto; padding: 0 0 100px; }
         .pd-related-title {
           font-family: 'Cormorant Garamond', serif;
           font-size: 32px; color: #000000; font-weight: 500;
           margin-bottom: 32px; padding-bottom: 16px; border-bottom: 1px solid #EFEFEF;
+          padding-left: 24px; padding-right: 24px;
         }
-        .pd-related-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 32px; }
-        .pd-rel-card { cursor: pointer; }
+        .pd-related-outer {
+          position: relative;
+        }
+        .pd-related-arrow {
+          position: absolute;
+          top: 50%;
+          transform: translateY(-60%);
+          z-index: 10;
+          background: #ffffff;
+          border: 1px solid #e0e0e0;
+          border-radius: 50%;
+          width: 40px;
+          height: 40px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+          box-shadow: 0 2px 12px rgba(0,0,0,0.1);
+          transition: background 0.2s ease, box-shadow 0.2s ease;
+          color: #1a1a1a;
+        }
+        .pd-related-arrow:hover {
+          background: #000000;
+          color: #ffffff;
+          border-color: #000000;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.18);
+        }
+        .pd-related-arrow-prev { left: -20px; }
+        .pd-related-arrow-next { right: -20px; }
+        @media (max-width: 900px) {
+          .pd-related-arrow-prev { left: 8px; }
+          .pd-related-arrow-next { right: 8px; }
+        }
+        .pd-related-carousel {
+          position: relative;
+          overflow: hidden;
+        }
+        .pd-related-carousel::before,
+        .pd-related-carousel::after {
+          content: '';
+          position: absolute;
+          top: 0;
+          width: 80px;
+          height: 100%;
+          z-index: 2;
+          pointer-events: none;
+        }
+        .pd-related-carousel::before {
+          left: 0;
+          background: linear-gradient(to right, #ffffff 20%, transparent);
+        }
+        .pd-related-carousel::after {
+          right: 0;
+          background: linear-gradient(to left, #ffffff 20%, transparent);
+        }
+        .pd-related-track {
+          display: flex;
+          gap: 24px;
+          overflow-x: auto;
+          scroll-behavior: smooth;
+          scrollbar-width: none;
+          scroll-snap-type: x mandatory;
+          padding: 10px 40px 30px;
+        }
+        .pd-related-track::-webkit-scrollbar { display: none; }
+        .pd-rel-card {
+          min-width: 260px;
+          max-width: 280px;
+          flex-shrink: 0;
+          scroll-snap-align: start;
+          cursor: pointer;
+        }
         .pd-rel-img {
           width: 100%; aspect-ratio: 1; background: #F9F9F9;
           display: flex; align-items: center; justify-content: center;
-          font-size: 64px; margin-bottom: 16px; transition: transform 0.3s ease;
+          font-size: 64px; margin-bottom: 16px;
+          overflow: hidden;
+          transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1);
         }
-        .pd-rel-card:hover .pd-rel-img { transform: scale(1.05); }
+        .pd-rel-img img { transition: transform 0.4s cubic-bezier(0.16, 1, 0.3, 1); }
+        .pd-rel-card:hover .pd-rel-img img { transform: scale(1.07); }
         .pd-rel-name { font-size: 14px; font-weight: 600; color: #000000; margin-bottom: 6px; }
         .pd-rel-price { font-size: 13px; color: #666666; margin-bottom: 12px; }
         .pd-rel-swatches { display: flex; gap: 6px; }
@@ -1104,7 +1196,7 @@ export default function ProductDetailsPage() {
         @media (max-width: 900px) {
           .pd-product-area { grid-template-columns: 1fr; gap: 48px; }
           .pd-reviews-layout { grid-template-columns: 1fr; }
-          .pd-related-grid { grid-template-columns: repeat(2, 1fr); }
+          .pd-rel-card { min-width: 220px; max-width: 240px; }
           .pd-benefits-grid { grid-template-columns: repeat(1, 1fr); }
           .pd-value-props { grid-template-columns: repeat(2, 1fr); }
           .pd-vp-item { border-right: 1px solid #EFEFEF; border-bottom: 1px solid #EFEFEF; }
@@ -1119,7 +1211,7 @@ export default function ProductDetailsPage() {
           .pd-btn-primary, .pd-btn-secondary { width: 100%; }
         }
         @media (max-width: 480px) {
-          .pd-related-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
+          .pd-rel-card { min-width: 180px; max-width: 200px; }
           .pd-product-name { font-size: 24px; }
           .pd-price { font-size: 26px; }
           .pd-btn-wishlist { max-width: 100%; }
@@ -1559,23 +1651,57 @@ export default function ProductDetailsPage() {
       )}
 
       {/* Related Products */}
-      <div className="pd-related-section">
-        <h2 className="pd-related-title">You May Also Like</h2>
-        <div className="pd-related-grid">
-          {RELATED_PRODUCTS.map(p => (
-            <Link key={p.id} href={productDetailsHref(p.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
-              <div className="pd-rel-card">
-                <div className="pd-rel-img">💍</div>
-                <p className="pd-rel-name">{p.name}</p>
-                <p className="pd-rel-price">{p.price}</p>
-                <div className="pd-rel-swatches">
-                  {p.swatches.map((s, i) => <span key={i} className="pd-rel-swatch" style={{ background: s }} />)}
-                </div>
+      {relatedProducts && relatedProducts.length > 0 && (
+        <div className="pd-related-section">
+          <h2 className="pd-related-title">You May Also Like</h2>
+          <div className="pd-related-outer">
+            <button
+              className="pd-related-arrow pd-related-arrow-prev"
+              onClick={() => scrollRelated(-1)}
+              aria-label="Scroll left"
+            >
+              <ChevronLeft size={18} />
+            </button>
+            <div className="pd-related-carousel">
+              <div className="pd-related-track" ref={relatedTrackRef}>
+                {relatedProducts.map(p => {
+                  const relImg = getRelatedProductImage(p);
+                  return (
+                    <Link 
+                      key={p.id} 
+                      href={productDetailsHref(p.id, p.category_id)} 
+                      style={{ textDecoration: 'none', color: 'inherit' }}
+                      onMouseEnter={() => setHoveredRelatedId(p.id)}
+                      onMouseLeave={() => setHoveredRelatedId(null)}
+                    >
+                      <div className="pd-rel-card">
+                        <div className="pd-rel-img">
+                          {relImg ? (
+                            <img src={relImg} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                          ) : (
+                            <span>💍</span>
+                          )}
+                        </div>
+                        <p className="pd-rel-name">{p.name}</p>
+                        <p className="pd-rel-price">
+                          <PriceDisplay amountInINR={p.price} />
+                        </p>
+                      </div>
+                    </Link>
+                  );
+                })}
               </div>
-            </Link>
-          ))}
+            </div>
+            <button
+              className="pd-related-arrow pd-related-arrow-next"
+              onClick={() => scrollRelated(1)}
+              aria-label="Scroll right"
+            >
+              <ChevronRight size={18} />
+            </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Product Specific FAQs Section (Accordion style) */}
       <section className="pd-faq-section">
