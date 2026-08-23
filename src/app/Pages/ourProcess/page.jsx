@@ -1,11 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import dynamic from 'next/dynamic';
+import Image from 'next/image';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
-import PhoneInput from 'react-phone-number-input';
-import flags from 'react-phone-number-input/flags';
-import 'react-phone-number-input/style.css';
 import { 
   Sparkles, 
   Gem, 
@@ -23,43 +22,12 @@ import {
   X
 } from 'lucide-react';
 
+const ConsultationDrawer = dynamic(() => import('@/components/consultation/ConsultationDrawer'), { ssr: false });
+
 export default function BespokeJourneyPage() {
   const [activeStage, setActiveStage] = useState(1);
   const [openFaq, setOpenFaq] = useState(null);
   const [isConsultationOpen, setIsConsultationOpen] = useState(false);
-  const [isSubmitted, setIsSubmitted] = useState(false);
-  
-  const [formState, setFormState] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    interest: 'Engagement Ring',
-    budget: '$5,000 - $10,000',
-    notes: ''
-  });
-
-  const handleInputChange = (e) => {
-    const { name, value } = e.target;
-    setFormState(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    // Simulate luxury submission
-    setIsSubmitted(true);
-    setTimeout(() => {
-      setIsSubmitted(false);
-      setIsConsultationOpen(false);
-      setFormState({
-        name: '',
-        email: '',
-        phone: '',
-        interest: 'Engagement Ring',
-        budget: '$5,000 - $10,000',
-        notes: ''
-      });
-    }, 3000);
-  };
 
   const stages = [
     {
@@ -1426,7 +1394,7 @@ export default function BespokeJourneyPage() {
                   </div>
                   <div className="bp-stage-image-container">
                     <div className="bp-stage-image-inner">
-                      <img src={stage.image} alt={stage.title} className="bp-stage-img" />
+                      <Image src={stage.image} alt={stage.title} fill sizes="(max-width: 900px) 100vw, 50vw" className="bp-stage-img" style={{ objectFit: 'cover' }} />
                     </div>
                   </div>
                 </div>
@@ -1450,7 +1418,7 @@ export default function BespokeJourneyPage() {
               <div key={i} className="bp-atelier-card">
                 <div className="bp-atelier-inner">
                   <div className="bp-atelier-img-box">
-                    <img src={step.image} alt={step.title} className="bp-atelier-img" />
+                    <Image src={step.image} alt={step.title} fill sizes="(max-width: 600px) 100vw, (max-width: 1024px) 50vw, 25vw" className="bp-atelier-img" style={{ objectFit: 'cover' }} />
                   </div>
                   <div className="bp-atelier-info">
                     <span className="bp-atelier-tag">{step.category}</span>
@@ -1477,8 +1445,8 @@ export default function BespokeJourneyPage() {
             {craftsmen.map((c, i) => (
               <div key={i} className="bp-craftsman-card">
                 <div className="bp-craftsman-img-container">
-                  <div className="bp-craftsman-img-inner">
-                    <img src={c.image} alt={c.name} className="bp-craftsman-img" />
+                  <div className="bp-craftsman-img-inner" style={{ position: 'relative' }}>
+                    <Image src={c.image} alt={c.name} fill sizes="140px" className="bp-craftsman-img" style={{ objectFit: 'cover' }} />
                   </div>
                 </div>
                 <div>
@@ -1553,7 +1521,7 @@ export default function BespokeJourneyPage() {
               <div key={i} className="bp-diary-card">
                 <div className="bp-diary-inner">
                   <div className="bp-diary-img-box">
-                    <img src={diary.image} alt={diary.phase} className="bp-diary-img" />
+                    <Image src={diary.image} alt={diary.phase} fill sizes="(max-width: 900px) 100vw, 33vw" className="bp-diary-img" style={{ objectFit: 'cover' }} />
                   </div>
                   <div className="bp-diary-info">
                     <span className="bp-diary-phase">{diary.phase}</span>
@@ -1608,122 +1576,7 @@ export default function BespokeJourneyPage() {
       </div>
 
       {/* Sliding Consultation Drawer Overlay */}
-      <div className={`bp-drawer-overlay ${isConsultationOpen ? 'open' : ''}`} onClick={() => setIsConsultationOpen(false)}>
-        <div className="bp-drawer" onClick={(e) => e.stopPropagation()}>
-          <div className="bp-drawer-header">
-            <h3 className="bp-drawer-title bp-serif">Bespoke Inquiry</h3>
-            <button className="bp-drawer-close" onClick={() => setIsConsultationOpen(false)}>
-              <X size={20} />
-            </button>
-          </div>
-          
-          <div className="bp-drawer-body">
-            {isSubmitted ? (
-              <div className="bp-success-message">
-                <div className="bp-success-icon">
-                  <Check size={48} style={{ margin: '0 auto', display: 'block', border: '1px solid #CEA268', borderRadius: '50%', padding: '10px' }} />
-                </div>
-                <h4 className="bp-success-title bp-serif">Inquiry Registered</h4>
-                <p className="bp-success-desc">
-                  Thank you for your interest in Zulu Jewellers. A private client advisor will contact you within 24 hours to schedule your design consultation.
-                </p>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit}>
-                <div className="bp-form-group">
-                  <label className="bp-form-label" htmlFor="name">Full Name</label>
-                  <input
-                    type="text"
-                    id="name"
-                    name="name"
-                    value={formState.name}
-                    onChange={handleInputChange}
-                    className="bp-form-input"
-                    placeholder="Enter your name"
-                    required
-                  />
-                </div>
-
-                <div className="bp-form-group">
-                  <label className="bp-form-label" htmlFor="email">Email Address</label>
-                  <input
-                    type="email"
-                    id="email"
-                    name="email"
-                    value={formState.email}
-                    onChange={handleInputChange}
-                    className="bp-form-input"
-                    placeholder="name@example.com"
-                    required
-                  />
-                </div>
-
-                <div className="bp-form-group">
-                  <label className="bp-form-label" htmlFor="phone">Phone / WhatsApp</label>
-                  <PhoneInput
-                    placeholder="Enter phone number"
-                    value={formState.phone}
-                    onChange={(value) => setFormState(prev => ({ ...prev, phone: value || '' }))}
-                    flags={flags}
-                    required
-                  />
-                </div>
-
-                <div className="bp-form-group">
-                  <label className="bp-form-label" htmlFor="interest">Item Interest</label>
-                  <select
-                    id="interest"
-                    name="interest"
-                    value={formState.interest}
-                    onChange={handleInputChange}
-                    className="bp-form-select"
-                  >
-                    <option>Engagement Ring</option>
-                    <option>Wedding Band Set</option>
-                    <option>Bespoke Necklace</option>
-                    <option>Custom Earrings</option>
-                    <option>Other Fine Jewelry</option>
-                  </select>
-                </div>
-
-                <div className="bp-form-group">
-                  <label className="bp-form-label" htmlFor="budget">Target Budget (USD)</label>
-                  <select
-                    id="budget"
-                    name="budget"
-                    value={formState.budget}
-                    onChange={handleInputChange}
-                    className="bp-form-select"
-                  >
-                    <option>$3,000 - $5,000</option>
-                    <option>$5,000 - $10,000</option>
-                    <option>$10,000 - $25,000</option>
-                    <option>$25,000 - $50,000</option>
-                    <option>$50,000+</option>
-                  </select>
-                </div>
-
-                <div className="bp-form-group">
-                  <label className="bp-form-label" htmlFor="notes">Design Inspiration & Notes</label>
-                  <textarea
-                    id="notes"
-                    name="notes"
-                    value={formState.notes}
-                    onChange={handleInputChange}
-                    className="bp-form-textarea"
-                    placeholder="Describe your design vision, timeline, diamond preference, or metal specifications..."
-                    required
-                  />
-                </div>
-
-                <button type="submit" className="bp-form-submit">
-                  Submit Private Request
-                </button>
-              </form>
-            )}
-          </div>
-        </div>
-      </div>
+      <ConsultationDrawer isOpen={isConsultationOpen} onClose={() => setIsConsultationOpen(false)} />
 
       <Footer />
     </>

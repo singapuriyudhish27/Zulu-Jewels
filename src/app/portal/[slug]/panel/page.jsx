@@ -1,6 +1,5 @@
 "use client";
 
-
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useAdminBase } from "@/hooks/useAdminBase";
@@ -47,20 +46,21 @@ export default function AdminPage() {
     reviews: []
   });
 
-
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        // Fetch Profile
-        const profileRes = await fetch('/api/Admin/Profile', { credentials: 'include' });
-        const profileData = await profileRes.json();
-        if (profileRes.ok) setLoggedInUserData(profileData);
-
-        // Fetch Dashboard Data
-        const dashRes = await fetch('/api/Admin', { credentials: 'include' });
-        const dashResult = await dashRes.json();
-        if (dashResult.success) {
+        // Fetch Profile and Dashboard Data in parallel
+        const [profileRes, dashRes] = await Promise.all([
+          fetch('/api/Admin/Profile', { credentials: 'include' }),
+          fetch('/api/Admin', { credentials: 'include' })
+        ]);
+        const [profileData, dashResult] = await Promise.all([
+          profileRes.ok ? profileRes.json() : Promise.resolve(null),
+          dashRes.ok ? dashRes.json() : Promise.resolve(null)
+        ]);
+        if (profileData) setLoggedInUserData(profileData);
+        if (dashResult?.success) {
           setDashboardData(dashResult.data);
         }
       } catch (error) {
@@ -174,159 +174,157 @@ export default function AdminPage() {
     return styles[status] || styles["Pending"];
   };
 
-  // 🔹 Logout handler
-
   if (loading) return <PageLoader admin label="Loading dashboard" />;
 
   return (
     <>
-          {/* Welcome Section */}
-          <div className="welcome-section">
-            <h1 className="welcome-title">Welcome back, Admin! 👋</h1>
-            <p className="welcome-subtitle">Here`s what`s happening with your store today.</p>
+      {/* Welcome Section */}
+      <div className="welcome-section">
+        <h1 className="welcome-title">Welcome back, Admin! 👋</h1>
+        <p className="welcome-subtitle">Here`s what`s happening with your store today.</p>
+      </div>
+
+      {/* Stats Grid */}
+      <div className="stats-grid">
+        <div className="stat-card gold">
+          <div className="stat-card-header">
+            <div className="stat-card-icon gold"><IndianRupee size={24} /></div>
+            <div className="stat-trend up"><ArrowUpRight size={14} /> +12.5%</div>
           </div>
-
-          {/* Stats Grid */}
-          <div className="stats-grid">
-            <div className="stat-card gold">
-              <div className="stat-card-header">
-                <div className="stat-card-icon gold"><IndianRupee size={24} /></div>
-                <div className="stat-trend up"><ArrowUpRight size={14} /> +12.5%</div>
-              </div>
-              <div className="stat-card-value">{loading ? "..." : (todayRevenue > 0 ? `₹${(todayRevenue / 1000).toFixed(1)}K` : "₹0")}</div>
-              <div className="stat-card-label">Today`s Revenue</div>
-            </div>
-            <div className="stat-card blue">
-              <div className="stat-card-header">
-                <div className="stat-card-icon blue"><ShoppingCart size={24} /></div>
-                <div className="stat-trend up"><ArrowUpRight size={14} /> +8.2%</div>
-              </div>
-              <div className="stat-card-value">{loading ? "..." : todayOrders.length}</div>
-              <div className="stat-card-label">Orders Today</div>
-            </div>
-            <div className="stat-card green">
-              <div className="stat-card-header">
-                <div className="stat-card-icon green"><Users size={24} /></div>
-                <div className="stat-trend up"><ArrowUpRight size={14} /> +5.4%</div>
-              </div>
-              <div className="stat-card-value">{loading ? "..." : monthlyCustomers}</div>
-              <div className="stat-card-label">New Customers (Month)</div>
-            </div>
-            <div className="stat-card orange">
-              <div className="stat-card-header">
-                <div className="stat-card-icon orange"><Clock size={24} /></div>
-                <div className="stat-trend down"><ArrowDownRight size={14} /> -2.1%</div>
-              </div>
-              <div className="stat-card-value">{loading ? "..." : pendingOrdersCount}</div>
-              <div className="stat-card-label">Pending Orders</div>
-            </div>
+          <div className="stat-card-value">{loading ? "..." : (todayRevenue > 0 ? `₹${(todayRevenue / 1000).toFixed(1)}K` : "₹0")}</div>
+          <div className="stat-card-label">Today`s Revenue</div>
+        </div>
+        <div className="stat-card blue">
+          <div className="stat-card-header">
+            <div className="stat-card-icon blue"><ShoppingCart size={24} /></div>
+            <div className="stat-trend up"><ArrowUpRight size={14} /> +8.2%</div>
           </div>
-
-          {/* Quick Actions */}
-          <div className="quick-actions" style={{ marginBottom: 30 }}>
-            <div className="quick-action-card" onClick={() => router.push(path('Order-Management'))}>
-              <div className="quick-action-icon"><ShoppingBag size={28} /></div>
-              <div className="quick-action-title">New Orders</div>
-              <div className="quick-action-count">{loading ? "..." : pendingOrdersCount} pending</div>
-            </div>
-            <div className="quick-action-card" onClick={() => router.push(path('Contact-Management'))}>
-              <div className="quick-action-icon"><MessageSquare size={28} /></div>
-              <div className="quick-action-title">Inquiries</div>
-              <div className="quick-action-count">{loading ? "..." : unreadInquiries} unread</div>
-            </div>
-            <div className="quick-action-card" onClick={() => router.push(path('Reviews-Management'))}>
-              <div className="quick-action-icon"><Star size={28} /></div>
-              <div className="quick-action-title">Reviews</div>
-              <div className="quick-action-count">{loading ? "..." : pendingReviews} pending</div>
-            </div>
-            <div className="quick-action-card" onClick={() => router.push(path('Product-Management'))}>
-              <div className="quick-action-icon"><AlertCircle size={28} /></div>
-              <div className="quick-action-title">Manage Products</div>
-              <div className="quick-action-count">{loading ? "..." : dashboardData.products.length} items</div>
-            </div>
+          <div className="stat-card-value">{loading ? "..." : todayOrders.length}</div>
+          <div className="stat-card-label">Orders Today</div>
+        </div>
+        <div className="stat-card green">
+          <div className="stat-card-header">
+            <div className="stat-card-icon green"><Users size={24} /></div>
+            <div className="stat-trend up"><ArrowUpRight size={14} /> +5.4%</div>
           </div>
+          <div className="stat-card-value">{loading ? "..." : monthlyCustomers}</div>
+          <div className="stat-card-label">New Customers (Month)</div>
+        </div>
+        <div className="stat-card orange">
+          <div className="stat-card-header">
+            <div className="stat-card-icon orange"><Clock size={24} /></div>
+            <div className="stat-trend down"><ArrowDownRight size={14} /> -2.1%</div>
+          </div>
+          <div className="stat-card-value">{loading ? "..." : pendingOrdersCount}</div>
+          <div className="stat-card-label">Pending Orders</div>
+        </div>
+      </div>
 
-          {/* Dashboard Grid */}
-          <div className="dashboard-grid">
-            {/* Recent Orders */}
-            <div className="content-card">
-              <div className="content-card-header">
-                <h3 className="content-card-title"><ShoppingCart size={20} /> Recent Orders</h3>
-                <span className="view-all-btn" onClick={() => router.push(path('Order-Management'))}>View All <ArrowUpRight size={14} /></span>
-              </div>
-              {loading ? (
-                <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading orders...</div>
-              ) : recentOrders.length > 0 ? (
-                recentOrders.map((order) => {
-                  const statusStyle = getStatusStyle(order.status);
-                  return (
-                    <div className="order-item" key={order.id}>
-                      <div className="order-info">
-                        <div className="order-id">{order.id}</div>
-                        <div className="order-details">{order.customer} • {order.product}</div>
-                      </div>
-                      <div className="order-meta">
-                        <div className="order-amount">{order.amount}</div>
-                        <div className="order-time">{order.time}</div>
-                        <span className="status-badge" style={{ background: statusStyle.bg, color: statusStyle.color }}>{order.status}</span>
-                      </div>
-                    </div>
-                  );
-                })
-              ) : (
-                <div style={{ padding: 40, textAlign: 'center', opacity: 0.3 }}>No recent orders</div>
-              )}
-            </div>
+      {/* Quick Actions */}
+      <div className="quick-actions" style={{ marginBottom: 30 }}>
+        <div className="quick-action-card" onClick={() => router.push(path('Order-Management'))}>
+          <div className="quick-action-icon"><ShoppingBag size={28} /></div>
+          <div className="quick-action-title">New Orders</div>
+          <div className="quick-action-count">{loading ? "..." : pendingOrdersCount} pending</div>
+        </div>
+        <div className="quick-action-card" onClick={() => router.push(path('Contact-Management'))}>
+          <div className="quick-action-icon"><MessageSquare size={28} /></div>
+          <div className="quick-action-title">Inquiries</div>
+          <div className="quick-action-count">{loading ? "..." : unreadInquiries} unread</div>
+        </div>
+        <div className="quick-action-card" onClick={() => router.push(path('Reviews-Management'))}>
+          <div className="quick-action-icon"><Star size={28} /></div>
+          <div className="quick-action-title">Reviews</div>
+          <div className="quick-action-count">{loading ? "..." : pendingReviews} pending</div>
+        </div>
+        <div className="quick-action-card" onClick={() => router.push(path('Product-Management'))}>
+          <div className="quick-action-icon"><AlertCircle size={28} /></div>
+          <div className="quick-action-title">Manage Products</div>
+          <div className="quick-action-count">{loading ? "..." : dashboardData.products.length} items</div>
+        </div>
+      </div>
 
-            {/* Recent Activity */}
-            <div className="content-card">
-              <div className="content-card-header">
-                <h3 className="content-card-title"><Bell size={20} /> Recent Activity</h3>
-              </div>
-              {loading ? (
-                <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading transactions...</div>
-              ) : activities.length > 0 ? (
-                activities.map((activity, index) => (
-                  <div className="activity-item" key={index}>
-                    <div className={`activity-icon ${activity.type}`}>{activity.icon}</div>
-                    <div className="activity-content">
-                      <div className="activity-text">{activity.text}</div>
-                      <div className="activity-time">{activity.time}</div>
-                    </div>
+      {/* Dashboard Grid */}
+      <div className="dashboard-grid">
+        {/* Recent Orders */}
+        <div className="content-card">
+          <div className="content-card-header">
+            <h3 className="content-card-title"><ShoppingCart size={20} /> Recent Orders</h3>
+            <span className="view-all-btn" onClick={() => router.push(path('Order-Management'))}>View All <ArrowUpRight size={14} /></span>
+          </div>
+          {loading ? (
+            <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading orders...</div>
+          ) : recentOrders.length > 0 ? (
+            recentOrders.map((order) => {
+              const statusStyle = getStatusStyle(order.status);
+              return (
+                <div className="order-item" key={order.id}>
+                  <div className="order-info">
+                    <div className="order-id">{order.id}</div>
+                    <div className="order-details">{order.customer} • {order.product}</div>
                   </div>
-                ))
-              ) : (
-                <div style={{ padding: 40, textAlign: 'center', opacity: 0.3 }}>No recent transactions</div>
-              )}
-            </div>
-          </div>
-
-          {/* Top Products */}
-          <div className="content-card">
-            <div className="content-card-header">
-              <h3 className="content-card-title"><Crown size={20} /> Top Selling Products</h3>
-              <span className="view-all-btn" onClick={() => router.push(path('Product-Management'))}>View All <ArrowUpRight size={14} /></span>
-            </div>
-            {loading ? (
-              <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading products...</div>
-            ) : topProducts.length > 0 ? (
-              topProducts.map((product, index) => (
-                <div className="product-item" key={index}>
-                  <div className="product-rank">{index + 1}</div>
-                  <div className="product-info">
-                    <div className="product-name">{product.name}</div>
-                    <div className="product-category">{product.category}</div>
-                  </div>
-                  <div className="product-stats">
-                    <div className="product-sold">{product.sold} sold</div>
-                    <div className="product-revenue">{product.revenue}</div>
+                  <div className="order-meta">
+                    <div className="order-amount">{order.amount}</div>
+                    <div className="order-time">{order.time}</div>
+                    <span className="status-badge" style={{ background: statusStyle.bg, color: statusStyle.color }}>{order.status}</span>
                   </div>
                 </div>
-              ))
-            ) : (
-              <div style={{ padding: 40, textAlign: 'center', opacity: 0.3 }}>No top products found</div>
-            )}
+              );
+            })
+          ) : (
+            <div style={{ padding: 40, textAlign: 'center', opacity: 0.3 }}>No recent orders</div>
+          )}
         </div>
+
+        {/* Recent Activity */}
+        <div className="content-card">
+          <div className="content-card-header">
+            <h3 className="content-card-title"><Bell size={20} /> Recent Activity</h3>
+          </div>
+          {loading ? (
+            <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading transactions...</div>
+          ) : activities.length > 0 ? (
+            activities.map((activity, index) => (
+              <div className="activity-item" key={index}>
+                <div className={`activity-icon ${activity.type}`}>{activity.icon}</div>
+                <div className="activity-content">
+                  <div className="activity-text">{activity.text}</div>
+                  <div className="activity-time">{activity.time}</div>
+                </div>
+              </div>
+            ))
+          ) : (
+            <div style={{ padding: 40, textAlign: 'center', opacity: 0.3 }}>No recent transactions</div>
+          )}
+        </div>
+      </div>
+
+      {/* Top Products */}
+      <div className="content-card">
+        <div className="content-card-header">
+          <h3 className="content-card-title"><Crown size={20} /> Top Selling Products</h3>
+          <span className="view-all-btn" onClick={() => router.push(path('Product-Management'))}>View All <ArrowUpRight size={14} /></span>
+        </div>
+        {loading ? (
+          <div style={{ padding: 20, textAlign: 'center', opacity: 0.5 }}>Loading products...</div>
+        ) : topProducts.length > 0 ? (
+          topProducts.map((product, index) => (
+            <div className="product-item" key={index}>
+              <div className="product-rank">{index + 1}</div>
+              <div className="product-info">
+                <div className="product-name">{product.name}</div>
+                <div className="product-category">{product.category}</div>
+              </div>
+              <div className="product-stats">
+                <div className="product-sold">{product.sold} sold</div>
+                <div className="product-revenue">{product.revenue}</div>
+              </div>
+            </div>
+          ))
+        ) : (
+          <div style={{ padding: 40, textAlign: 'center', opacity: 0.3 }}>No top products found</div>
+        )}
+      </div>
     </>
   );
 }

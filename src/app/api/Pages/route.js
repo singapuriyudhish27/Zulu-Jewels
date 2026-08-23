@@ -4,18 +4,27 @@ import Category from "@/lib/models/Category";
 import Product from "@/lib/models/Product";
 import ProductImage from "@/lib/models/ProductImage";
 
+export const revalidate = 300; // 5 minutes cache
+
 export async function GET() {
     try {
         await connectDB();
 
-        const categories = await Category.find().lean();
+        const categories = await Category.find()
+            .select('_id name image_url')
+            .lean();
 
-
-        const allProducts = await Product.find({ is_deleted: false }).sort({ _id: -1 }).lean();
+        const allProducts = await Product.find({ is_deleted: false })
+            .select('_id name description price is_active created_at category_id')
+            .sort({ _id: -1 })
+            .lean();
         const productIds = allProducts.map(p => p._id);
 
-        // Fetch all images in bulk
-        const allImages = await ProductImage.find({ product_id: { $in: productIds } }).lean();
+        // Fetch all images in bulk with projected fields
+        const allImages = await ProductImage.find({ product_id: { $in: productIds } })
+            .select('_id product_id media_url is_primary is_hover')
+            .lean();
+            
         const imagesMap = {};
         for (const img of allImages) {
             const pid = img.product_id.toString();
@@ -70,6 +79,6 @@ export async function GET() {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Home Page Data:", error);
-        return NextResponse.json({message: "Error In Backend API Call"}, { status: 500 });
+        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
     }
 }

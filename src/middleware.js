@@ -36,16 +36,50 @@ function isStorefrontPath(pathname) {
   return false;
 }
 
-async function fetchMaintenanceActive(request) {
-  try {
-    const url = new URL('/api/maintenance/status', request.url);
-    const res = await fetch(url, { cache: 'no-store' });
-    if (!res.ok) return false;
-    const data = await res.json();
-    return Boolean(data.active);
-  } catch {
-    return false;
+// In-memory TTL cache for maintenance status across requests
+let cachedMaintenance = {
+  active: false,
+  expiresAt: 0,
+  inFlight: null,
+};
+
+const MAINTENANCE_CACHE_TTL_MS = 30000; // 30 seconds
+
+async function getMaintenanceActive(request) {
+  const now = Date.now();
+  if (now < cachedMaintenance.expiresAt) {
+    return cachedMaintenance.active;
   }
+
+  // Deduplicate concurrent in-flight fetches
+  if (cachedMaintenance.inFlight) {
+    return cachedMaintenance.inFlight;
+  }
+
+  cachedMaintenance.inFlight = (async () => {
+    try {
+      const url = new URL('/api/maintenance/status', request.url);
+      const res = await fetch(url, { next: { revalidate: 30 } });
+      if (!res.ok) {
+        cachedMaintenance.active = false;
+        cachedMaintenance.expiresAt = now + 10000;
+        return false;
+      }
+      const data = await res.json();
+      const active = Boolean(data.active);
+      cachedMaintenance.active = active;
+      cachedMaintenance.expiresAt = now + MAINTENANCE_CACHE_TTL_MS;
+      return active;
+    } catch {
+      cachedMaintenance.active = false;
+      cachedMaintenance.expiresAt = now + 10000;
+      return false;
+    } finally {
+      cachedMaintenance.inFlight = null;
+    }
+  })();
+
+  return cachedMaintenance.inFlight;
 }
 
 function hasAdminSession(request) {
@@ -86,38 +120,16 @@ export async function middleware(request) {
 
   // Maintenance gate for storefront
   if (!isMaintenanceExempt(pathname) && isStorefrontPath(pathname)) {
-    const cachedMaintenance = request.cookies.get('site_maintenance')?.value;
-    let active = false;
-    let checkPerformed = false;
-
-    if (cachedMaintenance !== undefined) {
-      active = cachedMaintenance === '1';
-    } else {
-      active = await fetchMaintenanceActive(request);
-      checkPerformed = true;
-    }
+    const active = await getMaintenanceActive(request);
 
     if (active) {
       if (pathname.startsWith('/api/Pages')) {
-        const res = NextResponse.json(
+        return NextResponse.json(
           { success: false, message: 'Site is under maintenance', maintenance: true },
           { status: 503 }
         );
-        if (checkPerformed) {
-          res.cookies.set('site_maintenance', '1', { maxAge: 60, path: '/' });
-        }
-        return res;
       }
-      const res = NextResponse.redirect(new URL('/maintenance', request.url));
-      if (checkPerformed) {
-        res.cookies.set('site_maintenance', '1', { maxAge: 60, path: '/' });
-      }
-      return res;
-    } else if (checkPerformed) {
-      // Set cookie to avoid fetching database on subsequent requests for 1 minute
-      const res = NextResponse.next();
-      res.cookies.set('site_maintenance', '0', { maxAge: 60, path: '/' });
-      return res;
+      return NextResponse.redirect(new URL('/maintenance', request.url));
     }
   }
 

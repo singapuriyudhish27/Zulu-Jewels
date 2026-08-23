@@ -3,9 +3,8 @@ import { useEffect, useState, useRef } from 'react';
 import { useRouter, usePathname, useParams, useSearchParams } from 'next/navigation';
 import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import Image from 'next/image';
 import toast from 'react-hot-toast';
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import Navbar from '@/components/layout/Navbar';
 import TrustBadge from '@/components/home/trustBadge';
 import Footer from '@/components/layout/Footer';
@@ -15,42 +14,6 @@ import PageLoader from '@/components/common/PageLoader';
 import { useCurrency } from '@/context/CurrencyContext';
 
 const LocationMap = dynamic(() => import('@/components/map/LocationMap'), { ssr: false });
-
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-
-function StripeCheckoutForm({ onSuccess, onClose }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setLoading(true);
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: window.location.origin + '/payment-success' },
-      redirect: 'if_required',
-    });
-    if (error) {
-      toast.error(error.message);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      onSuccess(paymentIntent);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1a1a1a', marginBottom: '8px' }}>Pay with Card</h3>
-      <PaymentElement />
-      <button type="submit" className="pd-pay-btn" disabled={loading || !stripe}>
-        {loading ? 'Processing...' : 'Pay Now'}
-      </button>
-      <button type="button" className="pd-pay-cancel-btn" onClick={onClose}>Cancel</button>
-    </form>
-  );
-}
 
 const REVIEWS = [
   { id: 1, name: "Priya Sharma", rating: 5, date: "2 days ago", text: "This ring is absolutely gorgeous! The diamond sparkles beautifully and the quality is exceptional. Received so many compliments already.", helpful: 128, avatar: "PS" },
@@ -1350,7 +1313,14 @@ export default function ProductDetailsPage() {
                 style={{ width: '100%', height: '100%', objectFit: 'contain' }}
               />
             ) : (
-              <img src={thumbs[activeThumb]?.url} alt={product.name} style={{ width: '100%', height: '100%', objectFit: 'contain' }} />
+              <Image 
+                src={thumbs[activeThumb]?.url} 
+                alt={product.name} 
+                fill 
+                sizes="(max-width: 768px) 100vw, 50vw" 
+                priority 
+                style={{ objectFit: 'contain' }} 
+              />
             )}
             <button className="pd-share-btn" onClick={() => toast.success('Link copied!')}><Share2 size={16} /></button>
             <div className="pd-gallery-arrows">
@@ -1371,7 +1341,7 @@ export default function ProductDetailsPage() {
                     </div>
                   </div>
                 ) : (
-                  <img src={t.url} alt="thumbnail" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  <Image src={t.url} alt="thumbnail" fill sizes="70px" style={{ objectFit: 'cover' }} />
                 )}
               </div>
             ))}
@@ -1675,9 +1645,9 @@ export default function ProductDetailsPage() {
                       onMouseLeave={() => setHoveredRelatedId(null)}
                     >
                       <div className="pd-rel-card">
-                        <div className="pd-rel-img">
+                        <div className="pd-rel-img" style={{ position: 'relative', width: '100%', aspectRatio: '1', overflow: 'hidden' }}>
                           {relImg ? (
-                            <img src={relImg} alt={p.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <Image src={relImg} alt={p.name} fill sizes="(max-width: 768px) 50vw, 25vw" style={{ objectFit: 'cover' }} />
                           ) : (
                             <span>💍</span>
                           )}
@@ -1889,9 +1859,9 @@ export default function ProductDetailsPage() {
                     
                     {/* Product Card */}
                     <div className="pd-om-product" style={{ paddingBottom: '10px', marginBottom: '10px', gap: '12px' }}>
-                      <div className="pd-om-img" style={{ width: '56px', height: '56px' }}>
+                      <div className="pd-om-img" style={{ width: '56px', height: '56px', position: 'relative' }}>
                         {img
-                          ? <img src={img} alt={product.name} />
+                          ? <Image src={img} alt={product.name} fill sizes="56px" style={{ objectFit: 'cover' }} />
                           : <span style={{ fontSize: 24 }}>💍</span>
                         }
                       </div>

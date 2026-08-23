@@ -102,13 +102,11 @@ export default function AdminLayoutContent({ children }) {
 
       <div className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
         <div className="admin-logo">
-          <Image
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
             src="/Vector 1.png"
             alt="Website Logo"
             className="admin-logo-image"
-            width={80}
-            height={80}
-            priority
           />
           <span>ZULU JEWELS</span>
           <br />

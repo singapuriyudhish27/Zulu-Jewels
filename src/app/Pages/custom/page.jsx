@@ -4,6 +4,7 @@ import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import { User, ShoppingCart, ChevronRight, PenTool, Sparkles, Hammer, Scissors, Gem, FileText } from 'lucide-react';
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import TrustBadge from '@/components/home/trustBadge';
@@ -525,7 +526,7 @@ export default function CustomPage() {
 
           <div className="cu-gallery-grid">
             <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '0ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 122.png" alt="Art Deco Revival" className="cu-gallery-img cu-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 122.png" alt="Art Deco Revival" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
               <div className="cu-gallery-overlay">
                 <div className="cu-gallery-overlay-content">
                   <h3 className="cu-gallery-title">Art Deco Revival</h3>
@@ -534,7 +535,7 @@ export default function CustomPage() {
               </div>
             </div>
             <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '80ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 123.png" alt="Nature Embrace" className="cu-gallery-img cu-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 123.png" alt="Nature Embrace" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
               <div className="cu-gallery-overlay">
                 <div className="cu-gallery-overlay-content">
                   <h3 className="cu-gallery-title">Nature Embrace</h3>
@@ -543,7 +544,7 @@ export default function CustomPage() {
               </div>
             </div>
             <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '160ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 124.png" alt="Modern Minimalist" className="cu-gallery-img cu-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 124.png" alt="Modern Minimalist" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
               <div className="cu-gallery-overlay">
                 <div className="cu-gallery-overlay-content">
                   <h3 className="cu-gallery-title">Modern Minimalist</h3>
@@ -552,7 +553,7 @@ export default function CustomPage() {
               </div>
             </div>
             <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '240ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 125.png" alt="Royal Heritage" className="cu-gallery-img cu-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 125.png" alt="Royal Heritage" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
               <div className="cu-gallery-overlay">
                 <div className="cu-gallery-overlay-content">
                   <h3 className="cu-gallery-title">Royal Heritage</h3>
@@ -561,7 +562,7 @@ export default function CustomPage() {
               </div>
             </div>
             <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '320ms' }}>
-              <img src="/Home Page/Custom Design Template/Frame 91.png" alt="Celestial Dream" className="cu-gallery-img cu-animate-img" />
+              <Image src="/Home Page/Custom Design Template/Frame 91.png" alt="Celestial Dream" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
               <div className="cu-gallery-overlay">
                 <div className="cu-gallery-overlay-content">
                   <h3 className="cu-gallery-title">Celestial Dream</h3>
@@ -570,7 +571,7 @@ export default function CustomPage() {
               </div>
             </div>
             <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '400ms' }}>
-              <img src="/About Page/Header/Frame 37391.png" alt="Timeless Classic" className="cu-gallery-img cu-animate-img" />
+              <Image src="/About Page/Header/Frame 37391.png" alt="Timeless Classic" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
               <div className="cu-gallery-overlay">
                 <div className="cu-gallery-overlay-content">
                   <h3 className="cu-gallery-title">Timeless Classic</h3>

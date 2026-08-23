@@ -2,6 +2,7 @@
 import { useEffect } from 'react';
 import { useRouter, usePathname } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { 
@@ -1227,10 +1228,13 @@ export default function AboutPage() {
               </div>
             </div>
             <div className="ab-founder-image-wrapper ab-animate">
-              <img 
+              <Image 
                 src="/About Page/founder_portrait.png" 
                 alt="Yudhish Zulu - Founder of ZULU Jewellers" 
+                width={500}
+                height={625}
                 className="ab-founder-image ab-animate-img" 
+                style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
               />
             </div>
           </div>
@@ -1437,7 +1441,7 @@ export default function AboutPage() {
 
           <div className="ab-col-grid">
             <div className="ab-col-card ab-animate" style={{ transitionDelay: '0ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 122.png" alt="Luxury Rings" className="ab-col-img ab-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 122.png" alt="Luxury Rings" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
               <div className="ab-col-overlay">
                 <h3 className="ab-col-card-title">Rings</h3>
                 <Link href="/Pages/Products?category=rings" className="ab-col-link">
@@ -1447,7 +1451,7 @@ export default function AboutPage() {
             </div>
 
             <div className="ab-col-card ab-animate" style={{ transitionDelay: '100ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 123.png" alt="Elegant Earrings" className="ab-col-img ab-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 123.png" alt="Elegant Earrings" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
               <div className="ab-col-overlay">
                 <h3 className="ab-col-card-title">Earrings</h3>
                 <Link href="/Pages/Products?category=earrings" className="ab-col-link">
@@ -1457,7 +1461,7 @@ export default function AboutPage() {
             </div>
 
             <div className="ab-col-card ab-animate" style={{ transitionDelay: '200ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 124.png" alt="Fine Pendants" className="ab-col-img ab-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 124.png" alt="Fine Pendants" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
               <div className="ab-col-overlay">
                 <h3 className="ab-col-card-title">Pendants</h3>
                 <Link href="/Pages/Products?category=pendants" className="ab-col-link">
@@ -1467,7 +1471,7 @@ export default function AboutPage() {
             </div>
 
             <div className="ab-col-card ab-animate" style={{ transitionDelay: '300ms' }}>
-              <img src="/Home Page/Most Loved Pieces/Frame 125.png" alt="Signature Bracelets" className="ab-col-img ab-animate-img" />
+              <Image src="/Home Page/Most Loved Pieces/Frame 125.png" alt="Signature Bracelets" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
               <div className="ab-col-overlay">
                 <h3 className="ab-col-card-title">Bracelets</h3>
                 <Link href="/Pages/Products?category=bracelets" className="ab-col-link">
@@ -1477,7 +1481,7 @@ export default function AboutPage() {
             </div>
 
             <div className="ab-col-card ab-animate" style={{ transitionDelay: '400ms' }}>
-              <img src="/Home Page/Gift Of The Season/Rectangle 37.png" alt="Ornate Bangles" className="ab-col-img ab-animate-img" />
+              <Image src="/Home Page/Gift Of The Season/Rectangle 37.png" alt="Ornate Bangles" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
               <div className="ab-col-overlay">
                 <h3 className="ab-col-card-title">Bangles</h3>
                 <Link href="/Pages/Products?category=bangles" className="ab-col-link">
@@ -1487,7 +1491,7 @@ export default function AboutPage() {
             </div>
 
             <div className="ab-col-card ab-animate" style={{ transitionDelay: '500ms' }}>
-              <img src="/About Page/Expert/Rectangle 37.png" alt="Wedding Collection" className="ab-col-img ab-animate-img" />
+              <Image src="/About Page/Expert/Rectangle 37.png" alt="Wedding Collection" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
               <div className="ab-col-overlay">
                 <h3 className="ab-col-card-title">Wedding Set</h3>
                 <Link href="/Pages/Products?category=wedding" className="ab-col-link">
@@ -1577,10 +1581,13 @@ export default function AboutPage() {
         <section className="ab-sec-padding ab-bg-design">
           <div className="ab-custom-row">
             <div className="ab-custom-img-wrapper ab-animate">
-              <img 
+              <Image 
                 src="/Home Page/Custom Design Template/Frame 91.png" 
                 alt="Custom Jewelry Design Process" 
+                width={600}
+                height={450}
                 className="ab-custom-img ab-animate-img" 
+                style={{ width: '100%', height: 'auto', objectFit: 'cover' }}
               />
             </div>
             <div className="ab-founder-content ab-animate">

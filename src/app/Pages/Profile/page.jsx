@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react';
 import { User, ShoppingCart, Heart, MapPin, Settings, Eye, EyeOff, Plus, Search, ShoppingBag, Trash2, Star } from 'lucide-react';
 import PriceDisplay from '@/components/price/PriceDisplay';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
@@ -974,7 +975,7 @@ export default function ProfilePage() {
                       <div className="orders-column-product" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
                         <div style={{ width: '40px', height: '40px', background: '#f9f9f9', borderRadius: '2px', overflow: 'hidden' }}>
                           {order.image_url ? (
-                            <img src={order.image_url} alt={order.product_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                            <Image src={order.image_url} alt={order.product_name} width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                           ) : (
                             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '20px' }}>💍</div>
                           )}
@@ -1040,10 +1041,13 @@ export default function ProfilePage() {
                       <div className="wishlist-column-product">
                         <Link href={`/Pages/Products/${item.product_id}`}>
                           {item.image_url ? (
-                            <img 
+                            <Image 
                               src={item.image_url} 
                               alt={item.name} 
+                              width={90}
+                              height={90}
                               className="wishlist-item-img"
+                              style={{ objectFit: 'cover' }}
                             />
                           ) : (
                             <div className="wishlist-item-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>💍</div>

@@ -19,20 +19,25 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        // Database Collections (limit query results to avoid memory exhaustion)
-        const orders = await Order.find().sort({ created_at: -1 }).limit(100);
-        const orderItems = await OrderItem.find().sort({ created_at: -1 }).limit(200);
-        const transactions = await Transaction.find().sort({ created_at: -1 }).limit(100);
-        const inquiries = await Inquiry.find().sort({ _id: -1 }).limit(100);
-        const reviews = await Review.find().sort({ rating: -1, created_at: -1 }).limit(100);
-
-        // Calculate product order counts
-        const productsRaw = await Product.find().limit(200);
-        
-        // Count how many order items reference each product
-        // Using aggregation for better performance
-        const productOrderCounts = await OrderItem.aggregate([
-            { $group: { _id: "$product_id", count: { $sum: 1 } } }
+        // Execute all dashboard queries concurrently with lean serialization
+        const [
+            orders,
+            orderItems,
+            transactions,
+            inquiries,
+            reviews,
+            productsRaw,
+            productOrderCounts
+        ] = await Promise.all([
+            Order.find().sort({ created_at: -1 }).limit(100).lean(),
+            OrderItem.find().sort({ created_at: -1 }).limit(200).lean(),
+            Transaction.find().sort({ created_at: -1 }).limit(100).lean(),
+            Inquiry.find().sort({ _id: -1 }).limit(100).lean(),
+            Review.find().sort({ rating: -1, created_at: -1 }).limit(100).lean(),
+            Product.find().limit(200).lean(),
+            OrderItem.aggregate([
+                { $group: { _id: "$product_id", count: { $sum: 1 } } }
+            ])
         ]);
         
         const countMap = {};

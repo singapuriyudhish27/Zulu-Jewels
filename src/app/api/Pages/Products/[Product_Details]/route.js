@@ -34,74 +34,77 @@ export async function GET(request, { params }) {
 
         const userId = await getUserIdFromCookie();
 
-        const product = await Product.findById(id);
+        const product = await Product.findById(id).lean();
 
         if (!product) {
             return NextResponse.json({ success: false, message: "Product Not Found" }, { status: 404 });
         }
 
-        const category = product.category_id
-            ? await Category.findById(product.category_id).select('name').lean()
-            : null;
+        // Parallelize all dependent queries
+        const [
+            category,
+            variants,
+            images,
+            cartItems,
+            likeCount,
+            relatedProductsDocs
+        ] = await Promise.all([
+            product.category_id
+                ? Category.findById(product.category_id).select('name').lean()
+                : Promise.resolve(null),
+            ProductVariant.find({ product_id: id }).lean(),
+            ProductImage.find({ product_id: id }).lean(),
+            (userId && userId !== 'admin')
+                ? CartItem.find({ user_id: userId, product_id: id }).lean()
+                : Promise.resolve([]),
+            (userId && userId !== 'admin')
+                ? UserLike.countDocuments({ user_id: userId, product_id: id })
+                : Promise.resolve(0),
+            product.category_id
+                ? Product.find({
+                    category_id: product.category_id,
+                    _id: { $ne: product._id },
+                    is_deleted: { $ne: true },
+                    is_active: true
+                })
+                .limit(10)
+                .sort({ _id: -1 })
+                .lean()
+                : Promise.resolve([])
+        ]);
 
-        const variants = await ProductVariant.find({ product_id: id });
-        const images = await ProductImage.find({ product_id: id });
+        const cartVariants = (cartItems || []).map(ci => ci.variant_id ? ci.variant_id.toString() : 'base');
+        const isWishlisted = likeCount > 0;
 
-        // Get cart variants for this user+product
-        let cartVariants = [];
-        if (userId && userId !== 'admin') {
-            const cartItems = await CartItem.find({ user_id: userId, product_id: id });
-            cartVariants = cartItems.map(ci => ci.variant_id ? ci.variant_id.toString() : 'base');
-        }
-
-        // Check if wishlisted
-        let isWishlisted = false;
-        if (userId && userId !== 'admin') {
-            const likeCount = await UserLike.countDocuments({ user_id: userId, product_id: id });
-            isWishlisted = likeCount > 0;
-        }
-
-        // Fetch up to 10 related products from the same category
+        // Fetch related images in batch if related products exist
         let related_products = [];
-        if (product.category_id) {
-            const relatedProductsDocs = await Product.find({
-                category_id: product.category_id,
-                _id: { $ne: product._id },
-                is_deleted: { $ne: true },
-                is_active: true
-            })
-            .limit(10)
-            .sort({ _id: -1 })
-            .lean();
+        if (relatedProductsDocs && relatedProductsDocs.length > 0) {
+            const relatedIds = relatedProductsDocs.map(p => p._id);
+            const relatedImages = await ProductImage.find({ product_id: { $in: relatedIds } }).lean();
 
-            if (relatedProductsDocs.length > 0) {
-                const relatedIds = relatedProductsDocs.map(p => p._id);
-                const relatedImages = await ProductImage.find({ product_id: { $in: relatedIds } }).lean();
-
-                const relatedImagesMap = {};
-                for (const img of relatedImages) {
-                    const pid = img.product_id.toString();
-                    if (!relatedImagesMap[pid]) relatedImagesMap[pid] = [];
-                    relatedImagesMap[pid].push(img);
-                }
-
-                related_products = relatedProductsDocs.map(p => {
-                    const pImgs = relatedImagesMap[p._id.toString()] || [];
-                    const primaryImg = pImgs.find(i => i.is_primary)?.media_url || pImgs[0]?.media_url || null;
-                    return {
-                        id: p._id,
-                        name: p.name,
-                        price: p.price,
-                        image: primaryImg,
-                        images: pImgs.map(img => ({
-                            image_url: img.media_url,
-                            is_primary: Boolean(img.is_primary),
-                            is_hover: Boolean(img.is_hover)
-                        })),
-                        category_id: p.category_id
-                    };
-                });
+            const relatedImagesMap = {};
+            for (const img of relatedImages) {
+                const pid = img.product_id.toString();
+                if (!relatedImagesMap[pid]) relatedImagesMap[pid] = [];
+                relatedImagesMap[pid].push(img);
             }
+
+            related_products = relatedProductsDocs.map(p => {
+                const pImgs = relatedImagesMap[p._id.toString()] || [];
+                const primaryImg = pImgs.find(i => i.is_primary)?.media_url || pImgs[0]?.media_url || null;
+                return {
+                    id: p._id,
+                    name: p.name,
+                    price: p.price,
+                    image: primaryImg,
+                    images: pImgs.map(img => ({
+                        image_url: img.media_url,
+                        is_primary: Boolean(img.is_primary),
+                        is_hover: Boolean(img.is_hover)
+                    })),
+                    category_id: p.category_id
+                };
+            });
         }
 
         const result = {

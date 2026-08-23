@@ -50,12 +50,10 @@ export default function AdminPortalLoginForm({ slug }) {
         <main className="portal-card">
           <div className="portal-logo-wrap">
             <div className="portal-logo-ring" />
-            <Image
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
               src="/Vector 1.png"
               alt="Zulu Jewellers Admin"
-              width={56}
-              height={56}
-              priority
               className="portal-logo"
             />
           </div>

@@ -2,6 +2,7 @@
 import { useEffect, useState, Suspense } from 'react';
 import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import Image from 'next/image';
 import Navbar from '@/components/layout/Navbar';
 import Footer from '@/components/layout/Footer';
 import { SlidersHorizontal, ChevronDown, Heart } from 'lucide-react';
@@ -366,9 +367,11 @@ function ProductsContent({ initialCategories }) {
               <Link href={productDetailsHref(p.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="pr-product-img-wrap">
                   {p.images && p.images.length > 0 ? (
-                    <img 
+                    <Image 
                       src={getProductImage(p)} 
                       alt={p.name} 
+                      fill
+                      sizes="(max-width: 480px) 50vw, (max-width: 1024px) 33vw, 25vw"
                       className="pr-product-img"
                       style={{ objectFit: 'cover' }}
                     />

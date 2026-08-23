@@ -13,4 +13,6 @@ const ProductSchema = new mongoose.Schema({
   specifications: { type: mongoose.Schema.Types.Mixed, default: {} },
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
+ProductSchema.index({ is_deleted: 1, category_id: 1 });
+
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);

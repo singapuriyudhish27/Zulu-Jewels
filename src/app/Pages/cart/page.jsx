@@ -1,9 +1,8 @@
 'use client';
-
-import { loadStripe } from '@stripe/stripe-js';
-import { Elements, PaymentElement, useStripe, useElements } from '@stripe/react-stripe-js';
 import { useEffect, useState } from 'react';
+import dynamic from 'next/dynamic';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import Navbar from '@/components/layout/Navbar';
@@ -14,41 +13,7 @@ import PriceDisplay from '@/components/price/PriceDisplay';
 import PageLoader from '@/components/common/PageLoader';
 import { useCurrency } from '@/context/CurrencyContext';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY);
-
-function StripeCheckoutForm({ onSuccess, onClose }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [loading, setLoading] = useState(false);
-
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    if (!stripe || !elements) return;
-    setLoading(true);
-    const { error, paymentIntent } = await stripe.confirmPayment({
-      elements,
-      confirmParams: { return_url: window.location.origin + '/payment-success' },
-      redirect: 'if_required',
-    });
-    if (error) {
-      toast.error(error.message);
-    } else if (paymentIntent && paymentIntent.status === 'succeeded') {
-      onSuccess(paymentIntent);
-    }
-    setLoading(false);
-  };
-
-  return (
-    <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-      <h3 style={{ fontFamily: 'Cormorant Garamond, serif', fontSize: '22px', color: '#1a1a1a', marginBottom: '8px' }}>Pay with Card</h3>
-      <PaymentElement />
-      <button type="submit" className="ca-checkout-btn" disabled={loading || !stripe}>
-        {loading ? 'Processing...' : 'Pay Now'}
-      </button>
-      <button type="button" className="ca-continue-btn" onClick={onClose}>Cancel</button>
-    </form>
-  );
-}
+const StripeModal = dynamic(() => import('@/components/checkout/StripeModal'), { ssr: false });
 
 export default function CartPage() {
   const [showStripeModal, setShowStripeModal] = useState(false);
@@ -622,9 +587,11 @@ export default function CartPage() {
                   >
                     <div className="ca-item-img">
                       {item.product?.images?.[0]?.media_url ? (
-                        <img 
+                        <Image 
                           src={item.product.images[0].media_url} 
                           alt={item.product.name}
+                          width={80}
+                          height={80}
                           style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                         />
                       ) : (
@@ -743,30 +710,31 @@ export default function CartPage() {
         {showStripeModal && stripeClientSecret && (
           <div className="ca-modal-overlay" onClick={e => e.target === e.currentTarget && setShowStripeModal(false)}>
             <div className="ca-modal">
-              <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
-                <StripeCheckoutForm
-                  onSuccess={async (paymentIntent) => {
-                    try {
-                      const verifyRes = await fetch('/api/Pages/Payments/Stripe/verify', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        credentials: 'include',
-                        body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
-                      });
-                      const verifyData = await verifyRes.json();
-                      if (!verifyRes.ok) {
-                        throw new Error(verifyData.message || 'Verification failed');
-                      }
-                      setShowStripeModal(false);
-                      toast.success('Payment Successful! Thank you for your order.');
-                    } catch (err) {
-                      console.error("Order creation failed:", err);
-                      toast.error(err.message || 'Payment succeeded but order creation failed. Please contact support.');
+              <StripeModal
+                clientSecret={stripeClientSecret}
+                submitBtnClassName="ca-checkout-btn"
+                cancelBtnClassName="ca-continue-btn"
+                onSuccess={async (paymentIntent) => {
+                  try {
+                    const verifyRes = await fetch('/api/Pages/Payments/Stripe/verify', {
+                      method: 'POST',
+                      headers: { 'Content-Type': 'application/json' },
+                      credentials: 'include',
+                      body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+                    });
+                    const verifyData = await verifyRes.json();
+                    if (!verifyRes.ok) {
+                      throw new Error(verifyData.message || 'Verification failed');
                     }
-                  }}
-                  onClose={() => setShowStripeModal(false)}
-                />
-              </Elements>
+                    setShowStripeModal(false);
+                    toast.success('Payment Successful! Thank you for your order.');
+                  } catch (err) {
+                    console.error("Order creation failed:", err);
+                    toast.error(err.message || 'Payment succeeded but order creation failed. Please contact support.');
+                  }
+                }}
+                onClose={() => setShowStripeModal(false)}
+              />
             </div>
           </div>
         )}

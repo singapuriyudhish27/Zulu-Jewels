@@ -1,6 +1,7 @@
 'use client';
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { Search, User, Heart, ShoppingBag, X, Menu } from 'lucide-react';
 
@@ -36,42 +37,7 @@ export default function Navbar() {
   }, []);
 
 
-  const handleIconClick = async (type, targetPage) => {
-    try {
-      let apiRoute = '';
-      if (type === 'profile') apiRoute = '/api/Pages/Profile';
-      else if (type === 'wishlist') apiRoute = '/api/Pages/Profile';
-      else if (type === 'cart') apiRoute = '/api/Pages/cart';
 
-      if (!apiRoute) return;
-
-      const response = await fetch(apiRoute);
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`);
-      }
-      const data = await response.json();
-      console.log("Navbar Data: ", data);
-
-      if (data.role === "Admin" || data.role === "admin") {
-        const settingsRes = await fetch('/api/Admin/Settings', { credentials: 'include' });
-        if (settingsRes.ok) {
-          const settings = await settingsRes.json();
-          router.replace(settings.adminPortal?.path || '/auth/login');
-        } else {
-          router.replace('/auth/login');
-        }
-      } else if (data.role === "User") {
-        router.replace(targetPage);
-      } else {
-        // Handle unauthenticated or other roles
-        router.replace('/auth/login'); // Or wherever a non-logged-in user should go
-      }
-    } catch (error) {
-      console.error("Error checking auth/role:", error);
-      // Fallback for errors: redirect to login
-      router.replace('/auth/login');
-    }
-  };
 
   const [categories, setCategories] = useState([]);
 
@@ -475,8 +441,10 @@ export default function Navbar() {
           {/* Centered Logo */}
           <Link href="/Pages" className="zj-nav-logo">
             <div className="zj-nav-logo-wrapper">
-              <img src="/vector 1.png" alt="Logo" className="zj-nav-logo-icon" />
-              <img src="/Frame 65.png" alt="Logo" className="zj-nav-logo-text" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Vector 1.png" alt="Logo" className="zj-nav-logo-icon" />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src="/Frame 65.png" alt="Zulu Jewellers" className="zj-nav-logo-text" />
             </div>
           </Link>
 
@@ -493,16 +461,16 @@ export default function Navbar() {
               <button className="zj-nav-icon-btn" onClick={() => setShowSearch(!showSearch)} aria-label="Search">
                 {showSearch ? <X size={20} /> : <Search size={20} />}
               </button>
-              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('profile', '/Pages/Profile?tab=profile')} aria-label="Profile">
+              <Link href="/Pages/Profile?tab=profile" className="zj-nav-icon-btn" aria-label="Profile">
                 <User size={20} />
-              </button>
-              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('wishlist', '/Pages/Profile?tab=wishlist')} aria-label="Wishlist">
+              </Link>
+              <Link href="/Pages/Profile?tab=wishlist" className="zj-nav-icon-btn" aria-label="Wishlist">
                 <Heart size={20} />
-              </button>
-              <button className="zj-nav-icon-btn" onClick={() => handleIconClick('cart', '/Pages/cart')} aria-label="Cart">
+              </Link>
+              <Link href="/Pages/cart" className="zj-nav-icon-btn" aria-label="Cart">
                 <ShoppingBag size={20} />
                 <span className="zj-cart-badge">0</span>
-              </button>
+              </Link>
             </div>
           </div>
 
@@ -630,24 +598,27 @@ export default function Navbar() {
         
         {/* Mobile Account Utility Links */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0ebe4' }}>
-          <button 
-            onClick={() => { handleIconClick('profile', '/Pages/Profile?tab=profile'); setIsMenuOpen(false); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
+          <Link 
+            href="/Pages/Profile?tab=profile"
+            onClick={() => setIsMenuOpen(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
           >
             <User size={18} /> Profile / Account
-          </button>
-          <button 
-            onClick={() => { handleIconClick('wishlist', '/Pages/Profile?tab=wishlist'); setIsMenuOpen(false); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
+          </Link>
+          <Link 
+            href="/Pages/Profile?tab=wishlist"
+            onClick={() => setIsMenuOpen(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
           >
             <Heart size={18} /> Wishlist
-          </button>
-          <button 
-            onClick={() => { handleIconClick('cart', '/Pages/cart'); setIsMenuOpen(false); }}
-            style={{ display: 'flex', alignItems: 'center', gap: '12px', background: 'none', border: 'none', cursor: 'pointer', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
+          </Link>
+          <Link 
+            href="/Pages/cart"
+            onClick={() => setIsMenuOpen(false)}
+            style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
           >
             <ShoppingBag size={18} /> Shopping Cart
-          </button>
+          </Link>
         </div>
       </div>
     </>

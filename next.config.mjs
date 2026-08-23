@@ -34,12 +34,17 @@ const securityHeaders = [
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    // Use Cloudinary's own CDN transformation instead of proxying through Next.js image optimizer.
+    // This eliminates the TimeoutError on /_next/image for Cloudinary-hosted assets.
+    loader: 'custom',
+    loaderFile: './src/lib/cloudinaryLoader.js',
     remotePatterns: [
       {
         protocol: "https",
         hostname: "res.cloudinary.com",
       },
     ],
+    minimumCacheTTL: 31536000, // 1 year — Cloudinary images are immutable (versioned URLs)
   },
   // Prevent bundling of server-only packages that use Node.js internals
   serverExternalPackages: ["@react-pdf/renderer"],
