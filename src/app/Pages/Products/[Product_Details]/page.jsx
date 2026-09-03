@@ -1157,7 +1157,19 @@ export default function ProductDetailsPage() {
         .pd-rel-swatch { width: 14px; height: 14px; border-radius: 50%; border: 1px solid rgba(0,0,0,0.1); }
 
         @media (max-width: 900px) {
-          .pd-product-area { grid-template-columns: 1fr; gap: 48px; }
+          .pd-page { max-width: 100vw; overflow-x: hidden; }
+          .pd-product-area { grid-template-columns: 1fr; gap: 36px; padding: 0 20px 48px; min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+          .pd-gallery, .pd-info { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+          .pd-info { padding-top: 0; }
+          .pd-product-name { overflow-wrap: break-word; word-break: break-word; hyphens: auto; max-width: 100%; }
+          .pd-info p { overflow-wrap: break-word; word-break: break-word; max-width: 100%; }
+          .pd-info-summary { min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+          .pd-info-summary-grid { min-width: 0; max-width: 100%; }
+          .pd-info-summary-item { min-width: 0; box-sizing: border-box; }
+          .pd-info-summary-label, .pd-info-summary-value { word-break: break-word; overflow-wrap: break-word; min-width: 0; }
+          .pd-option-label { word-break: break-word; overflow-wrap: break-word; }
+          .pd-pill { max-width: 100%; word-break: break-word; overflow-wrap: break-word; box-sizing: border-box; }
+          .pd-actions, .pd-actions-row { min-width: 0; max-width: 100%; box-sizing: border-box; }
           .pd-reviews-layout { grid-template-columns: 1fr; }
           .pd-rel-card { min-width: 220px; max-width: 240px; }
           .pd-benefits-grid { grid-template-columns: repeat(1, 1fr); }
@@ -1166,23 +1178,62 @@ export default function ProductDetailsPage() {
           .pd-vp-item:nth-child(2n) { border-right: none; }
           .pd-vp-item:nth-last-child(-n+2) { border-bottom: none; }
         }
+        @media (max-width: 768px) {
+          .pd-breadcrumb { padding: 12px 16px; font-size: 10px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; max-width: 100%; box-sizing: border-box; }
+          .pd-breadcrumb::-webkit-scrollbar { display: none; }
+          .pd-bc-cur { max-width: 180px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; display: inline-block; vertical-align: bottom; }
+          .pd-product-area { padding: 0 16px 40px; gap: 24px; }
+          .pd-gallery { gap: 10px; }
+          .pd-main-img { border-radius: 6px; min-width: 0; max-width: 100%; width: 100%; }
+          .pd-thumbnails { gap: 8px; padding-bottom: 4px; min-width: 0; max-width: 100%; width: 100%; box-sizing: border-box; }
+          .pd-thumb { width: 60px; height: 60px; border-radius: 4px; flex-shrink: 0; }
+          .pd-gallery-arrow { width: 36px; height: 36px; }
+          .pd-share-btn { width: 36px; height: 36px; top: 12px; right: 12px; }
+          .pd-product-name { font-size: 26px; margin-bottom: 12px; }
+          .pd-price-row { gap: 12px; margin-bottom: 10px; flex-wrap: wrap; }
+          .pd-price { font-size: 26px; }
+          .pd-meta-row { gap: 10px; margin-bottom: 16px; font-size: 12px; flex-wrap: wrap; }
+          .pd-divider { margin: 18px 0; }
+          .pd-emi-text { margin-bottom: 14px; font-size: 12px; }
+          .pd-info-summary { margin: 16px 0 4px; }
+          .pd-info-summary-item { padding: 10px 12px; }
+          .pd-info-summary-value { font-size: 12px; }
+          .pd-option-group { margin-bottom: 18px; min-width: 0; max-width: 100%; }
+          .pd-option-label { margin-bottom: 8px; font-size: 10px; }
+          .pd-option-pills { gap: 8px; flex-wrap: wrap; }
+          .pd-pill { padding: 10px 16px; font-size: 12px; border-radius: 4px; }
+          .pd-actions { margin-top: 18px; gap: 10px; width: 100%; }
+          .pd-actions-row { flex-direction: column; gap: 10px; width: 100%; }
+          .pd-btn-primary, .pd-btn-secondary, .pd-btn-wishlist { width: 100%; max-width: 100%; padding: 13px 18px; font-size: 14px; border-radius: 6px; box-sizing: border-box; }
+          .pd-tabs-section { padding: 0 16px 60px; max-width: 100%; box-sizing: border-box; }
+          .pd-tab-nav { margin-bottom: 28px; overflow-x: auto; white-space: nowrap; scrollbar-width: none; }
+          .pd-tab-btn { margin-right: 24px; font-size: 13px; }
+        }
         @media (max-width: 600px) {
           .pd-value-props { grid-template-columns: 1fr; }
           .pd-vp-item { border-right: none; border-bottom: 1px solid #EFEFEF; }
           .pd-vp-item:last-child { border-bottom: none; }
-          .pd-actions-row { flex-direction: column; }
-          .pd-btn-primary, .pd-btn-secondary { width: 100%; }
         }
         @media (max-width: 480px) {
-          .pd-rel-card { min-width: 180px; max-width: 200px; }
-          .pd-product-name { font-size: 24px; }
-          .pd-price { font-size: 26px; }
-          .pd-btn-wishlist { max-width: 100%; }
-          .pd-tab-btn { margin-right: 20px; font-size: 13px; }
+          .pd-bc-cur { max-width: 130px; }
+          .pd-product-area { padding: 0 12px 32px; gap: 20px; }
+          .pd-thumb { width: 52px; height: 52px; }
+          .pd-product-name { font-size: 22px; line-height: 1.25; margin-bottom: 10px; }
+          .pd-price { font-size: 22px; }
+          .pd-mrp { font-size: 14px; }
+          .pd-discount-badge { font-size: 10px; padding: 2px 6px; }
+          .pd-meta-row { font-size: 11px; gap: 8px; margin-bottom: 12px; }
           .pd-info-summary-grid { grid-template-columns: 1fr; }
-          .pd-info-summary-item { border-right: none; }
-          .pd-info-summary-item:nth-last-child(-n+2) { border-bottom: 1px solid #EFEFEF; }
-          .pd-info-summary-item:last-child { border-bottom: none; }
+          .pd-info-summary-item { border-right: none !important; border-bottom: 1px solid #EFEFEF !important; padding: 8px 12px; }
+          .pd-info-summary-item:last-child { border-bottom: none !important; }
+          .pd-info-summary-label { font-size: 9px; margin-bottom: 2px; }
+          .pd-pill { padding: 8px 12px; font-size: 11px; }
+          .pd-btn-primary, .pd-btn-secondary, .pd-btn-wishlist { padding: 12px 14px; font-size: 13px; }
+          .pd-tab-btn { margin-right: 18px; font-size: 12px; }
+          .pd-benefit-row { flex-direction: column; }
+          .pd-benefit-label { border-right: none; border-bottom: 1px solid #EFEFEF; min-width: unset; width: 100%; padding: 10px 12px; }
+          .pd-benefit-val { padding: 10px 12px; font-size: 13px; }
+          .pd-rel-card { min-width: 170px; max-width: 190px; }
         }
 
         /* FAQ Section styling */

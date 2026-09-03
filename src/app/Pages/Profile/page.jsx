@@ -21,6 +21,7 @@ export default function ProfilePage() {
   const [loading, setLoading] = useState(true);
   const [wishlistLoading, setWishlistLoading] = useState(false);
   const [ordersLoading, setOrdersLoading] = useState(false);
+  const [addingCartId, setAddingCartId] = useState(null);
   const [savedAddresses, setSavedAddresses] = useState([]);
   const [showAddressModal, setShowAddressModal] = useState(false);
   const [newAddressText, setNewAddressText] = useState('');
@@ -237,6 +238,31 @@ export default function ProfilePage() {
     }
   };
 
+  // 🔹 Add to Cart from Wishlist
+  const handleAddToCart = async (productId, variantId) => {
+    const itemKey = `${productId}-${variantId || 'base'}`;
+    setAddingCartId(itemKey);
+    try {
+      const response = await fetch('/api/Pages/cart', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ product_id: productId, variant_id: variantId || null, quantity: 1 }),
+        credentials: 'include',
+      });
+      const data = await response.json();
+      if (response.ok && data.success) {
+        toast.success(data.message || 'Added to cart!');
+      } else {
+        toast.error(data.message || 'Failed to add to cart');
+      }
+    } catch (error) {
+      console.error("Add to cart error:", error);
+      toast.error("Failed to add to cart");
+    } finally {
+      setAddingCartId(null);
+    }
+  };
+
   // 🔹 Profile update handler
   const handleProfileSubmit = async (e) => {
     e.preventDefault();
@@ -423,7 +449,8 @@ export default function ProfilePage() {
         .profile-wrapper {
           max-width: 1200px;
           margin: 0 auto;
-          padding: 40px 24px;
+          padding: 110px 24px 60px;
+          min-height: 80vh;
         }
 
         .welcome-section {
@@ -667,20 +694,7 @@ export default function ProfilePage() {
           box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
 
-        /* Responsive */
-        @media (max-width: 768px) {
-          .profile-tabs {
-            gap: 24px;
-            overflow-x: auto;
-            justify-content: flex-start;
-            padding-bottom: 8px;
-          }
-          .wishlist-grid {
-            grid-template-columns: repeat(2, 1fr);
-          }
-        }
-
-        /* Wishlist List View Styles */
+        /* Wishlist Table Styles (Desktop) */
         .wishlist-list-container {
           width: 100%;
           border-top: 1px solid #000;
@@ -689,24 +703,27 @@ export default function ProfilePage() {
 
         .wishlist-list-header {
           display: grid;
-          grid-template-columns: 2.5fr 1.2fr 1fr 80px;
-          padding: 20px 10px;
+          grid-template-columns: 3fr 1.3fr 1.2fr 1.8fr;
+          padding: 18px 14px;
           border-bottom: 2px solid #000;
-          font-size: 12px;
+          font-size: 11px;
           font-weight: 700;
           text-transform: uppercase;
           letter-spacing: 0.1em;
           color: #000;
           background: #f4ede4;
+          gap: 16px;
+          align-items: center;
         }
 
         .wishlist-list-item {
           display: grid;
-          grid-template-columns: 2.5fr 1.2fr 1fr 80px;
-          padding: 24px 10px;
+          grid-template-columns: 3fr 1.3fr 1.2fr 1.8fr;
+          padding: 20px 14px;
           border-bottom: 1px solid var(--border-color);
           align-items: center;
           transition: background 0.3s ease;
+          gap: 16px;
         }
 
         .wishlist-list-item:hover {
@@ -716,15 +733,29 @@ export default function ProfilePage() {
         .wishlist-column-product {
           display: flex;
           align-items: center;
-          gap: 24px;
+          gap: 18px;
         }
 
-        .wishlist-item-img {
-          width: 90px;
-          height: 90px;
+        .wishlist-item-img-wrap {
+          width: 76px;
+          height: 76px;
           background: #f9f9f9;
-          object-fit: cover;
-          border-radius: 2px;
+          border-radius: 4px;
+          overflow: hidden;
+          flex-shrink: 0;
+          position: relative;
+          border: 1px solid #eee;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+        }
+
+        .wishlist-product-info {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
         }
 
         .wishlist-item-name {
@@ -733,70 +764,100 @@ export default function ProfilePage() {
           font-weight: 600;
           color: #000;
           text-decoration: none;
+          transition: color 0.2s;
+          line-height: 1.35;
         }
 
         .wishlist-item-name:hover {
           color: #CEA268;
         }
 
-        .wishlist-column-variant {
-          font-size: 13px;
-          color: #666;
-          font-weight: 500;
+        .wishlist-item-date {
+          font-size: 11px;
+          color: #888;
+        }
+
+        .wishlist-variant-badge {
+          display: inline-block;
+          padding: 3px 10px;
+          background: #f5efe6;
+          color: #8a6d3b;
+          border: 1px solid #e8decb;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          width: fit-content;
         }
 
         .wishlist-column-price {
-          font-size: 14px;
+          font-size: 15px;
           color: #000;
-          font-weight: 600;
+          font-weight: 700;
+          font-family: var(--font-main);
         }
 
         .wishlist-column-action {
           display: flex;
+          align-items: center;
           justify-content: flex-end;
+          gap: 10px;
         }
 
-        .wishlist-remove-link {
-          background: none;
-          border: none;
-          color: #999;
+        .wishlist-cart-btn {
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+          padding: 9px 16px;
+          background: #000;
+          color: #fff;
+          border: 1px solid #000;
+          border-radius: 4px;
+          font-family: var(--font-main);
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          cursor: pointer;
+          transition: all 0.25s;
+          text-decoration: none;
+          white-space: nowrap;
+        }
+
+        .wishlist-cart-btn:hover {
+          background: #333;
+          border-color: #333;
+        }
+
+        .wishlist-cart-btn:disabled {
+          background: #666;
+          border-color: #666;
+          cursor: not-allowed;
+        }
+
+        .wishlist-remove-btn {
+          background: transparent;
+          border: 1px solid #e0e0e0;
+          color: #888;
           cursor: pointer;
           font-size: 11px;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
           font-weight: 600;
-          padding: 8px;
-          transition: color 0.3s;
+          padding: 8px 10px;
+          border-radius: 4px;
+          transition: all 0.25s;
           display: flex;
           align-items: center;
-          gap: 6px;
+          justify-content: center;
+          gap: 4px;
         }
 
-        .wishlist-remove-link:hover {
+        .wishlist-remove-btn:hover {
+          border-color: #e74c3c;
           color: #e74c3c;
+          background: #fff5f5;
         }
 
-        @media (max-width: 768px) {
-          .wishlist-list-header {
-            display: none;
-          }
-          .wishlist-list-item {
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            padding: 20px 0;
-          }
-          .wishlist-column-product {
-            grid-column: span 2;
-          }
-          .wishlist-column-variant, .wishlist-column-price {
-            font-size: 12px;
-          }
-          .wishlist-column-action {
-            grid-column: span 2;
-            justify-content: flex-start;
-          }
-        }
-        /* Orders List View Styles */
+        /* Orders List View Styles (Desktop) */
         .orders-list-container {
           width: 100%;
           border-top: 1px solid #000;
@@ -805,8 +866,8 @@ export default function ProfilePage() {
 
         .orders-list-header {
           display: grid;
-          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr 1.3fr;
-          padding: 20px 10px;
+          grid-template-columns: 1.2fr 2.4fr 1.1fr 1fr 1fr 1.1fr 1.2fr;
+          padding: 18px 14px;
           border-bottom: 2px solid #000;
           font-size: 11px;
           font-weight: 700;
@@ -814,53 +875,187 @@ export default function ProfilePage() {
           letter-spacing: 0.1em;
           color: #000;
           background: #f4ede4;
-          gap: 10px;
+          gap: 12px;
+          align-items: center;
         }
 
         .orders-list-item {
           display: grid;
-          grid-template-columns: 1fr 1.2fr 2fr 1fr 1fr 1.2fr 1fr 1.3fr;
-          padding: 24px 10px;
+          grid-template-columns: 1.2fr 2.4fr 1.1fr 1fr 1fr 1.1fr 1.2fr;
+          padding: 20px 14px;
           border-bottom: 1px solid var(--border-color);
           align-items: center;
           transition: background 0.3s ease;
-          gap: 10px;
+          gap: 12px;
         }
 
         .orders-list-item:hover {
           background: #fdfdfd;
         }
 
-        .orders-column-id, .orders-column-product-name {
+        .orders-column-orderinfo {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+        }
+
+        .orders-column-id {
+          font-family: var(--font-main);
+          font-size: 13px;
+          font-weight: 700;
+          color: #000;
+        }
+
+        .orders-column-date {
+          font-size: 11px;
+          color: #888;
+        }
+
+        .orders-column-product {
+          display: flex;
+          align-items: center;
+          gap: 14px;
+          min-width: 0;
+        }
+
+        .orders-product-img-wrap {
+          width: 56px;
+          height: 56px;
+          background: #f9f9f9;
+          border-radius: 4px;
+          overflow: hidden;
+          flex-shrink: 0;
+          position: relative;
+          border: 1px solid #eee;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          text-decoration: none;
+        }
+
+        .orders-product-details {
+          display: flex;
+          flex-direction: column;
+          gap: 4px;
+          min-width: 0;
+        }
+
+        .orders-product-name {
           font-family: var(--font-main);
           font-size: 13px;
           font-weight: 600;
           color: #000;
+          text-decoration: none;
+          transition: color 0.2s;
+          line-height: 1.35;
         }
 
-        .orders-column-date, .orders-column-total, .orders-column-variant, .orders-column-payment {
-          font-size: 12px;
-          color: #333;
+        .orders-product-name:hover {
+          color: #CEA268;
+        }
+
+        .orders-product-qty {
+          font-size: 11px;
+          color: #777;
           font-weight: 500;
         }
 
-        .orders-column-status {
-          font-size: 10px;
-          text-transform: uppercase;
-          letter-spacing: 0.05em;
+        .orders-variant-badge {
+          display: inline-block;
+          padding: 3px 8px;
+          background: #f5efe6;
+          color: #8a6d3b;
+          border: 1px solid #e8decb;
+          border-radius: 20px;
+          font-size: 11px;
+          font-weight: 600;
+          width: fit-content;
+        }
+
+        .orders-column-total {
+          font-size: 14px;
+          color: #000;
           font-weight: 700;
-          color: #CEA268;
+          font-family: var(--font-main);
+        }
+
+        .orders-badge-paid {
+          display: inline-block;
+          padding: 4px 8px;
+          background: #DCFCE7;
+          color: #15803D;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          width: fit-content;
+        }
+
+        .orders-badge-pending {
+          display: inline-block;
+          padding: 4px 8px;
+          background: #FEF3C7;
+          color: #B45309;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          width: fit-content;
+        }
+
+        .orders-status-badge {
+          display: inline-block;
+          padding: 4px 8px;
+          border-radius: 4px;
+          font-size: 11px;
+          font-weight: 700;
+          text-transform: uppercase;
+          letter-spacing: 0.04em;
+          width: fit-content;
+        }
+
+        .orders-status-delivered {
+          background: #DCFCE7;
+          color: #15803D;
+        }
+
+        .orders-status-processing {
+          background: #FEF3C7;
+          color: #B45309;
+        }
+
+        .orders-status-shipped {
+          background: #DBEAFE;
+          color: #1D4ED8;
+        }
+
+        .orders-status-cancelled {
+          background: #FEE2E2;
+          color: #B91C1C;
+        }
+
+        .orders-status-default {
+          background: #F3F4F6;
+          color: #374151;
+        }
+
+        .orders-column-track {
+          display: flex;
+          justify-content: flex-end;
         }
 
         .track-order-btn {
           display: inline-flex;
           align-items: center;
+          justify-content: center;
           gap: 6px;
-          padding: 7px 14px;
+          padding: 8px 14px;
           background: #fff;
           color: #000;
           border: 1.5px solid #000;
-          border-radius: 3px;
+          border-radius: 4px;
           font-family: var(--font-main);
           font-size: 11px;
           font-weight: 700;
@@ -868,7 +1063,7 @@ export default function ProfilePage() {
           letter-spacing: 0.08em;
           cursor: pointer;
           text-decoration: none;
-          transition: background 0.25s ease, color 0.25s ease;
+          transition: all 0.25s ease;
           white-space: nowrap;
         }
 
@@ -885,37 +1080,261 @@ export default function ProfilePage() {
           pointer-events: none;
         }
 
-        .track-order-btn.disabled:hover {
-          background: #f0f0f0;
-          color: #aaa;
+        /* Desktop: hide mobile-only order card elements */
+        .orders-mobile-header,
+        .orders-mobile-footer,
+        .orders-mobile-meta-row {
+          display: none;
         }
 
+        /* Consolidated Responsive Styles */
         @media (max-width: 768px) {
+          .profile-wrapper {
+            padding: 95px 16px 60px;
+            max-width: 100vw;
+            overflow-x: hidden;
+          }
+          .welcome-section {
+            margin-bottom: 24px;
+          }
+          .welcome-title {
+            font-size: 22px;
+            margin-bottom: 20px;
+            word-break: break-word;
+          }
+          .section-title {
+            font-size: 20px;
+            margin-bottom: 24px;
+          }
+          .profile-tabs {
+            gap: 20px;
+            overflow-x: auto;
+            justify-content: flex-start;
+            padding-bottom: 8px;
+            scrollbar-width: none;
+            white-space: nowrap;
+            -webkit-overflow-scrolling: touch;
+          }
+          .profile-tabs::-webkit-scrollbar {
+            display: none;
+          }
+          .tab-btn {
+            font-size: 12px;
+            padding: 12px 0;
+            flex-shrink: 0;
+            white-space: nowrap;
+          }
+          .profile-details-section {
+            max-width: 100%;
+            width: 100%;
+          }
+          .form-row {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 6px;
+            width: 100%;
+          }
+          .date-joined {
+            font-size: 11px;
+            color: #888;
+          }
+          .profile-btn-group {
+            flex-direction: column;
+            gap: 10px;
+            margin-top: 24px;
+            width: 100%;
+          }
+          .save-button, .logout-button {
+            width: 100%;
+            padding: 13px;
+          }
+          .wishlist-grid {
+            grid-template-columns: 1fr;
+            gap: 16px;
+          }
+          .wishlist-list-container {
+            border-top: none;
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+          }
+          .wishlist-list-header {
+            display: none;
+          }
+          .wishlist-list-item {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            background: #FAFAFA;
+            border: 1px solid #EAEAEA;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
+          }
+          .wishlist-column-product {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+          }
+          .wishlist-item-img-wrap {
+            width: 64px;
+            height: 64px;
+            border-radius: 4px;
+            flex-shrink: 0;
+          }
+          .wishlist-item-name {
+            font-size: 13px;
+            line-height: 1.4;
+            word-break: break-word;
+          }
+          .wishlist-column-variant {
+            display: flex;
+            align-items: center;
+          }
+          .wishlist-variant-badge {
+            font-size: 10px;
+            padding: 2px 8px;
+          }
+          .wishlist-column-price {
+            font-size: 15px;
+            font-weight: 700;
+          }
+          .wishlist-column-action {
+            display: flex;
+            width: 100%;
+            gap: 10px;
+            justify-content: stretch;
+            padding-top: 6px;
+            border-top: 1px solid #F0F0F0;
+          }
+          .wishlist-cart-btn {
+            flex: 1;
+            padding: 11px;
+            font-size: 12px;
+            justify-content: center;
+            text-align: center;
+          }
+          .wishlist-remove-btn {
+            flex: 0 0 auto;
+            padding: 11px 14px;
+            font-size: 12px;
+            justify-content: center;
+          }
+          .orders-list-container {
+            border-top: none;
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+          }
           .orders-list-header {
             display: none;
           }
           .orders-list-item {
-            grid-template-columns: 1fr 1fr;
-            gap: 15px;
-            padding: 20px 0;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            padding: 16px;
+            background: #FAFAFA;
+            border: 1px solid #EAEAEA;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.02);
           }
-          .orders-column-id {
-            grid-column: span 2;
+          /* Show mobile-only card elements */
+          .orders-mobile-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            width: 100%;
           }
-          .orders-column-status {
-            grid-column: span 1;
-            text-align: left;
+          .orders-mobile-meta-row {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 2px;
           }
-          .orders-column-total {
-            text-align: right;
+          .orders-mobile-footer {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+          }
+          /* Hide desktop-only standalone columns */
+          .orders-column-variant,
+          .orders-column-total,
+          .orders-column-payment,
+          .orders-column-status,
+          .orders-column-orderinfo {
+            display: none;
+          }
+          /* Re-show total inside mobile footer */
+          .orders-mobile-footer .orders-column-total {
+            display: block;
+            font-size: 15px;
+            font-weight: 700;
+          }
+          .orders-column-product {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            width: 100%;
+            padding: 8px 0;
+            border-top: 1px solid #F0F0F0;
+            border-bottom: 1px solid #F0F0F0;
+          }
+          .orders-product-img-wrap {
+            width: 56px;
+            height: 56px;
+            border-radius: 4px;
+            flex-shrink: 0;
+          }
+          .orders-product-name {
+            font-size: 13px;
+            line-height: 1.4;
+            word-break: break-word;
           }
           .orders-column-track {
-            grid-column: span 2;
+            display: block;
+            width: 100%;
+            margin-top: 4px;
+          }
+          .track-order-btn {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 11px 14px;
+            text-align: center;
+            box-sizing: border-box;
+            border-radius: 4px;
+            font-size: 12px;
+          }
+        }
+        @media (max-width: 480px) {
+          .profile-wrapper {
+            padding: 85px 12px 48px;
+          }
+          .welcome-title {
+            font-size: 20px;
+            margin-bottom: 16px;
+          }
+          .section-title {
+            font-size: 18px;
+            margin-bottom: 20px;
+          }
+          .tab-btn {
+            font-size: 11px;
+            padding: 10px 0;
+          }
+          .profile-tabs {
+            gap: 16px;
           }
         }
       `}} />
 
-      <div className="promo-bar">50%off</div>
       <Navbar />
 
       <main className="profile-wrapper">
@@ -953,63 +1372,131 @@ export default function ProfilePage() {
               <h2 className="section-title">Recent Orders</h2>
               <div className="orders-list-container">
                 <div className="orders-list-header">
-                  <div>Date</div>
-                  <div>Order ID</div>
+                  <div>Order Info</div>
                   <div>Product</div>
                   <div>Variant</div>
-                  <div>Price</div>
+                  <div>Total Price</div>
                   <div>Payment</div>
                   <div>Status</div>
-                  <div>Track Order</div>
+                  <div style={{ textAlign: 'right' }}>Track Order</div>
                 </div>
                 
                 {ordersLoading ? (
-                  <p style={{ textAlign: 'center', padding: '40px 0' }}>Loading your orders...</p>
+                  <p style={{ textAlign: 'center', padding: '40px 0', color: '#666' }}>Loading your orders...</p>
                 ) : orders.length > 0 ? (
-                  orders.map((order, idx) => (
-                    <div key={`${order.order_id}-${idx}`} className="orders-list-item">
-                      <div className="orders-column-date">
-                        {new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                      </div>
-                      <div className="orders-column-id">#ZJ-{order.order_id.toString().padStart(6, '0')}</div>
-                      <div className="orders-column-product" style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                        <div style={{ width: '40px', height: '40px', background: '#f9f9f9', borderRadius: '2px', overflow: 'hidden' }}>
-                          {order.image_url ? (
-                            <Image src={order.image_url} alt={order.product_name} width={40} height={40} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                  orders.map((order, idx) => {
+                    const statusClass = 
+                      order.order_status === 'Delivered' ? 'orders-status-delivered' :
+                      order.order_status === 'Processing' ? 'orders-status-processing' :
+                      order.order_status === 'Shipped' ? 'orders-status-shipped' :
+                      order.order_status === 'Cancelled' ? 'orders-status-cancelled' : 'orders-status-default';
+
+                    const formattedOrderId = `#ZJ-${order.order_id.toString().padStart(6, '0')}`;
+                    const formattedDate = new Date(order.order_date).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+
+                    return (
+                      <div key={`${order.order_id}-${idx}`} className="orders-list-item">
+                        {/* Order Info Column - Desktop only (1st grid col) */}
+                        <div className="orders-column-orderinfo">
+                          <span className="orders-column-id">{formattedOrderId}</span>
+                          <span className="orders-column-date">{formattedDate}</span>
+                        </div>
+
+                        {/* Mobile Header - shown only on mobile (hidden on desktop) */}
+                        <div className="orders-mobile-header">
+                          <div style={{ display: 'flex', flexDirection: 'column', gap: '2px' }}>
+                            <span className="orders-column-id">{formattedOrderId}</span>
+                            <span className="orders-column-date">{formattedDate}</span>
+                          </div>
+                          <span className={`orders-status-badge ${statusClass}`}>
+                            {order.order_status || 'Ordered'}
+                          </span>
+                        </div>
+
+                        {/* Product Column */}
+                        <div className="orders-column-product">
+                          <Link href={`/Pages/Products/${order.product_id}`} className="orders-product-img-wrap">
+                            {order.image_url ? (
+                              <Image 
+                                src={order.image_url} 
+                                alt={order.product_name} 
+                                width={56} 
+                                height={56} 
+                                style={{ width: '100%', height: '100%', objectFit: 'cover' }} 
+                              />
+                            ) : (
+                              <div style={{ fontSize: '24px' }}>💍</div>
+                            )}
+                          </Link>
+                          <div className="orders-product-details">
+                            <Link href={`/Pages/Products/${order.product_id}`} className="orders-product-name">
+                              {order.product_name}
+                            </Link>
+                            <div className="orders-mobile-meta-row">
+                              <span className="orders-variant-badge">{order.variant_material || "Standard"}</span>
+                              <span className="orders-product-qty">Qty: {order.quantity || 1}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Variant Column (Desktop) */}
+                        <div className="orders-column-variant">
+                          <span className="orders-variant-badge">{order.variant_material || "Standard"}</span>
+                        </div>
+
+                        {/* Total Price */}
+                        <div className="orders-column-total">
+                          <PriceDisplay amountInINR={(order.item_price || 0) * (order.quantity || 1)} />
+                        </div>
+
+                        {/* Payment Status */}
+                        <div className="orders-column-payment">
+                          {order.is_paid ? (
+                            <span className="orders-badge-paid">Paid</span>
                           ) : (
-                            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100%', fontSize: '20px' }}>💍</div>
+                            <span className="orders-badge-pending">Pending</span>
                           )}
                         </div>
-                        <span className="orders-column-product-name">{order.product_name}</span>
-                      </div>
-                      <div className="orders-column-variant">{order.variant_material || "Standard"}</div>
-                      <div className="orders-column-total">
-                        <PriceDisplay amountInINR={order.item_price} />
-                      </div>
-                      <div className="orders-column-payment" style={{ color: order.is_paid ? '#2ecc71' : '#f39c12' }}>
-                        {order.is_paid ? 'Success' : 'Pending'}
-                      </div>
-                      <div className="orders-column-status" style={{ 
-                        color: order.order_status === 'Delivered' ? '#2ecc71' : (order.order_status === 'Processing' ? '#CEA268' : '#3498db') 
-                      }}>
-                        {order.order_status || 'Ordered'}
-                      </div>
-                      <div className="orders-column-track">
-                        {order.order_status === 'Cancelled' ? (
-                          <span className="track-order-btn disabled">
-                            Track Order
+
+                        {/* Fulfillment Status (Desktop) */}
+                        <div className="orders-column-status">
+                          <span className={`orders-status-badge ${statusClass}`}>
+                            {order.order_status || 'Ordered'}
                           </span>
-                        ) : (
-                          <Link
-                            href={`/Pages/Track-Order?orderId=${order.order_id}`}
-                            className="track-order-btn"
-                          >
-                            Track Order
-                          </Link>
-                        )}
+                        </div>
+
+                        {/* Mobile Financials (Hidden on Desktop) */}
+                        <div className="orders-mobile-footer">
+                          <div className="orders-column-total">
+                            <PriceDisplay amountInINR={(order.item_price || 0) * (order.quantity || 1)} />
+                          </div>
+                          <div>
+                            {order.is_paid ? (
+                              <span className="orders-badge-paid">Paid</span>
+                            ) : (
+                              <span className="orders-badge-pending">Pending</span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* Action Column */}
+                        <div className="orders-column-track">
+                          {order.order_status === 'Cancelled' ? (
+                            <span className="track-order-btn disabled">
+                              Track Order
+                            </span>
+                          ) : (
+                            <Link
+                              href={`/Pages/Track-Order?orderId=${order.order_id}`}
+                              className="track-order-btn"
+                            >
+                              Track Order
+                            </Link>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))
+                    );
+                  })
                 ) : (
                   <div style={{ textAlign: 'center', padding: '60px 0' }}>
                     <ShoppingBag size={48} color="#E5E5E5" style={{ marginBottom: '16px' }} />
@@ -1026,12 +1513,12 @@ export default function ProfilePage() {
             <div className="wishlist-section">
               <h2 className="section-title">Your Wishlist</h2>
               {wishlistLoading ? (
-                <p style={{ textAlign: 'center', py: '20px' }}>Loading your favorites...</p>
+                <p style={{ textAlign: 'center', padding: '40px 0', color: '#666' }}>Loading your favorites...</p>
               ) : wishlist.length > 0 ? (
                 <div className="wishlist-list-container">
                   <div className="wishlist-list-header">
                     <div>Product</div>
-                    <div>Variant</div>
+                    <div>Metal / Variant</div>
                     <div>Price</div>
                     <div style={{ textAlign: 'right' }}>Action</div>
                   </div>
@@ -1039,44 +1526,60 @@ export default function ProfilePage() {
                     <div key={`${item.wishlist_id}-${index}`} className="wishlist-list-item">
                       {/* Product Column */}
                       <div className="wishlist-column-product">
-                        <Link href={`/Pages/Products/${item.product_id}`}>
+                        <Link href={`/Pages/Products/${item.product_id}`} className="wishlist-item-img-wrap">
                           {item.image_url ? (
                             <Image 
                               src={item.image_url} 
                               alt={item.name} 
-                              width={90}
-                              height={90}
-                              className="wishlist-item-img"
-                              style={{ objectFit: 'cover' }}
+                              width={76}
+                              height={76}
+                              style={{ width: '100%', height: '100%', objectFit: 'cover' }}
                             />
                           ) : (
-                            <div className="wishlist-item-img" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '32px' }}>💍</div>
+                            <div style={{ fontSize: '28px' }}>💍</div>
                           )}
                         </Link>
-                        <Link href={`/Pages/Products/${item.product_id}`} className="wishlist-item-name">
-                          {item.name}
-                        </Link>
+                        <div className="wishlist-product-info">
+                          <Link href={`/Pages/Products/${item.product_id}`} className="wishlist-item-name">
+                            {item.name}
+                          </Link>
+                          {item.created_at && (
+                            <span className="wishlist-item-date">
+                              Added on: {new Date(item.created_at).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
                       </div>
 
                       {/* Variant Column */}
                       <div className="wishlist-column-variant">
-                        {item.variant_material || "Standard"}
+                        <span className="wishlist-variant-badge">{item.variant_material || "Standard"}</span>
                       </div>
 
                       {/* Price Column */}
                       <div className="wishlist-column-price">
-                        {new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(item.price)}
+                        <PriceDisplay amountInINR={item.price} />
                       </div>
 
                       {/* Action Column */}
                       <div className="wishlist-column-action">
+                        <button
+                          type="button"
+                          className="wishlist-cart-btn"
+                          onClick={() => handleAddToCart(item.product_id, item.variant_id)}
+                          disabled={addingCartId === `${item.product_id}-${item.variant_id || 'base'}`}
+                        >
+                          <ShoppingBag size={14} />
+                          {addingCartId === `${item.product_id}-${item.variant_id || 'base'}` ? 'Adding...' : 'Add To Cart'}
+                        </button>
                         <button 
-                          className="wishlist-remove-link"
+                          type="button"
+                          className="wishlist-remove-btn"
                           onClick={() => handleRemoveWishlist(item.product_id, item.variant_id)}
                           title="Remove from wishlist"
                         >
-                          <Plus size={14} style={{ transform: 'rotate(45deg)' }} />
-                          <span className="remove-text">Remove</span>
+                          <Trash2 size={14} />
+                          <span>Remove</span>
                         </button>
                       </div>
                     </div>
