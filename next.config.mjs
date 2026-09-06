@@ -33,6 +33,9 @@ const securityHeaders = [
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Required for Docker/CapRover deployment: produces a self-contained server
+  // in .next/standalone that doesn't need the full node_modules at runtime.
+  output: 'standalone',
   images: {
     // Use Cloudinary's own CDN transformation instead of proxying through Next.js image optimizer.
     // This eliminates the TimeoutError on /_next/image for Cloudinary-hosted assets.
