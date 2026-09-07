@@ -1,3 +1,17 @@
+/**
+ * In-Memory Sliding Window Rate Limiter
+ *
+ * ARCHITECTURAL NOTE ON HORIZONTAL SCALING:
+ * This rate limiter stores client request timestamps in a local per-process JavaScript `Map`.
+ * - In a single-instance container deployment (such as default CapRover or Docker), this is lightweight,
+ *   fast, and requires no external infrastructure.
+ * - If the application is ever scaled horizontally across multiple instances (e.g. multi-container cluster,
+ *   Kubernetes pods, or serverless functions), memory is NOT shared between processes. An IP hitting different
+ *   instances will have separate rate-limit budgets.
+ * - Before running multiple instances in production, replace or back this state store with a centralized,
+ *   distributed database/cache such as Redis (e.g. Upstash Redis, Redis with `@upstash/ratelimit`, or `ioredis`).
+ */
+
 const rateLimitMap = new Map();
 
 /**

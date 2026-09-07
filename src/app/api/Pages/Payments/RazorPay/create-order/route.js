@@ -2,10 +2,7 @@ import Razorpay from "razorpay";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
-import { connectDB } from "@/lib/db";
-import Product from "@/lib/models/Product";
-import ProductVariant from "@/lib/models/ProductVariant";
-import CartItem from "@/lib/models/CartItem";
+import { calculateOrderPricing } from "@/lib/pricing";
 
 const ALLOWED_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY', 'CHF', 'NZD', 'MYR', 'HKD', 'ZAR', 'SAR', 'THB'];
 
@@ -28,55 +25,33 @@ export async function POST(req) {
             return NextResponse.json({ error: "Unauthorized: Please login first." }, { status: 401 });
         }
 
-        const { currency = "INR", receipt, specificItem, totalPayable } = await req.json();
-        console.log("Specific Item:", specificItem);
-        console.log("Total Payable*:", totalPayable);
+        const { currency = "INR", receipt, specificItem, totalPayable, promoCode } = await req.json();
         const safeCurrency = ALLOWED_CURRENCIES.includes((currency || '').toUpperCase())
             ? currency.toUpperCase()
             : 'INR';
 
-        await connectDB();
+        // Calculate server-authoritative order pricing
+        let pricing;
+        try {
+            pricing = await calculateOrderPricing({
+                userId: user.userId,
+                specificItem,
+                promoCode
+            });
+        } catch (calcError) {
+            return NextResponse.json(
+                { error: calcError.message || "Failed to calculate order pricing" },
+                { status: 400 }
+            );
+        }
 
-        let finalAmount = Number(totalPayable);
+        const finalAmount = pricing.total;
 
-        if (specificItem) {
-            let unitPrice = 0;
-            if (specificItem.variantId) {
-                const variant = await ProductVariant.findById(specificItem.variantId);
-                unitPrice = variant ? variant.price : 0;
-            }
-            if (!unitPrice) {
-                const product = await Product.findById(specificItem.productId);
-                unitPrice = product ? product.price : 0;
-            }
-            if (finalAmount < unitPrice) {
-                return NextResponse.json(
-                    { error: "Invalid payment amount" },
-                    { status: 400 }
-                );
-            }
-            const subtotal = unitPrice * (specificItem.quantity || 1);
-            const gst = subtotal * 0.03;
-            const shipping = 0;
-            finalAmount = subtotal + gst + shipping;
-        } else {
-            const cartItems = await CartItem.find({ user_id: user.userId });
-            let totalCartAmount = 0;
-            for (const item of cartItems) {
-                let unitPrice = 0;
-                if (item.variant_id) {
-                    const variant = await ProductVariant.findById(item.variant_id);
-                    unitPrice = variant ? variant.price : 0;
-                }
-                if (!unitPrice) {
-                    const product = await Product.findById(item.product_id);
-                    unitPrice = product ? product.price : 0;
-                }
-                const subtotal = unitPrice * item.quantity;
-                const gst = subtotal * 0.03;
-                totalCartAmount += subtotal + gst;
-            }
-            if (finalAmount < totalCartAmount) {
+        // If client passed totalPayable, verify it is not significantly less than authoritative amount
+        if (totalPayable !== undefined && totalPayable !== null) {
+            const payableNum = Number(totalPayable);
+            const minAcceptable = specificItem ? Math.floor(pricing.subtotal) : Math.floor(finalAmount);
+            if (isNaN(payableNum) || payableNum < minAcceptable) {
                 return NextResponse.json(
                     { error: "Invalid payment amount" },
                     { status: 400 }
@@ -101,6 +76,10 @@ export async function POST(req) {
             amount: Math.round(finalAmount * 100),
             currency: safeCurrency,
             receipt: receipt || `rcpt_${Date.now()}`,
+            notes: {
+                userId: user.userId,
+                specificItem: pricing.verifiedSpecificItem ? JSON.stringify(pricing.verifiedSpecificItem) : null
+            }
         };
 
         const order = await razorPay.orders.create(options);

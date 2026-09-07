@@ -21,8 +21,7 @@ export default function CartPage() {
   const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [promoCode, setPromoCode] = useState('');
   const [promoApplied, setPromoApplied] = useState(false);
-  const router = useRouter();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, currencyCode } = useCurrency();
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -58,7 +57,7 @@ export default function CartPage() {
 
   const subtotal = cartItems.reduce((sum, item) => sum + (item.product?.price * item.quantity), 0);
   const discountAmt = promoApplied ? Math.round(subtotal * 0.05) : 0;
-  const shipping = subtotal > 50000 ? 0 : 999;
+  const shipping = 0; // Complimentary free worldwide shipping
   const tax = Math.round((subtotal - discountAmt) * 0.03);
   const total = subtotal - discountAmt + shipping + tax;
 
@@ -114,59 +113,100 @@ export default function CartPage() {
     });
 
   const handlePayment = async () => {
-    setLoading(true);
-    const res = await fetch('/api/Pages/Payments/RazorPay/create-order', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: total * 100 }),
-    });
-    const order = await res.json();
-    const isLoaded = await loadRazorpay();
-    if (!isLoaded) {
-      toast.error('Razorpay SDK failed to load');
-      setLoading(false);
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
       return;
     }
-    const options = {
-      key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
-      amount: order.amount,
-      currency: order.currency,
-      name: 'Zulu Jewellers',
-      description: 'Order Payment',
-      order_id: order.id,
-      handler: async function (response) {
-        await fetch('/api/Pages/Payments/RazorPay/verify', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(response),
-        });
-        toast.success('Payment Successful! Thank you for your order.');
-      },
-      prefill: { name: 'Customer Name', email: 'customer@example.com', contact: '9999999999' },
-      theme: { color: '#CEA268' },
-    };
-    const paymentObject = new window.Razorpay(options);
-    paymentObject.open();
-    setLoading(false);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/Pages/Payments/RazorPay/create-order', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currency: 'INR',
+          totalPayable: total,
+          promoCode: promoApplied ? promoCode : undefined,
+        }),
+      });
+      const order = await res.json();
+      if (!res.ok) {
+        throw new Error(order.error || order.message || 'Failed to create Razorpay order');
+      }
+
+      const isLoaded = await loadRazorpay();
+      if (!isLoaded) {
+        toast.error('Razorpay SDK failed to load');
+        return;
+      }
+
+      const options = {
+        key: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+        amount: order.amount,
+        currency: order.currency,
+        name: 'Zulu Jewellers',
+        description: 'Cart Order Payment',
+        order_id: order.id,
+        handler: async function (response) {
+          try {
+            const verifyRes = await fetch('/api/Pages/Payments/RazorPay/verify', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify(response),
+            });
+            const verifyData = await verifyRes.json();
+            if (!verifyRes.ok) {
+              throw new Error(verifyData.message || 'Verification failed');
+            }
+            toast.success('Payment Successful! Thank you for your order.');
+            setShowPaymentOptions(false);
+            fetchCart();
+          } catch (err) {
+            console.error('Order verification failed:', err);
+            toast.error(err.message || 'Payment succeeded but order creation failed. Please contact support.');
+          }
+        },
+        prefill: { name: 'Customer Name', email: 'customer@example.com', contact: '9999999999' },
+        theme: { color: '#CEA268' },
+      };
+      const paymentObject = new window.Razorpay(options);
+      paymentObject.open();
+    } catch (err) {
+      console.error('Razorpay checkout error:', err);
+      toast.error(err.message || 'Razorpay payment failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleStripePayment = async () => {
-    setLoading(true);
-    const res = await fetch('/api/Pages/Payments/Stripe/create-intent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ amount: total }),
-    });
-    const { clientSecret } = await res.json();
-    if (!clientSecret) {
-      toast.error('Failed to create Stripe payment');
-      setLoading(false);
+    if (cartItems.length === 0) {
+      toast.error('Your cart is empty');
       return;
     }
-    setStripeClientSecret(clientSecret);
-    setShowStripeModal(true);
-    setLoading(false);
+    setLoading(true);
+    try {
+      const res = await fetch('/api/Pages/Payments/Stripe/create-intent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          currency: currencyCode || 'INR',
+          totalPayable: total,
+          promoCode: promoApplied ? promoCode : undefined,
+        }),
+      });
+      const data = await res.json();
+      if (!res.ok || !data.clientSecret) {
+        throw new Error(data.error || 'Failed to create Stripe payment');
+      }
+      setStripeClientSecret(data.clientSecret);
+      setShowStripeModal(true);
+    } catch (err) {
+      console.error('Stripe checkout error:', err);
+      toast.error(err.message || 'Failed to initialize Stripe payment. Please try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -682,18 +722,34 @@ export default function CartPage() {
                   <button
                     className="ca-checkout-btn"
                     onClick={() => setShowPaymentOptions(true)}
-                    disabled={loading}
+                    disabled={loading || cartItems.length === 0}
                   >
                     <ShoppingBag size={16} />
                     {loading ? 'Processing...' : 'Proceed to Checkout'}
                   </button>
                 ) : (
                   <div className="ca-payment-options">
-                    <button className="ca-pay-btn" onClick={handlePayment} disabled={loading}>
-                      💳 {loading ? 'Loading...' : 'Pay with Razorpay'}
-                    </button>
+                    {currencyCode && currencyCode !== 'INR' && (
+                      <p style={{ fontSize: '11px', color: '#888888', marginBottom: '8px', lineHeight: 1.4 }}>
+                        🌐 Storefront currency is <strong>{currencyCode}</strong>. Stripe is selected for international card checkout.
+                      </p>
+                    )}
+                    {(!currencyCode || currencyCode === 'INR') ? (
+                      <button className="ca-pay-btn" onClick={handlePayment} disabled={loading}>
+                        💳 {loading ? 'Loading...' : 'Pay with Razorpay (UPI, Cards, Netbanking)'}
+                      </button>
+                    ) : (
+                      <button
+                        className="ca-pay-btn"
+                        disabled={true}
+                        style={{ opacity: 0.5, cursor: 'not-allowed' }}
+                        title="Razorpay is only available for INR (₹) payments. Please use Stripe for international checkout."
+                      >
+                        🇮🇳 Razorpay (INR Only)
+                      </button>
+                    )}
                     <button className="ca-pay-btn" onClick={handleStripePayment} disabled={loading}>
-                      💳 {loading ? 'Loading...' : 'Pay with Stripe'}
+                      💳 {loading ? 'Loading...' : `Pay with Stripe (${currencyCode || 'Card'})`}
                     </button>
                   </div>
                 )}

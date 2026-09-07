@@ -41,8 +41,7 @@ export default function ProductDetailsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
-  const searchParams = useSearchParams();
-  const { formatPrice } = useCurrency();
+  const { formatPrice, currencyCode } = useCurrency();
   const categoryId = searchParams.get('category');
   const productsHref = categoryId
     ? `/Pages/Products?category=${encodeURIComponent(categoryId)}`
@@ -452,6 +451,10 @@ export default function ProductDetailsPage() {
     setShowOrderModal(false);
 
     const price = selectedVariant ? selectedVariant.price : product.price;
+    const gst = Math.round(price * 0.03);
+    const shipping = 0;
+    const total = price + gst + shipping;
+
     const specificItem = {
       productId: product.id,
       variantId: selectedVariant?._id || selectedVariant?.id || null,
@@ -462,10 +465,10 @@ export default function ProductDetailsPage() {
 
     if (selectedPaymentMethod === 'razorpay') {
       toast('Opening Razorpay', { icon: '💳' });
-      await handleRazorpayPayment(price, specificItem);
+      await handleRazorpayPayment(total, specificItem);
     } else {
       toast('Opening Stripe for international payment 🌐', { icon: '💳' });
-      await handleStripePayment(price, specificItem);
+      await handleStripePayment(total, specificItem);
     }
   };
 
@@ -1751,7 +1754,7 @@ export default function ProductDetailsPage() {
       {showOrderModal && product && (() => {
         const price = selectedVariant ? selectedVariant.price : product.price;
         const gst = Math.round(price * 0.03);
-        const shipping = price > 50000 ? 0 : 999;
+        const shipping = 0; // Complimentary free worldwide shipping
         const total = price + gst + shipping;
         const selectedVarId = selectedVariant?._id?.toString() || selectedVariant?.id?.toString();
         const img = selectedVariant
@@ -1954,38 +1957,72 @@ export default function ProductDetailsPage() {
                     <div style={{ marginTop: '12px' }}>
                       <p style={{ fontSize: '10px', fontWeight: 700, color: '#888888', letterSpacing: '0.05em', textTransform: 'uppercase', marginBottom: '6px', fontFamily: 'Montserrat, sans-serif' }}>Choose Payment Option</p>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                        <button
-                          type="button"
-                          onClick={() => setSelectedPaymentMethod('razorpay')}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'space-between',
-                            padding: '10px 14px',
-                            background: selectedPaymentMethod === 'razorpay' ? '#ffffff' : '#FAF9F8',
-                            border: `1px solid ${selectedPaymentMethod === 'razorpay' ? '#111111' : '#EAEAEA'}`,
-                            borderRadius: '4px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            width: '100%',
-                            fontFamily: 'Montserrat, sans-serif'
-                          }}
-                        >
-                          <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-                            <div style={{
-                              width: '14px', height: '14px', borderRadius: '50%',
-                              border: `2px solid ${selectedPaymentMethod === 'razorpay' ? '#111111' : '#cccccc'}`,
-                              display: 'flex', alignItems: 'center', justifyContent: 'center'
-                            }}>
-                              {selectedPaymentMethod === 'razorpay' && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#111111' }} />}
+                        {currencyCode && currencyCode !== 'INR' && (
+                          <p style={{ fontSize: '11px', color: '#888888', margin: '0 0 4px 0', lineHeight: 1.4, fontFamily: 'Montserrat, sans-serif' }}>
+                            🌐 Storefront currency is <strong>{currencyCode}</strong>. Stripe is selected for international card checkout.
+                          </p>
+                        )}
+                        {(!currencyCode || currencyCode === 'INR') ? (
+                          <button
+                            type="button"
+                            onClick={() => setSelectedPaymentMethod('razorpay')}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 14px',
+                              background: selectedPaymentMethod === 'razorpay' ? '#ffffff' : '#FAF9F8',
+                              border: `1px solid ${selectedPaymentMethod === 'razorpay' ? '#111111' : '#EAEAEA'}`,
+                              borderRadius: '4px',
+                              cursor: 'pointer',
+                              transition: 'all 0.2s',
+                              width: '100%',
+                              fontFamily: 'Montserrat, sans-serif'
+                            }}
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{
+                                width: '14px', height: '14px', borderRadius: '50%',
+                                border: `2px solid ${selectedPaymentMethod === 'razorpay' ? '#111111' : '#cccccc'}`,
+                                display: 'flex', alignItems: 'center', justifyContent: 'center'
+                              }}>
+                                {selectedPaymentMethod === 'razorpay' && <div style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#111111' }} />}
+                              </div>
+                              <div style={{ textAlign: 'left' }}>
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: '#111111', margin: 0 }}>Razorpay (India)</p>
+                                <p style={{ fontSize: '10px', color: '#666666', margin: '2px 0 0' }}>UPI, Cards, Netbanking, Wallets</p>
+                              </div>
                             </div>
-                            <div style={{ textAlign: 'left' }}>
-                              <p style={{ fontSize: '12px', fontWeight: 600, color: '#111111', margin: 0 }}>Razorpay (India)</p>
-                              <p style={{ fontSize: '10px', color: '#666666', margin: '2px 0 0' }}>UPI, Cards, Netbanking, Wallets</p>
+                            <span style={{ fontSize: '18px' }}>🇮🇳</span>
+                          </button>
+                        ) : (
+                          <button
+                            type="button"
+                            disabled={true}
+                            style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              justifyContent: 'space-between',
+                              padding: '10px 14px',
+                              background: '#FAF9F8',
+                              border: '1px solid #EAEAEA',
+                              borderRadius: '4px',
+                              cursor: 'not-allowed',
+                              opacity: 0.5,
+                              width: '100%',
+                              fontFamily: 'Montserrat, sans-serif'
+                            }}
+                            title="Razorpay is only available for INR (₹) payments. Please use Stripe for international checkout."
+                          >
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                              <div style={{ textAlign: 'left' }}>
+                                <p style={{ fontSize: '12px', fontWeight: 600, color: '#888888', margin: 0 }}>Razorpay (INR Only)</p>
+                                <p style={{ fontSize: '10px', color: '#999999', margin: '2px 0 0' }}>Available for domestic Indian payments</p>
+                              </div>
                             </div>
-                          </div>
-                          <span style={{ fontSize: '18px' }}>🇮🇳</span>
-                        </button>
+                            <span style={{ fontSize: '18px' }}>🇮🇳</span>
+                          </button>
+                        )}
 
                         <button
                           type="button"
