@@ -7,6 +7,22 @@ import { verifyAdminFromRequest } from "@/lib/adminAuth";
 
 // Helper removed - now using centralized storage utility
 
+// Get All Categories
+export async function GET(request) {
+    const auth = await verifyAdminFromRequest(request);
+    if (!auth.ok) {
+        return NextResponse.json({ message: auth.message }, { status: auth.status });
+    }
+    try {
+        await connectDB();
+        const categories = await Category.find().lean();
+        return NextResponse.json({ success: true, categories }, { status: 200 });
+    } catch (error) {
+        console.error("Error fetching categories:", error);
+        return NextResponse.json({ success: false, message: "Error In Backend API Call" }, { status: 500 });
+    }
+}
+
 //Add New Category
 export async function POST(request) {
     const auth = await verifyAdminFromRequest(request);

@@ -53,27 +53,40 @@ export default function CustomerManagementPage() {
   const [sendingEmail, setSendingEmail] = useState(false);
   const [showOrdersDropdown, setShowOrdersDropdown] = useState(false);
 
-  useEffect(() => {
-    const fetchCustomers = async () => {
-      try {
-        const response = await fetch('/api/Admin/Customer-Management', {
-          credentials: 'include',
-        });
-        const result = await response.json();
-        if (result.success) {
-          setCustomersData(result.data || []);
-          setAdminEmail(result.adminEmail || "");
-        } else {
-          console.error("Failed to fetch customers:", result.message);
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCustomersServer, setTotalCustomersServer] = useState(0);
+  const [pageSize] = useState(20);
+
+  const fetchCustomers = async (page = 1) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/Admin/Customer-Management?page=${page}&limit=${pageSize}`, {
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (result.success) {
+        setCustomersData(result.data || []);
+        setAdminEmail(result.adminEmail || "");
+        if (result.pagination) {
+          setTotalPages(result.pagination.totalPages || 1);
+          setCurrentPage(result.pagination.currentPage || 1);
+          setTotalCustomersServer(result.pagination.totalCustomers || 0);
         }
-      } catch (error) {
-        console.error("Error fetching customers:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error("Failed to fetch customers:", result.message);
       }
-    };
-    fetchCustomers();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching customers:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchCustomers(currentPage);
+  }, [currentPage]);
 
   // Format currency helper
   const formatCurrency = (amount) => {
@@ -93,12 +106,9 @@ export default function CustomerManagementPage() {
 
   // Mapping logic based on API data
   const customers = customersData.map(item => {
-    // Calculate total spent for this customer
+    // total_spent is pre-computed by the API via MongoDB aggregation — no need to iterate items[]
     const totalSpentValue = item.orders.reduce((acc, order) => {
-      const orderTotal = order.items.reduce((itemAcc, orderItem) => {
-        return itemAcc + (Number(orderItem.price) * orderItem.quantity);
-      }, 0);
-      return acc + orderTotal;
+      return acc + (Number(order.total_spent) || 0);
     }, 0);
 
     // Dynamic Tier Calculation
@@ -128,7 +138,7 @@ export default function CustomerManagementPage() {
   });
 
   // Calculate stats
-  const totalCustomersCount = customers.length;
+  const totalCustomersCount = totalCustomersServer || customers.length;
   const newThisMonthCount = customers.filter(c => {
     const rawCustomer = customersData.find(cd => cd.id === c.id);
     if (!rawCustomer) return false;
@@ -146,10 +156,6 @@ export default function CustomerManagementPage() {
     return formatCurrency(amount);
   };
 
-
-  // Customers data
-  // No longer needed, calculated from customersData
-
   const getTierBadge = (tier) => {
     const styles = {
       "VIP": { bg: "linear-gradient(135deg, #d4af37, #f4e4c1)", color: "#2c2c2c", icon: <Crown size={12} /> },
@@ -165,8 +171,6 @@ export default function CustomerManagementPage() {
     const matchesTier = filterTier === "all" || customer.tier === filterTier;
     return matchesSearch && matchesTier;
   });
-
-  // 🔹 Logout handler
 
   const handleSendEmail = async (e) => {
     e.preventDefault();
@@ -305,6 +309,33 @@ export default function CustomerManagementPage() {
                     )}
                   </tbody>
                 </table>
+                {totalPages > 1 && (
+                  <div className="pagination-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '12px 16px', borderTop: '1px solid #eee' }}>
+                    <span style={{ fontSize: '13px', color: '#666' }}>
+                      Showing Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> {totalCustomersServer > 0 ? `(${totalCustomersServer} total customers)` : ''}
+                    </span>
+                    <div style={{ display: 'flex', gap: '8px' }}>
+                      <button 
+                        type="button" 
+                        className="add-btn secondary" 
+                        disabled={currentPage === 1} 
+                        onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                      >
+                        Previous
+                      </button>
+                      <button 
+                        type="button" 
+                        className="add-btn secondary" 
+                        disabled={currentPage === totalPages} 
+                        onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                        style={{ padding: '6px 12px', fontSize: '12px' }}
+                      >
+                        Next
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -369,13 +400,14 @@ export default function CustomerManagementPage() {
                       <div className="dropdown-header">Customer Orders</div>
                       <div className="dropdown-list">
                         {selectedCustomer.rawOrders.map((order) => {
-                          const orderTotal = order.items.reduce((acc, itm) => acc + (Number(itm.price) * itm.quantity), 0);
+                          // total_spent is pre-computed by the API via aggregation
+                          const orderTotal = order.total_spent || 0;
                           return (
                             <div key={order.id} className="dropdown-item">
                               <div className="dropdown-item-info">
                                 <div className="dropdown-item-id">ORD-{order.id}</div>
                                 <div className="dropdown-item-meta">
-                                  {formatDate(order.order_date)} • {order.items.length} items • {formatCurrency(orderTotal)}
+                                  {formatDate(order.order_date)} • {order.item_count || 0} items • {formatCurrency(orderTotal)}
                                 </div>
                               </div>
                               <button 

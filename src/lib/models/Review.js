@@ -7,4 +7,6 @@ const ReviewSchema = new mongoose.Schema({
   review_message: { type: String },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
 
+ReviewSchema.index({ rating: -1, created_at: -1 });
+
 export default mongoose.models.Review || mongoose.model('Review', ReviewSchema);

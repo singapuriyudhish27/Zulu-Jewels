@@ -60,6 +60,12 @@ export default function ContactManagementPage() {
   const [inquiriesData, setInquiriesData] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalInquiriesServer, setTotalInquiriesServer] = useState(0);
+  const [pageSize] = useState(20);
+
   const [confirmConfig, setConfirmConfig] = useState({
     isOpen: false,
     title: "",
@@ -68,28 +74,34 @@ export default function ContactManagementPage() {
     type: "danger"
   });
 
-  useEffect(() => {
-    const fetchInquiries = async () => {
-      try {
-        const response = await fetch('/api/Admin/Contact-Management', {
-          credentials: 'include',
-        });
-        const result = await response.json();
-        console.log(result);
-        if (result.success) {
-          setInquiriesData(result.data || []);
-          setAdminEmail(result.adminEmail || "");
-        } else {
-          console.error("Failed to fetch inquiries:", result.message);
+  const fetchInquiries = async (page = 1) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/Admin/Contact-Management?page=${page}&limit=${pageSize}`, {
+        credentials: 'include',
+      });
+      const result = await response.json();
+      if (result.success) {
+        setInquiriesData(result.data || []);
+        setAdminEmail(result.adminEmail || "");
+        if (result.pagination) {
+          setTotalPages(result.pagination.totalPages || 1);
+          setCurrentPage(result.pagination.currentPage || 1);
+          setTotalInquiriesServer(result.pagination.totalInquiries || 0);
         }
-      } catch (error) {
-        console.error("Error fetching inquiries:", error);
-      } finally {
-        setLoading(false);
+      } else {
+        console.error("Failed to fetch inquiries:", result.message);
       }
-    };
-    fetchInquiries();
-  }, []);
+    } catch (error) {
+      console.error("Error fetching inquiries:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    fetchInquiries(currentPage);
+  }, [currentPage]);
 
   // Format date helper
   const formatDate = (dateString) => {
@@ -152,7 +164,7 @@ export default function ContactManagementPage() {
   });
 
   // Calculate general stats
-  const totalInquiries = inquiries.length;
+  const totalInquiries = totalInquiriesServer || inquiries.length;
   const newInquiries = inquiries.filter(i => {
     const s = (i.status || "").toLowerCase();
     return s === "new" || s === "unread";
@@ -404,6 +416,33 @@ export default function ContactManagementPage() {
                   </div>
                 )}
               </div>
+              {totalPages > 1 && (
+                <div className="pagination-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '12px 16px', borderTop: '1px solid #eee' }}>
+                  <span style={{ fontSize: '13px', color: '#666' }}>
+                    Showing Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> {totalInquiriesServer > 0 ? `(${totalInquiriesServer} total inquiries)` : ''}
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      type="button" 
+                      className="add-btn secondary" 
+                      disabled={currentPage === 1} 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      type="button" 
+                      className="add-btn secondary" 
+                      disabled={currentPage === totalPages} 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Detail Panel */}

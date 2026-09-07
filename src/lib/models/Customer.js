@@ -6,4 +6,6 @@ const CustomerSchema = new mongoose.Schema({
   location: { type: String, required: true },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
 
+CustomerSchema.index({ user_id: 1 });
+
 export default mongoose.models.Customer || mongoose.model('Customer', CustomerSchema);

@@ -17,27 +17,20 @@ export async function GET(request) {
         await connectDB();
 
         const url = new URL(request.url);
-        const page = parseInt(url.searchParams.get("page") || "1", 10);
-        const limit = parseInt(url.searchParams.get("limit") || "0", 10);
+        const page = Math.max(parseInt(url.searchParams.get("page") || "1", 10), 1);
+        const rawLimit = url.searchParams.get("limit");
+        const limit = rawLimit !== null ? Math.min(Math.max(parseInt(rawLimit, 10), 1), 100) : 50;
 
         // Fetch Categories
         const categories = await Category.find().lean();
 
-        let productsRaw;
-        let totalProducts;
-
-        if (limit > 0) {
-            const skip = (page - 1) * limit;
-            totalProducts = await Product.countDocuments({ is_deleted: false });
-            productsRaw = await Product.find({ is_deleted: false })
-                .sort({ created_at: -1 })
-                .skip(skip)
-                .limit(limit)
-                .lean();
-        } else {
-            productsRaw = await Product.find({ is_deleted: false }).sort({ created_at: -1 }).lean();
-            totalProducts = productsRaw.length;
-        }
+        const skip = (page - 1) * limit;
+        const totalProducts = await Product.countDocuments({ is_deleted: false });
+        const productsRaw = await Product.find({ is_deleted: false })
+            .sort({ created_at: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
 
         const productIds = productsRaw.map(p => p._id);
 

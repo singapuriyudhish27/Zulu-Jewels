@@ -75,26 +75,38 @@ export default function OrderManagementPage() {
   // Dropdown state for multiple items
   const [showItemDropdown, setShowItemDropdown] = useState(false);
 
-  useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        const response = await fetch(`/api/Admin/Order-Management?t=${Date.now()}`, {
-          credentials: 'include',
-          cache: 'no-store'
-        });
-        const result = await response.json();
-        if (result.success) {
-          setOrdersData(result.data.recent_orders || []);
-        } else {
-          console.error("Failed to fetch orders:", result.message);
-        }
-      } catch (error) {
-        console.error("Error fetching orders:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
+  // Pagination state
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalOrdersServer, setTotalOrdersServer] = useState(0);
+  const [pageSize] = useState(20);
 
+  const fetchOrders = async (page = 1) => {
+    setLoading(true);
+    try {
+      const response = await fetch(`/api/Admin/Order-Management?page=${page}&limit=${pageSize}&t=${Date.now()}`, {
+        credentials: 'include',
+        cache: 'no-store'
+      });
+      const result = await response.json();
+      if (result.success) {
+        setOrdersData(result.data.recent_orders || []);
+        if (result.pagination) {
+          setTotalPages(result.pagination.totalPages || 1);
+          setCurrentPage(result.pagination.currentPage || 1);
+          setTotalOrdersServer(result.pagination.totalOrders || 0);
+        }
+      } else {
+        console.error("Failed to fetch orders:", result.message);
+      }
+    } catch (error) {
+      console.error("Error fetching orders:", error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
     const fetchShippingData = async () => {
       try {
         const response = await fetch('/api/Admin/Shipping-Management', {
@@ -110,9 +122,9 @@ export default function OrderManagementPage() {
       }
     };
 
-    fetchOrders();
+    fetchOrders(currentPage);
     fetchShippingData();
-  }, []);
+  }, [currentPage]);
 
   useEffect(() => {
     if (selectedOrder) {
@@ -679,6 +691,33 @@ export default function OrderManagementPage() {
                   )}
                 </tbody>
               </table>
+              {totalPages > 1 && (
+                <div className="pagination-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '12px 16px', borderTop: '1px solid #eee' }}>
+                  <span style={{ fontSize: '13px', color: '#666' }}>
+                    Showing Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> {totalOrdersServer > 0 ? `(${totalOrdersServer} total orders)` : ''}
+                  </span>
+                  <div style={{ display: 'flex', gap: '8px' }}>
+                    <button 
+                      type="button" 
+                      className="add-btn secondary" 
+                      disabled={currentPage === 1} 
+                      onClick={() => setCurrentPage(prev => Math.max(prev - 1, 1))}
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      Previous
+                    </button>
+                    <button 
+                      type="button" 
+                      className="add-btn secondary" 
+                      disabled={currentPage === totalPages} 
+                      onClick={() => setCurrentPage(prev => Math.min(prev + 1, totalPages))}
+                      style={{ padding: '6px 12px', fontSize: '12px' }}
+                    >
+                      Next
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Order Detail Panel */}

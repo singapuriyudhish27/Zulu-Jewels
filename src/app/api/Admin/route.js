@@ -19,7 +19,7 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        // Execute all dashboard queries concurrently with lean serialization
+        // Execute all dashboard queries concurrently with lean + field selection
         const [
             orders,
             orderItems,
@@ -29,12 +29,35 @@ export async function GET(req) {
             productsRaw,
             productOrderCounts
         ] = await Promise.all([
-            Order.find().sort({ created_at: -1 }).limit(100).lean(),
-            OrderItem.find().sort({ created_at: -1 }).limit(200).lean(),
-            Transaction.find().sort({ created_at: -1 }).limit(100).lean(),
-            Inquiry.find().sort({ _id: -1 }).limit(100).lean(),
-            Review.find().sort({ rating: -1, created_at: -1 }).limit(100).lean(),
-            Product.find().limit(200).lean(),
+            Order.find()
+                .select('_id status is_paid customer_id payment_method created_at is_refunded')
+                .sort({ created_at: -1 })
+                .limit(100)
+                .lean(),
+            OrderItem.find()
+                .select('_id order_id product_id quantity price created_at')
+                .sort({ created_at: -1 })
+                .limit(200)
+                .lean(),
+            Transaction.find()
+                .select('_id order_id customer_id amount payment_method status created_at')
+                .sort({ created_at: -1 })
+                .limit(100)
+                .lean(),
+            Inquiry.find()
+                .select('_id name email phone message created_at')
+                .sort({ _id: -1 })
+                .limit(100)
+                .lean(),
+            Review.find()
+                .select('_id user_id order_id rating review_message created_at')
+                .sort({ rating: -1, created_at: -1 })
+                .limit(100)
+                .lean(),
+            Product.find()
+                .select('_id name price material gender category_id is_active is_deleted created_at')
+                .limit(200)
+                .lean(),
             OrderItem.aggregate([
                 { $group: { _id: "$product_id", count: { $sum: 1 } } }
             ])
@@ -71,7 +94,14 @@ export async function GET(req) {
                 inquiries,
                 reviews,
             }
-        }, { status: 200, headers: { 'Cache-Control': 'no-store, no-cache, must-revalidate' } });
+        }, {
+            status: 200,
+            headers: {
+                // Serve stale dashboard data for up to 60s while revalidating in the background.
+                // Eliminates repeated DB hits on every page refresh.
+                'Cache-Control': 's-maxage=60, stale-while-revalidate=120',
+            }
+        });
     } catch (error) {
         console.error("Error Getting Dashboard Data:", error);
         return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });

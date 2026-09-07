@@ -400,7 +400,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         /* Curated Masterpieces */
         .zj-most-loved {
           text-align: center;
-          padding: 60px 24px 60px;
+          padding: 40px 24px;
           max-width: 1400px;
           margin: 0 auto;
         }
@@ -445,7 +445,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
 
         /* Explore Our Collections — Circular Medallion Grid */
         .zj-collections-section {
-          padding: 80px 24px 72px;
+          padding: 48px 24px 44px;
           max-width: 1320px;
           margin: 0 auto;
           background: #ffffff;
@@ -625,7 +625,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
 
         /* This Month's Best Sellers */
         .zj-best-sellers-section {
-          padding: 80px 24px 90px;
+          padding: 48px 24px;
           background: #FAF8F5;
           border-top: 1px solid rgba(206, 162, 104, 0.2);
           border-bottom: 1px solid rgba(206, 162, 104, 0.2);
@@ -735,7 +735,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         }
         .zj-shelf-section {
           max-width: 1400px;
-          margin: 0 auto 72px;
+          margin: 0 auto 40px;
           padding: 0 24px;
         }
         .zj-shelf-section:last-child {
@@ -1000,7 +1000,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         /* Dynamic Product Section below */
         #product-sections {
           background: #ffffff; 
-          padding: 60px 0;
+          padding: 36px 0;
           border-top: 1px solid rgba(232, 224, 216, 0.4);
         }
 
@@ -1015,7 +1015,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         .zj-cta-banner-wrap { 
           max-width: 1400px; 
           margin: 0 auto; 
-          padding: 60px 24px; 
+          padding: 40px 24px; 
           display: flex; 
           flex-direction: column;
           align-items: center;
@@ -1221,7 +1221,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         .zj-testimonials-section { 
           position: relative;
           background: #FAF8F6; 
-          padding: 60px 0;
+          padding: 40px 0;
           border-top: 1px solid rgba(232, 224, 216, 0.4);
           border-bottom: 1px solid rgba(232, 224, 216, 0.4);
         }
@@ -1334,7 +1334,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         .zj-blog-section { 
           max-width: 1280px; 
           margin: 0 auto; 
-          padding: 60px 24px; 
+          padding: 40px 24px; 
         }
         .zj-blog-featured {
           display: grid;
@@ -1386,7 +1386,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
           .zj-product-grid { grid-template-columns: repeat(2, 1fr); gap: 20px; }
           .zj-most-loved-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
           .zj-most-loved-title { margin-bottom: 20px; font-size: 32px; }
-          .zj-most-loved { padding: 80px 16px 40px; }
+          .zj-most-loved { padding: 48px 16px 28px; }
           .zj-blog-featured { grid-template-columns: 1fr; gap: 30px; margin-bottom: 40px; }
           .zj-blog-featured-title { font-size: 26px; }
           .zj-blog-featured-image { aspect-ratio: 1.5; }
@@ -1395,7 +1395,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
           .zj-gifts-title { font-size: 32px; margin-bottom: 20px; }
           .zj-gifts-text { margin-bottom: 28px; }
           .zj-gifts-image { height: 320px; }
-          .zj-cta-banner-wrap { padding: 40px 16px; }
+          .zj-cta-banner-wrap { padding: 28px 16px; }
           .zj-cta-banner { padding: 40px 30px; min-height: 380px; justify-content: center; text-align: center; }
           .zj-cta-content { align-items: center; }
           .zj-cta-title { font-size: 32px; }
@@ -1480,7 +1480,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         .zj-faq-section {
           max-width: 900px;
           margin: 0 auto;
-          padding: 80px 24px;
+          padding: 48px 24px;
           font-family: 'Montserrat', sans-serif;
         }
         .zj-faq-title {
@@ -1557,7 +1557,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         }
         @media (max-width: 600px) {
           .zj-faq-section {
-            padding: 50px 16px;
+            padding: 32px 16px;
           }
           .zj-faq-title {
             font-size: 32px;

@@ -2,16 +2,16 @@ import { NextResponse } from "next/server";
 import Stripe from "stripe";
 import { processOrderSuccess } from "@/lib/orderUtils";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('[Stripe] STRIPE_SECRET_KEY environment variable is not configured.');
-}
-if (!process.env.STRIPE_WEBHOOK_SECRET) {
-    throw new Error('[Stripe] STRIPE_WEBHOOK_SECRET environment variable is not configured. Register your webhook endpoint in the Stripe Dashboard.');
-}
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 export async function POST(req) {
+  const secretKey = process.env.STRIPE_SECRET_KEY;
+  const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+
+  if (!secretKey || !webhookSecret) {
+    console.error("[Stripe Webhook] STRIPE_SECRET_KEY or STRIPE_WEBHOOK_SECRET is not configured.");
+    return NextResponse.json({ error: "Webhook not configured" }, { status: 500 });
+  }
+
+  const stripe = new Stripe(secretKey);
   const body = await req.text();
   const sig = req.headers.get("stripe-signature");
 

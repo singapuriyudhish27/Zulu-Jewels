@@ -22,4 +22,8 @@ const OrderSchema = new mongoose.Schema({
   is_refunded: { type: Boolean, default: false },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
 
+OrderSchema.index({ customer_id: 1 });
+OrderSchema.index({ created_at: -1 });
+OrderSchema.index({ status: 1 });
+
 export default mongoose.models.Order || mongoose.model('Order', OrderSchema);

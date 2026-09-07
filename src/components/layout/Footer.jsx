@@ -43,12 +43,12 @@ export default function Footer() {
           background: #EEEDE9;
           color: #555;
           font-family: 'Montserrat', sans-serif;
-          padding-top: 60px;
+          padding-top: 40px;
         }
         .zj-footer-grid {
           max-width: 1280px;
           margin: 0 auto;
-          padding: 0 24px 48px;
+          padding: 0 24px 32px;
           display: grid;
           grid-template-columns: repeat(4, 1fr) 1.4fr;
           gap: 40px;

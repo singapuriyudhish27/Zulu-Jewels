@@ -56,6 +56,26 @@ export default function Navbar() {
     fetchCategories();
   }, []);
 
+  const handleAccountNavigation = async (event, tab, closeMobileMenu = false) => {
+    event.preventDefault();
+
+    if (closeMobileMenu) setIsMenuOpen(false);
+
+    try {
+      const response = await fetch('/api/Pages/Profile');
+      const data = await response.json();
+
+      if (data.role === 'User' || data.role === 'Admin') {
+        router.push(`/Pages/Profile?tab=${tab}`);
+      } else {
+        router.push('/auth/login');
+      }
+    } catch (error) {
+      console.error('Error checking authentication:', error);
+      router.push('/auth/login');
+    }
+  };
+
   return (
     <>
       <style>{`
@@ -461,10 +481,10 @@ export default function Navbar() {
               <button className="zj-nav-icon-btn" onClick={() => setShowSearch(!showSearch)} aria-label="Search">
                 {showSearch ? <X size={20} /> : <Search size={20} />}
               </button>
-              <Link href="/Pages/Profile?tab=profile" className="zj-nav-icon-btn" aria-label="Profile">
+              <Link href="/Pages/Profile?tab=profile" className="zj-nav-icon-btn" aria-label="Profile" onClick={(event) => handleAccountNavigation(event, 'profile')}>
                 <User size={20} />
               </Link>
-              <Link href="/Pages/Profile?tab=wishlist" className="zj-nav-icon-btn" aria-label="Wishlist">
+              <Link href="/Pages/Profile?tab=wishlist" className="zj-nav-icon-btn" aria-label="Wishlist" onClick={(event) => handleAccountNavigation(event, 'wishlist')}>
                 <Heart size={20} />
               </Link>
               <Link href="/Pages/cart" className="zj-nav-icon-btn" aria-label="Cart">
@@ -600,14 +620,14 @@ export default function Navbar() {
         <div style={{ display: 'flex', flexDirection: 'column', gap: '16px', marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #f0ebe4' }}>
           <Link 
             href="/Pages/Profile?tab=profile"
-            onClick={() => setIsMenuOpen(false)}
+            onClick={(event) => handleAccountNavigation(event, 'profile', true)}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
           >
             <User size={18} /> Profile / Account
           </Link>
           <Link 
             href="/Pages/Profile?tab=wishlist"
-            onClick={() => setIsMenuOpen(false)}
+            onClick={(event) => handleAccountNavigation(event, 'wishlist', true)}
             style={{ display: 'flex', alignItems: 'center', gap: '12px', textDecoration: 'none', fontFamily: 'Montserrat, sans-serif', textTransform: 'uppercase', fontSize: '13px', fontWeight: 500, color: '#1a1a1a', padding: '6px 0', textAlign: 'left' }}
           >
             <Heart size={18} /> Wishlist

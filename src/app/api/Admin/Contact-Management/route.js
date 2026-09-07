@@ -12,7 +12,13 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        const inquiries = await Inquiry.find().sort({ _id: -1 }).lean();
+        const url = new URL(req.url);
+        const page = Math.max(parseInt(url.searchParams.get("page") || "1", 10), 1);
+        const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "20", 10), 1), 100);
+        const skip = (page - 1) * limit;
+
+        const totalInquiries = await Inquiry.countDocuments();
+        const inquiries = await Inquiry.find().sort({ _id: -1 }).skip(skip).limit(limit).lean();
 
 
         const userIds = inquiries.map(i => i.user_id).filter(Boolean);
@@ -50,7 +56,13 @@ export async function GET(req) {
 
         return NextResponse.json({
             success: true,
-            data
+            data,
+            pagination: {
+                totalInquiries,
+                totalPages: Math.ceil(totalInquiries / limit),
+                currentPage: page,
+                limit
+            }
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Inquiry Data:", error);

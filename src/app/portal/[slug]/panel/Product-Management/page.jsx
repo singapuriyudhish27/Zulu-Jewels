@@ -109,6 +109,7 @@ export default function ProductManagementPage() {
 
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [totalProductsServer, setTotalProductsServer] = useState(0);
   const [pageSize, setPageSize] = useState(20);
 
   const fetchData = async (page = 1) => {
@@ -124,6 +125,7 @@ export default function ProductManagementPage() {
         if (result.pagination) {
           setTotalPages(result.pagination.totalPages || 1);
           setCurrentPage(result.pagination.currentPage || 1);
+          setTotalProductsServer(result.pagination.totalProducts || 0);
         }
       } else {
         console.error("Failed to fetch products:", result.message);
@@ -318,7 +320,7 @@ export default function ProductManagementPage() {
       const data = await res.json();
       if (data.success) {
         // Refresh categories
-        const catRes = await fetch('/api/Admin/Product-Management', { credentials: 'include' });
+        const catRes = await fetch('/api/Admin/Product-Management/Category', { credentials: 'include' });
         const catData = await catRes.json();
         if (catData.success) {
             setCategoriesData(catData.categories || []);
@@ -1017,7 +1019,7 @@ export default function ProductManagementPage() {
             {totalPages > 1 && (
               <div className="pagination-wrap" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '16px', padding: '12px 24px', borderTop: '1px solid #eee' }}>
                 <span style={{ fontSize: '13px', color: '#666' }}>
-                  Showing Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong>
+                  Showing Page <strong>{currentPage}</strong> of <strong>{totalPages}</strong> {totalProductsServer > 0 ? `(${totalProductsServer} total products)` : ''}
                 </span>
                 <div style={{ display: 'flex', gap: '8px' }}>
                   <button 

@@ -15,7 +15,11 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        const reviews = await Review.find().sort({ created_at: -1 }).limit(100).lean();
+        const reviews = await Review.find()
+            .select('_id user_id order_id rating review_message created_at')
+            .sort({ created_at: -1 })
+            .limit(100)
+            .lean();
 
         const userIds = reviews.map(r => r.user_id).filter(Boolean);
 
@@ -42,7 +46,9 @@ export async function GET(req) {
         const orderIds = reviews.map(r => r.order_id).filter(Boolean);
 
         // Fetch order items in bulk
-        const orderItems = await OrderItem.find({ order_id: { $in: orderIds } }).lean();
+        const orderItems = await OrderItem.find({ order_id: { $in: orderIds } })
+            .select('_id order_id product_id')
+            .lean();
 
         const productIds = orderItems.map(oi => oi.product_id).filter(Boolean);
 

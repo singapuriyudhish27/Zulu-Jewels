@@ -29,13 +29,26 @@ export async function GET(req) {
     try {
         await connectDB();
 
-        const orders = await Order.find().sort({ created_at: -1 }).limit(100).lean();
+        const url = new URL(req.url);
+        const page = Math.max(parseInt(url.searchParams.get("page") || "1", 10), 1);
+        const limit = Math.min(Math.max(parseInt(url.searchParams.get("limit") || "20", 10), 1), 100);
+        const skip = (page - 1) * limit;
+
+        const totalOrders = await Order.countDocuments();
+        const orders = await Order.find()
+            .select('_id customer_id order_date payment_method is_paid status created_at is_refunded shipping_partner tracking_url expected_delivery_date delivery_received delivery_confirmed_at receipt_url shipping_address')
+            .sort({ created_at: -1 })
+            .skip(skip)
+            .limit(limit)
+            .lean();
 
 
         const customerIds = orders.map(o => o.customer_id).filter(Boolean);
 
         // Fetch customers in bulk
-        const customers = await Customer.find({ _id: { $in: customerIds } }).lean();
+        const customers = await Customer.find({ _id: { $in: customerIds } })
+            .select('_id user_id customer_name location')
+            .lean();
         const customersMap = {};
         for (const c of customers) {
             customersMap[c._id.toString()] = c;
@@ -57,13 +70,16 @@ export async function GET(req) {
 
         // Fetch order items in bulk
         const orderItems = await OrderItem.find({ order_id: { $in: orderIds } })
+            .select('_id order_id product_id variant_id quantity price')
             .sort({ _id: 1 })
             .lean();
 
         const productIds = orderItems.map(oi => oi.product_id).filter(Boolean);
 
         // Fetch products in bulk
-        const products = await Product.find({ _id: { $in: productIds } }).lean();
+        const products = await Product.find({ _id: { $in: productIds } })
+            .select('_id name price category_id')
+            .lean();
         const productsMap = {};
         for (const p of products) {
             productsMap[p._id.toString()] = p;
@@ -72,7 +88,9 @@ export async function GET(req) {
         const categoryIds = products.map(p => p.category_id).filter(Boolean);
 
         // Fetch categories in bulk
-        const categories = await Category.find({ _id: { $in: categoryIds } }).lean();
+        const categories = await Category.find({ _id: { $in: categoryIds } })
+            .select('_id name')
+            .lean();
         const categoriesMap = {};
         for (const cat of categories) {
             categoriesMap[cat._id.toString()] = { id: cat._id, name: cat.name };
@@ -81,7 +99,9 @@ export async function GET(req) {
         const variantIds = orderItems.map(oi => oi.variant_id).filter(Boolean);
 
         // Fetch variants in bulk
-        const variants = await ProductVariant.find({ _id: { $in: variantIds } }).lean();
+        const variants = await ProductVariant.find({ _id: { $in: variantIds } })
+            .select('_id material')
+            .lean();
         const variantsMap = {};
         for (const v of variants) {
             variantsMap[v._id.toString()] = v.material;
@@ -155,6 +175,12 @@ export async function GET(req) {
             data: {
                 recent_orders: recentOrders,
             },
+            pagination: {
+                totalOrders,
+                totalPages: Math.ceil(totalOrders / limit),
+                currentPage: page,
+                limit
+            }
         }, { status: 200 });
     } catch (error) {
         console.error("Error Getting Orders Data:", error);

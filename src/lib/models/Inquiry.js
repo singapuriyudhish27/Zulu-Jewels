@@ -7,4 +7,7 @@ const InquirySchema = new mongoose.Schema({
   status: { type: String, default: 'Unread' },
 }, { timestamps: { createdAt: 'created_at', updatedAt: false } });
 
+InquirySchema.index({ created_at: -1 });
+InquirySchema.index({ status: 1 });
+
 export default mongoose.models.Inquiry || mongoose.model('Inquiry', InquirySchema);
