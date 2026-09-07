@@ -7,11 +7,6 @@ import Product from "@/lib/models/Product";
 import ProductVariant from "@/lib/models/ProductVariant";
 import CartItem from "@/lib/models/CartItem";
 
-if (!process.env.STRIPE_SECRET_KEY) {
-    throw new Error('[Stripe] STRIPE_SECRET_KEY environment variable is not configured.');
-}
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 const ALLOWED_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY', 'CHF', 'NZD', 'MYR', 'HKD', 'ZAR', 'SAR', 'THB'];
 
 // Helper function to extract user from session cookie
@@ -84,6 +79,12 @@ export async function POST(req) {
     if (finalAmount <= 0) {
         return NextResponse.json({ error: "Invalid payment amount calculated" }, { status: 400 });
     }
+
+    if (!process.env.STRIPE_SECRET_KEY) {
+        return NextResponse.json({ error: "Stripe is not configured on the server." }, { status: 500 });
+    }
+
+    const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
     const paymentIntent = await stripe.paymentIntents.create({
       amount: Math.round(finalAmount * 100),

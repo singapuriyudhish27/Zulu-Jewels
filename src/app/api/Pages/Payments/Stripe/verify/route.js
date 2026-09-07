@@ -4,8 +4,6 @@ import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
 import { processOrderSuccess } from "@/lib/orderUtils";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
-
 // Helper function to extract user from session cookie
 async function getUserFromCookie() {
     const cookieStore = await cookies();
@@ -30,6 +28,12 @@ export async function POST(req) {
         if (!paymentIntentId) {
             return NextResponse.json({ message: "Missing paymentIntentId" }, { status: 400 });
         }
+
+        if (!process.env.STRIPE_SECRET_KEY) {
+            return NextResponse.json({ message: "Stripe is not configured on the server." }, { status: 500 });
+        }
+
+        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
 
         // Retrieve payment intent from Stripe to check status and metadata
         const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);

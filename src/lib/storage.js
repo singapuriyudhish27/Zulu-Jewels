@@ -1,16 +1,16 @@
 import { v2 as cloudinary } from 'cloudinary';
 
-// Guard: fail fast if Cloudinary is not configured
-if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
-  throw new Error('[Storage] Cloudinary environment variables are not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
-}
+function ensureCloudinaryConfigured() {
+  if (!process.env.CLOUDINARY_CLOUD_NAME || !process.env.CLOUDINARY_API_KEY || !process.env.CLOUDINARY_API_SECRET) {
+    throw new Error('[Storage] Cloudinary environment variables are not configured. Set CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, and CLOUDINARY_API_SECRET.');
+  }
 
-// Configure Cloudinary
-cloudinary.config({
-  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-  api_key: process.env.CLOUDINARY_API_KEY,
-  api_secret: process.env.CLOUDINARY_API_SECRET,
-});
+  cloudinary.config({
+    cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+    api_key: process.env.CLOUDINARY_API_KEY,
+    api_secret: process.env.CLOUDINARY_API_SECRET,
+  });
+}
 
 const ALLOWED_MIME_TYPES = [
   'image/jpeg',
@@ -32,6 +32,7 @@ const MAX_FILE_SIZE = 100 * 1024 * 1024; // 15MB
  * @returns {Promise<string>} - The secure URL of the uploaded image
  */
 async function uploadToCloudinary(file, folder) {
+  ensureCloudinaryConfigured();
   let buffer;
   let mimeType = '';
   let size = 0;
