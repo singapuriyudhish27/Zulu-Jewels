@@ -124,6 +124,7 @@ export default function OrderManagementPage() {
 
     fetchOrders(currentPage);
     fetchShippingData();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   useEffect(() => {

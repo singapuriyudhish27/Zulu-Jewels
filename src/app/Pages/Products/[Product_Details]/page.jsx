@@ -14,6 +14,7 @@ import PageLoader from '@/components/common/PageLoader';
 import { useCurrency } from '@/context/CurrencyContext';
 
 const LocationMap = dynamic(() => import('@/components/map/LocationMap'), { ssr: false });
+const StripeModal = dynamic(() => import('@/components/checkout/StripeModal'), { ssr: false });
 
 const REVIEWS = [
   { id: 1, name: "Priya Sharma", rating: 5, date: "2 days ago", text: "This ring is absolutely gorgeous! The diamond sparkles beautifully and the quality is exceptional. Received so many compliments already.", helpful: 128, avatar: "PS" },
@@ -2392,30 +2393,29 @@ export default function ProductDetailsPage() {
       {showStripeModal && stripeClientSecret && (
         <div className="pd-modal-overlay" onClick={e => e.target === e.currentTarget && setShowStripeModal(false)}>
           <div className="pd-modal">
-            <Elements stripe={stripePromise} options={{ clientSecret: stripeClientSecret }}>
-              <StripeCheckoutForm
-                onSuccess={async (paymentIntent) => {
-                  try {
-                    const verifyRes = await fetch('/api/Pages/Payments/Stripe/verify', {
-                      method: 'POST',
-                      headers: { 'Content-Type': 'application/json' },
-                      credentials: 'include',
-                      body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
-                    });
-                    const verifyData = await verifyRes.json();
-                    if (!verifyRes.ok) {
-                      throw new Error(verifyData.message || 'Verification failed');
-                    }
-                    setShowStripeModal(false);
-                    toast.success('Payment Successful! Thank you for your order.');
-                  } catch (err) {
-                    console.error("Order creation failed:", err);
-                    toast.error(err.message || 'Payment succeeded but order creation failed. Please contact support.');
+            <StripeModal
+              clientSecret={stripeClientSecret}
+              onSuccess={async (paymentIntent) => {
+                try {
+                  const verifyRes = await fetch('/api/Pages/Payments/Stripe/verify', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ paymentIntentId: paymentIntent.id }),
+                  });
+                  const verifyData = await verifyRes.json();
+                  if (!verifyRes.ok) {
+                    throw new Error(verifyData.message || 'Verification failed');
                   }
-                }}
-                onClose={() => setShowStripeModal(false)}
-              />
-            </Elements>
+                  setShowStripeModal(false);
+                  toast.success('Payment Successful! Thank you for your order.');
+                } catch (err) {
+                  console.error("Order creation failed:", err);
+                  toast.error(err.message || 'Payment succeeded but order creation failed. Please contact support.');
+                }
+              }}
+              onClose={() => setShowStripeModal(false)}
+            />
           </div>
         </div>
       )}

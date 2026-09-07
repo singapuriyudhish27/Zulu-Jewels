@@ -1435,7 +1435,7 @@ export default function AboutPage() {
             <span className="ab-sec-eyebrow">The ZULU Curation</span>
             <h2 className="ab-sec-title">Explore Our Collections</h2>
             <p className="ab-sec-subtitle">
-              Sleek contours, brilliant gemstones, and structural integrity made for life's celebrated milestones.
+              Sleek contours, brilliant gemstones, and structural integrity made for life&apos;s celebrated milestones.
             </p>
           </div>
 
@@ -1644,7 +1644,7 @@ export default function AboutPage() {
             <span className="ab-sec-eyebrow">Client Journals</span>
             <h2 className="ab-sec-title">Bespoke Stories</h2>
             <p className="ab-sec-subtitle">
-              Heirlooms co-created with ZULU that capture life's most singular milestones.
+              Heirlooms co-created with ZULU that capture life&apos;s most singular milestones.
             </p>
           </div>
 

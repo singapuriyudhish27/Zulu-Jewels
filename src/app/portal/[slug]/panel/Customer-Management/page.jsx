@@ -86,6 +86,7 @@ export default function CustomerManagementPage() {
 
   useEffect(() => {
     fetchCustomers(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   // Format currency helper

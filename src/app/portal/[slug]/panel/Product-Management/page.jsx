@@ -139,6 +139,7 @@ export default function ProductManagementPage() {
 
   useEffect(() => {
     fetchData(currentPage);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentPage]);
 
   // Format currency helper
@@ -1321,6 +1322,7 @@ export default function ProductManagementPage() {
                   </div>
                   {categoryForm.imagePreview && (
                     <div style={{ position: "relative", width: "100%", height: "120px", borderRadius: "8px", overflow: "hidden", border: "1px solid #ddd" }}>
+                      {/* eslint-disable-next-line @next/next/no-img-element */}
                       <img src={categoryForm.imagePreview} alt="Preview" style={{ width: "100%", height: "100%", objectFit: "cover" }} />
                       <button 
                         type="button" 
@@ -1538,6 +1540,7 @@ export default function ProductManagementPage() {
                         {item.media_type === "video" ? (
                           <div style={{ width: "100%", height: "62px", background: "#f0f0f0", display: "flex", alignItems: "center", justifyContent: "center" }}><CheckCircle2 size={16} color="#666" /></div>
                         ) : (
+                          // eslint-disable-next-line @next/next/no-img-element
                           <img src={item.preview} alt="preview" style={{ width: "100%", height: "62px", objectFit: "cover" }} />
                         )}
                         <div style={{ position: "absolute", top: "2px", right: "2px", display: "flex", gap: "2px" }}>
