@@ -41,6 +41,7 @@ export default function ProductDetailsPage() {
   const router = useRouter();
   const pathname = usePathname();
   const params = useParams();
+  const searchParams = useSearchParams();
   const { formatPrice, currencyCode } = useCurrency();
   const categoryId = searchParams.get('category');
   const productsHref = categoryId

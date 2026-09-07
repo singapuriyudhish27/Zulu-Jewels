@@ -51,15 +51,6 @@ const nextConfig = {
   },
   // Prevent bundling of server-only packages that use Node.js internals
   serverExternalPackages: ["@react-pdf/renderer"],
-  // async redirects() {
-  //   return [
-  //     {
-  //       source: '/Pages/About',
-  //       destination: '/Pages/about',
-  //       permanent: true,
-  //     },
-  //   ];
-  // },
   async headers() {
     return [
       {
