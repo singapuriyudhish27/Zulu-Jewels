@@ -66,7 +66,7 @@ export default function AboutPage() {
         .ab-hero {
           position: relative;
           min-height: 85vh;
-          background: #000000 url('/About Page/Header/Frame 37391.png') no-repeat center center;
+          background: #000000 url('/about Page/Header/Frame 37391.png') no-repeat center center;
           background-size: cover;
           display: flex;
           align-items: center;
@@ -1229,7 +1229,7 @@ export default function AboutPage() {
             </div>
             <div className="ab-founder-image-wrapper ab-animate">
               <Image 
-                src="/About Page/founder_portrait.png" 
+                src="/about Page/founder_portrait.png" 
                 alt="Yudhish Zulu - Founder of ZULU Jewellers" 
                 width={500}
                 height={625}
@@ -1319,9 +1319,9 @@ export default function AboutPage() {
                 muted 
                 playsInline
                 controls={false}
-                poster="/About Page/Craftmentship Video.png"
+                poster="/about Page/Craftmentship Video.png"
               >
-                <source src="/About Page/Craftmentship Video.mp4" type="video/mp4" />
+                <source src="/about Page/Craftmentship Video.mp4" type="video/mp4" />
                 Your browser does not support the video tag.
               </video>
             </div>
@@ -1491,7 +1491,7 @@ export default function AboutPage() {
             </div>
 
             <div className="ab-col-card ab-animate" style={{ transitionDelay: '500ms' }}>
-              <Image src="/About Page/Expert/Rectangle 37.png" alt="Wedding Collection" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
+              <Image src="/about Page/Expert/Rectangle 37.png" alt="Wedding Collection" fill sizes="(max-width: 768px) 100vw, 33vw" className="ab-col-img ab-animate-img" style={{ objectFit: 'cover' }} />
               <div className="ab-col-overlay">
                 <h3 className="ab-col-card-title">Wedding Set</h3>
                 <Link href="/Pages/Products?category=wedding" className="ab-col-link">

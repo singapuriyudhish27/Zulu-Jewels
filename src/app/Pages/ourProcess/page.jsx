@@ -126,7 +126,7 @@ export default function BespokeJourneyPage() {
     {
       name: "Devendra Nayak",
       role: "Chief Gemologist / The Purity Curator",
-      image: "/About Page/founder_portrait.png",
+      image: "/about Page/founder_portrait.png",
       story: "Devendra travels to diamond cutting centers worldwide to hand-select solitaires. His strict criteria reject 98% of the stones he inspects, ensuring only the top 2% grace ZULU designs."
     }
   ];

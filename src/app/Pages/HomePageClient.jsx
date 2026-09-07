@@ -1779,7 +1779,7 @@ export default function HomePageClient({ initialSections = [], initialCollection
         <div className="zj-cta-banner-wrap">
           <div className="zj-cta-banner">
             <video 
-              src="/About Page/Craftmentship Video.mp4" 
+              src="/about Page/Craftmentship Video.mp4" 
               autoPlay 
               loop 
               muted 

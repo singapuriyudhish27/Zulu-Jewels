@@ -571,7 +571,7 @@ export default function CustomPage() {
               </div>
             </div>
             <div className="cu-gallery-item cu-animate" style={{ transitionDelay: '400ms' }}>
-              <Image src="/About Page/Header/Frame 37391.png" alt="Timeless Classic" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
+              <Image src="/about Page/Header/Frame 37391.png" alt="Timeless Classic" fill sizes="(max-width: 768px) 100vw, 33vw" className="cu-gallery-img cu-animate-img" style={{ objectFit: 'cover' }} />
               <div className="cu-gallery-overlay">
                 <div className="cu-gallery-overlay-content">
                   <h3 className="cu-gallery-title">Timeless Classic</h3>
