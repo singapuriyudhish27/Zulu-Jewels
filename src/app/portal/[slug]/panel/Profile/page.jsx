@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { Settings, RefreshCw, Copy, Wrench } from 'lucide-react';
+import { Settings, RefreshCw, Copy, Wrench, FileText, ShieldCheck, Upload, Trash2, ExternalLink, FileDown } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import toast from 'react-hot-toast';
 import PageLoader from '@/components/common/PageLoader';
@@ -22,6 +22,17 @@ export default function ProfilePage() {
   const [maintenanceStartsAt, setMaintenanceStartsAt] = useState('');
   const [maintenanceEndsAt, setMaintenanceEndsAt] = useState('');
   const [maintenanceStatus, setMaintenanceStatus] = useState('inactive');
+
+  // Legal Policies State
+  const [policies, setPolicies] = useState({
+    terms: { page_name: 'Terms & Conditions', content: '', pdf_url: null, status: true },
+    privacy: { page_name: 'Privacy Policy', content: '', pdf_url: null, status: true },
+  });
+  const [selectedPolicySlug, setSelectedPolicySlug] = useState('terms');
+  const [policyLoading, setPolicyLoading] = useState(false);
+  const [policySaving, setPolicySaving] = useState(false);
+  const [pdfFile, setPdfFile] = useState(null);
+  const [removePdfFlag, setRemovePdfFlag] = useState(false);
   const router = useRouter();
 
   const toDatetimeLocal = (iso) => {
@@ -100,6 +111,75 @@ export default function ProfilePage() {
     toast.success('Admin portal URL copied');
   };
 
+  const fetchPolicies = async () => {
+    setPolicyLoading(true);
+    try {
+      const res = await fetch('/api/Admin/Policies', { credentials: 'include' });
+      const data = await res.json();
+      if (res.ok && data.success && data.policies) {
+        setPolicies(data.policies);
+      }
+    } catch (err) {
+      console.error('Failed to load policies:', err);
+    } finally {
+      setPolicyLoading(false);
+    }
+  };
+
+  const handlePolicyFieldChange = (field, value) => {
+    setPolicies(prev => ({
+      ...prev,
+      [selectedPolicySlug]: {
+        ...prev[selectedPolicySlug],
+        [field]: value,
+      }
+    }));
+  };
+
+  const handleSavePolicy = async () => {
+    setPolicySaving(true);
+    try {
+      const current = policies[selectedPolicySlug] || {};
+      const formData = new FormData();
+      formData.append('slug', selectedPolicySlug);
+      formData.append('page_name', current.page_name || (selectedPolicySlug === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'));
+      formData.append('content', current.content || '');
+      formData.append('status', String(current.status !== false));
+
+      if (pdfFile) {
+        formData.append('pdf_file', pdfFile);
+      } else if (removePdfFlag) {
+        formData.append('remove_pdf', 'true');
+      }
+
+      const res = await fetch('/api/Admin/Policies', {
+        method: 'POST',
+        credentials: 'include',
+        body: formData,
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success) {
+        throw new Error(data.message || 'Failed to save policy');
+      }
+
+      toast.success(data.message || 'Policy saved successfully!');
+      setPdfFile(null);
+      setRemovePdfFlag(false);
+      if (data.policy) {
+        setPolicies(prev => ({
+          ...prev,
+          [selectedPolicySlug]: data.policy,
+        }));
+      }
+    } catch (err) {
+      console.error('Error saving policy:', err);
+      toast.error(err.message || 'Failed to save policy');
+    } finally {
+      setPolicySaving(false);
+    }
+  };
+
   useEffect(() => {
     //Backend API Call
     const fetchProfile = async () => {
@@ -131,6 +211,7 @@ export default function ProfilePage() {
     }
     fetchProfile();
     fetchAdminSettings();
+    fetchPolicies();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [router]);
 
@@ -389,6 +470,61 @@ export default function ProfilePage() {
           transform: translateX(24px);
         }
 
+        /* Policy Management Styles */
+        .policy-tabs {
+          display: flex;
+          gap: 12px;
+          margin-bottom: 24px;
+          border-bottom: 1px solid var(--border-light);
+          padding-bottom: 12px;
+        }
+        .policy-tab-btn {
+          display: inline-flex;
+          align-items: center;
+          gap: 8px;
+          padding: 8px 18px;
+          border-radius: 6px;
+          border: 1px solid var(--border-light);
+          background: #fafafa;
+          color: #555;
+          font-size: 13px;
+          font-weight: 500;
+          cursor: pointer;
+          transition: all 0.2s ease;
+        }
+        .policy-tab-btn:hover {
+          border-color: #aaa;
+        }
+        .policy-tab-btn.active {
+          background: #1a1a1a;
+          color: #fff;
+          border-color: #1a1a1a;
+        }
+        .policy-meta-bar {
+          display: flex;
+          justify-content: space-between;
+          align-items: center;
+          background: #fafafa;
+          border: 1px solid var(--border-light);
+          border-radius: 8px;
+          padding: 12px 16px;
+          margin-bottom: 20px;
+          flex-wrap: wrap;
+          gap: 12px;
+        }
+        .policy-pdf-box {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          padding: 12px 16px;
+          background: #fdfbf7;
+          border: 1px solid #e8dec8;
+          border-radius: 8px;
+          margin-top: 8px;
+          flex-wrap: wrap;
+          gap: 10px;
+        }
+
         /* Responsive */
         @media (max-width: 767px) {
           .form-row {
@@ -617,6 +753,243 @@ export default function ProfilePage() {
                 >
                   {settingsSaving ? 'Saving...' : 'Save Settings'}
                 </button>
+              </div>
+            )}
+          </div>
+
+          {/* Divider */}
+          <div className="profile-divider"></div>
+
+          {/* Legal Policies Section */}
+          <div className="profile-section">
+            <div className="section-header">
+              <h1>Legal & Policies</h1>
+              <p>Upload and manage Terms & Conditions and Privacy Policy for the customer storefront</p>
+            </div>
+
+            {policyLoading ? (
+              <p style={{ color: '#888', fontSize: '14px' }}>Loading policies...</p>
+            ) : (
+              <div>
+                {/* Tabs */}
+                <div className="policy-tabs">
+                  <button
+                    type="button"
+                    className={`policy-tab-btn ${selectedPolicySlug === 'terms' ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedPolicySlug('terms');
+                      setPdfFile(null);
+                      setRemovePdfFlag(false);
+                    }}
+                  >
+                    <FileText size={15} /> Terms & Conditions
+                  </button>
+                  <button
+                    type="button"
+                    className={`policy-tab-btn ${selectedPolicySlug === 'privacy' ? 'active' : ''}`}
+                    onClick={() => {
+                      setSelectedPolicySlug('privacy');
+                      setPdfFile(null);
+                      setRemovePdfFlag(false);
+                    }}
+                  >
+                    <ShieldCheck size={15} /> Privacy Policy
+                  </button>
+                </div>
+
+                {/* Status and Storefront link bar */}
+                <div className="policy-meta-bar">
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '13px', fontWeight: 600, color: '#333' }}>
+                      Storefront Status:
+                    </span>
+                    <span style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '4px',
+                      padding: '4px 10px',
+                      borderRadius: '20px',
+                      fontSize: '11px',
+                      fontWeight: 700,
+                      textTransform: 'uppercase',
+                      background: policies[selectedPolicySlug]?.status !== false ? '#e8f5e9' : '#fff3e0',
+                      color: policies[selectedPolicySlug]?.status !== false ? '#2e7d32' : '#e65100',
+                    }}>
+                      {policies[selectedPolicySlug]?.status !== false ? 'Published (Live)' : 'Draft (Hidden)'}
+                    </span>
+                    <label className="toggle-switch" style={{ marginLeft: '4px' }}>
+                      <input
+                        type="checkbox"
+                        checked={policies[selectedPolicySlug]?.status !== false}
+                        onChange={(e) => handlePolicyFieldChange('status', e.target.checked)}
+                      />
+                      <span className="toggle-slider"></span>
+                    </label>
+                  </div>
+
+                  <a
+                    href={selectedPolicySlug === 'terms' ? '/Pages/terms' : '/Pages/privacy'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: '5px',
+                      color: '#D4AF37',
+                      fontSize: '13px',
+                      fontWeight: 600,
+                      textDecoration: 'none'
+                    }}
+                  >
+                    View Live Page <ExternalLink size={14} />
+                  </a>
+                </div>
+
+                {/* Policy Edit Form */}
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                  <div className="form-group">
+                    <label className="form-label">Page Title</label>
+                    <input
+                      type="text"
+                      className="form-input"
+                      value={policies[selectedPolicySlug]?.page_name || ''}
+                      onChange={(e) => handlePolicyFieldChange('page_name', e.target.value)}
+                      placeholder={selectedPolicySlug === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}
+                    />
+                  </div>
+
+                  <div className="form-group">
+                    <label className="form-label">
+                      Policy Content (HTML / Formatted Text)
+                    </label>
+                    <p style={{ fontSize: '12px', color: '#777', marginTop: '-4px', marginBottom: '4px' }}>
+                      Type or paste your policy sections. Standard HTML tags (&lt;h2&gt;, &lt;h3&gt;, &lt;p&gt;, &lt;ul&gt;, &lt;li&gt;) are fully supported.
+                    </p>
+                    <textarea
+                      className="form-input"
+                      rows={12}
+                      value={policies[selectedPolicySlug]?.content || ''}
+                      onChange={(e) => handlePolicyFieldChange('content', e.target.value)}
+                      placeholder="Enter policy content..."
+                      style={{ resize: 'vertical', fontFamily: 'monospace', fontSize: '13px', lineHeight: '1.5' }}
+                    />
+                  </div>
+
+                  {/* Official PDF Document Upload */}
+                  <div className="form-group">
+                    <label className="form-label">Official PDF Document (Upload Attachment)</label>
+                    <p style={{ fontSize: '12px', color: '#777', marginTop: '-4px', marginBottom: '8px' }}>
+                      Upload an official signed or formatted PDF document. Customers can view or download it directly from the policy page.
+                    </p>
+
+                    {policies[selectedPolicySlug]?.pdf_url && !removePdfFlag ? (
+                      <div className="policy-pdf-box">
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                          <FileDown size={18} color="#D4AF37" />
+                          <span style={{ fontSize: '13px', fontWeight: 600, color: '#2c2c2c' }}>
+                            Current PDF:
+                          </span>
+                          <a
+                            href={policies[selectedPolicySlug].pdf_url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            style={{ fontSize: '13px', color: '#D4AF37', textDecoration: 'underline' }}
+                          >
+                            Download / View PDF
+                          </a>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRemovePdfFlag(true);
+                            setPdfFile(null);
+                          }}
+                          style={{
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '4px',
+                            background: '#fee2e2',
+                            color: '#b91c1c',
+                            border: 'none',
+                            padding: '6px 12px',
+                            borderRadius: '6px',
+                            fontSize: '12px',
+                            fontWeight: 600,
+                            cursor: 'pointer'
+                          }}
+                        >
+                          <Trash2 size={13} /> Remove PDF
+                        </button>
+                      </div>
+                    ) : null}
+
+                    {removePdfFlag && (
+                      <div style={{ fontSize: '12px', color: '#b91c1c', marginTop: '6px', fontStyle: 'italic' }}>
+                        PDF will be removed upon saving. You can also upload a new file below.
+                      </div>
+                    )}
+
+                    <div style={{ marginTop: '10px' }}>
+                      <input
+                        type="file"
+                        accept="application/pdf"
+                        id="policy-pdf-input"
+                        onChange={(e) => {
+                          if (e.target.files && e.target.files[0]) {
+                            setPdfFile(e.target.files[0]);
+                            setRemovePdfFlag(false);
+                          }
+                        }}
+                        style={{ display: 'none' }}
+                      />
+                      <label
+                        htmlFor="policy-pdf-input"
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '8px',
+                          padding: '10px 18px',
+                          border: '1px dashed #D4AF37',
+                          borderRadius: '8px',
+                          background: '#fff9e6',
+                          color: '#8c6d1f',
+                          fontSize: '13px',
+                          fontWeight: 600,
+                          cursor: 'pointer',
+                        }}
+                      >
+                        <Upload size={16} /> {pdfFile ? `Selected: ${pdfFile.name}` : policies[selectedPolicySlug]?.pdf_url && !removePdfFlag ? 'Replace PDF Document' : 'Upload Official PDF Document'}
+                      </label>
+                      {pdfFile && (
+                        <button
+                          type="button"
+                          onClick={() => setPdfFile(null)}
+                          style={{
+                            marginLeft: '10px',
+                            background: 'none',
+                            border: 'none',
+                            color: '#999',
+                            cursor: 'pointer',
+                            fontSize: '12px',
+                            textDecoration: 'underline'
+                          }}
+                        >
+                          Cancel file
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    className="save-btn"
+                    onClick={handleSavePolicy}
+                    disabled={policySaving}
+                    style={{ marginTop: '12px', maxWidth: '240px' }}
+                  >
+                    {policySaving ? 'Saving Policy...' : `Save ${selectedPolicySlug === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}`}
+                  </button>
+                </div>
               </div>
             )}
           </div>

@@ -21,7 +21,8 @@ const ALLOWED_MIME_TYPES = [
   'video/mp4',
   'video/mpeg',
   'video/webm',
-  'video/quicktime'
+  'video/quicktime',
+  'application/pdf'
 ];
 const MAX_FILE_SIZE = 100 * 1024 * 1024; // 15MB
 
@@ -61,7 +62,7 @@ async function uploadToCloudinary(file, folder) {
 
   // Validate mime-type
   if (!mimeType || !ALLOWED_MIME_TYPES.includes(mimeType.toLowerCase())) {
-    throw new Error(`Invalid file type: ${mimeType || 'unknown'}. Only standard images and videos are allowed.`);
+    throw new Error(`Invalid file type: ${mimeType || 'unknown'}. Only images, videos, and PDF documents are allowed.`);
   }
   
   return new Promise((resolve, reject) => {

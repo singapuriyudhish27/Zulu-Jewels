@@ -1,5 +1,6 @@
 'use client';
 
+import Link from 'next/link';
 import { useRouter, usePathname } from 'next/navigation';
 import Image from 'next/image';
 import toast from 'react-hot-toast';
@@ -114,13 +115,15 @@ export default function AdminLayoutContent({ children }) {
         </div>
         <div className="admin-menu">
           {menuItems.map((item) => (
-            <div
+            <Link
               key={item.path}
+              href={item.path}
+              prefetch={true}
               className={`admin-menu-item ${isActive(item.path) ? 'active' : ''}`}
-              onClick={() => router.push(item.path)}
+              onMouseEnter={() => router.prefetch(item.path)}
             >
-              {item.icon} {item.name}
-            </div>
+              {item.icon} <span>{item.name}</span>
+            </Link>
           ))}
           <button className="logout-btn" type="button" onClick={handleLogout}>
             Logout

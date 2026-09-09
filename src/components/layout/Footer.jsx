@@ -454,9 +454,9 @@ export default function Footer() {
           <div className="zj-footer-bottom">
             <p className="zj-footer-copy">© {new Date().getFullYear()} Zulu Jewellers. All rights reserved.</p>
             <div className="zj-footer-legal">
-              <a href="#">Privacy Policy</a>
+              <Link href="/Pages/privacy">Privacy Policy</Link>
               <span style={{ color: '#999', fontSize: '10px' }}>&nbsp;·&nbsp;</span>
-              <a href="#">Terms &amp; Conditions</a>
+              <Link href="/Pages/terms">Terms &amp; Conditions</Link>
               <span style={{ color: '#999', fontSize: '10px' }}>&nbsp;·&nbsp;</span>
               <a href="#">Sitemap</a>
               <span style={{ color: '#999', fontSize: '10px' }}>&nbsp;·&nbsp;</span>
