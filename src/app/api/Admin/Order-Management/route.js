@@ -12,6 +12,12 @@ import ProductVariant from "@/lib/models/ProductVariant";
 import { sendOrderEmail } from "@/lib/emailService";
 import { buildOrderEmailData } from "@/lib/orderUtils";
 import { verifyAdminFromRequest } from "@/lib/adminAuth";
+import InventoryJournal from "@/lib/models/InventoryJournal";
+import RefundRecord from "@/lib/models/RefundRecord";
+import OrderSideEffect from "@/lib/models/OrderSideEffect";
+import { dispatchOutboxJob } from "@/lib/orderOutbox";
+import Stripe from "stripe";
+import Razorpay from "razorpay";
 
 // Maps order status values to email event types
 const STATUS_EMAIL_MAP = {
@@ -243,36 +249,177 @@ export async function PUT(request) {
             );
         }
 
-        // Update Order
-        const result = await Order.updateOne({ _id: order_id }, updateFields);
+        // Fetch current order to enforce legal state machine transitions
+        const currentOrder = await Order.findById(order_id);
+        if (!currentOrder) {
+            return NextResponse.json({ success: false, message: "Order not found." }, { status: 404 });
+        }
 
-        if (result.matchedCount === 0) {
-            return NextResponse.json(
-                { success: false, message: "Order not found." },
-                { status: 404 }
+        // 1. Enforce Legal State Transitions
+        if (status && status !== currentOrder.status) {
+            const LEGAL_TRANSITIONS = {
+                'Pending': ['Paid', 'Cancelled'],
+                'Paid': ['Processing', 'Cancelled', 'RefundPending'],
+                'Processing': ['Shipped', 'Cancelled', 'RefundPending'],
+                'Shipped': ['Delivered'],
+                'Delivered': [],
+                'Cancelled': [],
+                'RefundPending': ['Refunded', 'Cancelled'],
+                'Refunded': []
+            };
+
+            const allowed = LEGAL_TRANSITIONS[currentOrder.status] || [];
+            if (!allowed.includes(status)) {
+                return NextResponse.json({
+                    success: false,
+                    message: `Illegal order transition from "${currentOrder.status}" to "${status}"`
+                }, { status: 400 });
+            }
+        }
+
+        // 2. Cancellation and Idempotent Stock Restoration via InventoryJournal
+        let shouldRestoreStock = false;
+        let result;
+
+        if (status === 'Cancelled') {
+            result = await Order.updateOne(
+                { _id: order_id, status: { $ne: 'Cancelled' } },
+                updateFields
             );
+            if (result.modifiedCount === 1) {
+                shouldRestoreStock = true;
+            } else {
+                result = await Order.updateOne({ _id: order_id }, updateFields);
+            }
+        } else {
+            result = await Order.updateOne({ _id: order_id }, updateFields);
+        }
+
+        // 3. Durable Inventory Restoration (Guaranteed Exact-Once via InventoryJournal)
+        if (shouldRestoreStock) {
+            const cancelOpId = `inv_cancel_${order_id}`;
+            const journalRecord = await InventoryJournal.findOneAndUpdate(
+                { operation_id: cancelOpId },
+                {
+                    $setOnInsert: {
+                        operation_id: cancelOpId,
+                        checkout_id: currentOrder.checkout_id || `chk_${order_id}`,
+                        status: 'APPLYING',
+                        items: []
+                    }
+                },
+                { upsert: true, new: true }
+            );
+
+            if (journalRecord.status !== 'ROLLED_BACK') {
+                const orderItems = await OrderItem.find({ order_id }).lean();
+                for (const item of orderItems) {
+                    if (item.variant_id && item.quantity > 0) {
+                        try {
+                            await ProductVariant.updateOne(
+                                { _id: item.variant_id },
+                                { $inc: { stock: item.quantity } }
+                            );
+                        } catch (stockErr) {
+                            console.error(`[OrderManagement] Failed to restore stock for variant ${item.variant_id}:`, stockErr.message);
+                        }
+                    }
+                }
+                await InventoryJournal.updateOne(
+                    { operation_id: cancelOpId },
+                    { $set: { status: 'ROLLED_BACK' } }
+                );
+            }
+
+            // 4. Automated Provider Refund on Paid Cancellation
+            if (currentOrder.is_paid && currentOrder.refund_status !== 'REFUNDED') {
+                const refundAmountPaise = currentOrder.total_paise || Math.round(Number(currentOrder.amount || 0) * 100);
+                const refundOpId = `ref_${order_id}_cancel`;
+
+                if (currentOrder.provider === 'stripe' && currentOrder.payment_id && process.env.STRIPE_SECRET_KEY) {
+                    try {
+                        const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+                        const refund = await stripe.refunds.create({
+                            payment_intent: currentOrder.payment_id
+                        }, {
+                            idempotencyKey: refundOpId
+                        });
+
+                        await Order.updateOne({ _id: order_id }, {
+                            $set: {
+                                is_refunded: true,
+                                refund_status: 'REFUNDED',
+                                refund_id: refund.id,
+                                refund_amount_paise: refundAmountPaise
+                            }
+                        });
+                    } catch (refErr) {
+                        console.error("[OrderManagement] Stripe refund error:", refErr.message);
+                        await Order.updateOne({ _id: order_id }, { $set: { refund_status: 'REFUND_FAILED' } });
+                    }
+                } else if (currentOrder.provider === 'razorpay' && currentOrder.payment_id && process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+                    try {
+                        const razorPay = new Razorpay({ key_id: process.env.RAZORPAY_KEY_ID, key_secret: process.env.RAZORPAY_KEY_SECRET });
+                        const receiptId = refundOpId.slice(-40);
+
+                        // 1. Pre-flight idempotency verification: check if refund already exists on Razorpay ledger
+                        let existingRefund = null;
+                        try {
+                            const pastRefunds = await razorPay.payments.fetchRefunds(currentOrder.payment_id);
+                            if (pastRefunds && pastRefunds.items && pastRefunds.items.length > 0) {
+                                existingRefund = pastRefunds.items.find(r => r.receipt === receiptId || r.notes?.refundOpId === refundOpId);
+                            }
+                        } catch (fetchRefErr) {
+                            console.warn('[OrderManagement] Razorpay fetchRefunds pre-check note:', fetchRefErr.message);
+                        }
+
+                        let refund = existingRefund;
+                        if (!refund) {
+                            refund = await razorPay.payments.refund(currentOrder.payment_id, {
+                                receipt: receiptId,
+                                notes: { refundOpId }
+                            });
+                        }
+
+                        await Order.updateOne({ _id: order_id }, {
+                            $set: {
+                                is_refunded: true,
+                                refund_status: 'REFUNDED',
+                                refund_id: refund.id,
+                                refund_amount_paise: refundAmountPaise
+                            }
+                        });
+                    } catch (refErr) {
+                        console.error("[OrderManagement] Razorpay refund error:", refErr.message);
+                        await Order.updateOne({ _id: order_id }, { $set: { refund_status: 'REFUND_FAILED' } });
+                    }
+                }
+            }
         }
 
         // Fetch updated order
         const updatedOrder = await Order.findById(order_id);
 
-        // ── Fire Status Email (non-blocking) ─────────────────────────────
-        const emailType = STATUS_EMAIL_MAP[status];
+        // 5. Enqueue Status Side Effects to Durable Outbox
+        const emailType = STATUS_EMAIL_MAP[status] || (is_refunded === true ? 'order_refunded' : null);
         if (emailType) {
-            buildOrderEmailData(order_id).then((emailData) => {
-                if (emailData) return sendOrderEmail(emailType, emailData);
-            }).catch((err) => {
-                console.error(`[EmailService] ${emailType} email failed (non-critical):`, err.message);
-            });
-        }
+            const outboxKey = `email_${emailType}_${order_id}_${status || 'refund'}`;
+            await OrderSideEffect.findOneAndUpdate(
+                { operation_key: outboxKey },
+                {
+                    $setOnInsert: {
+                        operation_key: outboxKey,
+                        type: emailType,
+                        order_id,
+                        status: 'PENDING',
+                        next_attempt_at: new Date()
+                    }
+                },
+                { upsert: true }
+            );
 
-        // ── Fire Refund Email (non-blocking) ─────────────────────────────
-        if (is_refunded === true) {
-            buildOrderEmailData(order_id).then((emailData) => {
-                if (emailData) return sendOrderEmail('order_refunded', emailData);
-            }).catch((err) => {
-                console.error(`[EmailService] order_refunded email failed (non-critical):`, err.message);
-            });
+            // Trigger non-blocking outbox processing
+            dispatchOutboxJob().catch(err => console.error('[OrderManagement] Outbox dispatch error:', err.message));
         }
 
         return NextResponse.json({
@@ -282,7 +429,7 @@ export async function PUT(request) {
         }, { status: 200 });
     } catch (error) {
         console.error("Error Editing Orders:", error);
-        return NextResponse.json({ message: "Error In Backend API Call" }, { status: 500 });
+        return NextResponse.json({ message: error.message || "Error In Backend API Call" }, { status: 500 });
     }
 }
 

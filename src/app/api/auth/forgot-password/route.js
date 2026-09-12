@@ -18,8 +18,9 @@ export async function POST(req) {
             return NextResponse.json({ message: "Email is required" }, { status: 400 });
         }
 
+        const normalizedEmail = email.toLowerCase().trim();
         const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        if (!EMAIL_REGEX.test(email)) {
+        if (!EMAIL_REGEX.test(normalizedEmail)) {
             return NextResponse.json({ message: "Invalid email format" }, { status: 400 });
         }
 
@@ -27,7 +28,7 @@ export async function POST(req) {
         await connectDB();
 
         //Check User Exists Or Not
-        const user = await User.findOne({ email });
+        const user = await User.findOne({ email: normalizedEmail });
 
         // Generic response to prevent user enumeration
         const genericResponse = NextResponse.json(
@@ -56,7 +57,7 @@ export async function POST(req) {
 
         const mailOptions = {
             from: `"Zulu Jewellers Support" <${process.env.SMTP_USER}>`,
-            to: email,
+            to: user.email,
             subject: "Reset Your Password - Zulu Jewellers",
             html: `
                 <div style="font-family: Arial, sans-serif; line-height: 1.6; max-width: 600px; margin: 0 auto; padding: 20px; border: 1px solid #f0eeb3; border-radius: 5px;">

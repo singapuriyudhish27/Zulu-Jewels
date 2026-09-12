@@ -72,7 +72,12 @@ export async function sendOrderEmail(type, data) {
         }
     }
 
-    const transporter = getTransporter();
-    const info = await transporter.sendMail(mailOptions);
-    console.log(`[EmailService] ✅ "${type}" email sent to ${toEmail} | MessageId: ${info.messageId}`);
+    try {
+        const transporter = getTransporter();
+        const info = await transporter.sendMail(mailOptions);
+        console.log(`[EmailService] ✅ "${type}" email sent to ${toEmail} | MessageId: ${info.messageId}`);
+    } catch (err) {
+        console.error(`[EmailService] ❌ Failed to send "${type}" email to ${toEmail}:`, err.message);
+        // Do not rethrow - email failures should not crash order placement or status update flows
+    }
 }

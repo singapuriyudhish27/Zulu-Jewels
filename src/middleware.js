@@ -58,8 +58,13 @@ async function getMaintenanceActive(request) {
 
   cachedMaintenance.inFlight = (async () => {
     try {
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 2000); // 2s timeout
+
       const url = new URL('/api/maintenance/status', request.url);
-      const res = await fetch(url, { next: { revalidate: 30 } });
+      const res = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
       if (!res.ok) {
         cachedMaintenance.active = false;
         cachedMaintenance.expiresAt = now + 10000;
@@ -71,6 +76,7 @@ async function getMaintenanceActive(request) {
       cachedMaintenance.expiresAt = now + MAINTENANCE_CACHE_TTL_MS;
       return active;
     } catch {
+      // On timeout or network error: fail open (maintenance = inactive) and cache briefly
       cachedMaintenance.active = false;
       cachedMaintenance.expiresAt = now + 10000;
       return false;

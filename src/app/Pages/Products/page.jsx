@@ -31,7 +31,9 @@ async function getProductsData(categoryId, search) {
     // Build product filter
     const productFilter = { is_deleted: false, category_id: { $in: catIds } };
     if (search) {
-      const regex = new RegExp(search, 'i');
+      // Escape special regex characters to prevent ReDoS
+      const escapedSearch = search.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+      const regex = new RegExp(escapedSearch, 'i');
       productFilter.$or = [{ name: regex }, { description: regex }];
     }
 

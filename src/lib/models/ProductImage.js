@@ -9,7 +9,9 @@ const ProductImageSchema = new mongoose.Schema({
   is_hover: { type: Boolean, default: false },
 });
 
+ProductImageSchema.index({ product_id: 1, variant_id: 1 });
 ProductImageSchema.index({ product_id: 1 });
 ProductImageSchema.index({ variant_id: 1 });
 
 export default mongoose.models.ProductImage || mongoose.model('ProductImage', ProductImageSchema);
+

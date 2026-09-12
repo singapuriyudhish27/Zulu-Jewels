@@ -27,21 +27,23 @@ export async function GET(request) {
         }
         const cats = await Category.find(categoryFilter).sort({ name: 1 }).lean();
 
-        // Build product filter
-        const productFilter = { is_deleted: false };
+        // Build product filter (bounded search string, active, non-deleted)
+        const productFilter = { is_deleted: false, is_active: true };
         if (search) {
-            const escapedSearch = escapeRegExp(search);
-            const regex = new RegExp(escapedSearch, 'i');
-            productFilter.$or = [{ name: regex }, { description: regex }];
+            const cleanSearch = search.slice(0, 60).trim();
+            if (cleanSearch.length > 0) {
+                const escapedSearch = escapeRegExp(cleanSearch);
+                const regex = new RegExp(escapedSearch, 'i');
+                productFilter.$or = [{ name: regex }, { description: regex }];
+            }
         }
-
-
 
         const catIds = cats.map(c => c._id);
 
-        // Fetch products in bulk
+        // Fetch products in bulk with boundary limit
         const products = await Product.find({ ...productFilter, category_id: { $in: catIds } })
             .sort({ _id: -1 })
+            .limit(200)
             .lean();
 
         const productIds = products.map(p => p._id);

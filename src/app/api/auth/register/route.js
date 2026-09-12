@@ -40,9 +40,11 @@ export async function POST(req) {
 
 
         
+        const normalizedEmail = email.toLowerCase().trim();
+
         //User Existence Check
         const existingUser = await User.findOne({
-            $or: [{ email }, { phone: contact_number }]
+            $or: [{ email: normalizedEmail }, { phone: contact_number }]
         });
 
         if (existingUser) {
@@ -54,10 +56,10 @@ export async function POST(req) {
 
         //User Insertion
         const newUser = await User.create({
-            firstName,
-            lastName,
+            firstName: firstName.trim(),
+            lastName: lastName.trim(),
             phone: contact_number,
-            email,
+            email: normalizedEmail,
             password_hash: hashedPassword
         });
 

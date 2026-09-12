@@ -74,16 +74,14 @@ export async function POST(req) {
             }
         }
 
-        // Inquiry Insert
+        // Inquiry Insert — name/email/phone stored in dedicated schema fields
         await Inquiry.create({
             user_id: userId, // Can be NULL for guest inquiries
-            inquiry_category: subject,
-            message: JSON.stringify({ 
-                name: userData.name || 'Anonymous', 
-                email: userData.email || 'N/A', 
-                phone: userData.phone || 'N/A', 
-                message 
-            })
+            name: (userData.name || 'Anonymous').trim().slice(0, 200),
+            email: (userData.email || '').trim().toLowerCase().slice(0, 254) || null,
+            phone: (userData.phone || '').trim().slice(0, 30) || null,
+            inquiry_category: subject.trim().slice(0, 200),
+            message: message.trim().slice(0, 2000),
         });
 
         return NextResponse.json({

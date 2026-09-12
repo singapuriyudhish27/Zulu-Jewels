@@ -23,6 +23,7 @@ const ProductVariantSchema = new mongoose.Schema({
   is_active: { type: Boolean, default: true },
 });
 
-ProductVariantSchema.index({ product_id: 1 });
+ProductVariantSchema.index({ product_id: 1, is_active: 1 });
 
 export default mongoose.models.ProductVariant || mongoose.model('ProductVariant', ProductVariantSchema);
+

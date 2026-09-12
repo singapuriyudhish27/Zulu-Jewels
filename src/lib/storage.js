@@ -24,7 +24,7 @@ const ALLOWED_MIME_TYPES = [
   'video/quicktime',
   'application/pdf'
 ];
-const MAX_FILE_SIZE = 100 * 1024 * 1024; // 15MB
+const MAX_FILE_SIZE = 25 * 1024 * 1024; // 25MB max limit (prevents OOM on 2GB RAM)
 
 /**
  * Uploads a file to Cloudinary.
@@ -44,11 +44,19 @@ async function uploadToCloudinary(file, folder) {
       mimeType = mimeMatch[1];
     }
     const base64Data = file.split(',')[1];
+    // Approximate base64 size check before Buffer allocation
+    const approxSize = Math.ceil((base64Data.length * 3) / 4);
+    if (approxSize > MAX_FILE_SIZE) {
+      throw new Error(`File size exceeds the limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+    }
     buffer = Buffer.from(base64Data, 'base64');
     size = buffer.length;
   } else if (file && typeof file === 'object' && typeof file.arrayBuffer === 'function') {
     mimeType = file.type || '';
     size = file.size || 0;
+    if (size > MAX_FILE_SIZE) {
+      throw new Error(`File size exceeds the limit of ${MAX_FILE_SIZE / (1024 * 1024)}MB`);
+    }
     const bytes = await file.arrayBuffer();
     buffer = Buffer.from(bytes);
   } else {

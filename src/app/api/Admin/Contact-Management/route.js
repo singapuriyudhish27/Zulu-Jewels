@@ -36,12 +36,18 @@ export async function GET(req) {
         const data = inquiries.map(i => {
             const user = i.user_id ? usersMap[i.user_id.toString()] : null;
 
+            // Prefer dedicated schema fields; fall back to linked User document
+            const contactName  = i.name  || (user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() : null) || null;
+            const contactEmail = i.email || user?.email || null;
+            const contactPhone = i.phone || user?.phone || null;
+
             return {
                 userId: user?._id || null,
                 firstName: user?.firstName || null,
                 lastName: user?.lastName || null,
-                email: user?.email || null,
-                phone: user?.phone || null,
+                email: contactEmail,
+                phone: contactPhone,
+                name: contactName,
                 is_active: user?.is_active ?? null,
                 is_verified: user?.is_verified ?? null,
                 inquiry: {

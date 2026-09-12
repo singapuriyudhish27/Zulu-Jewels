@@ -23,7 +23,8 @@ export async function POST(req) {
         }
         await connectDB();
 
-        const user = await User.findOne({ email });
+        const normalizedEmail = email.toLowerCase().trim();
+        const user = await User.findOne({ email: normalizedEmail });
         if (!user) {
             return NextResponse.json({ message: "User not found" }, { status: 404 });
         }
@@ -39,7 +40,7 @@ export async function POST(req) {
 
         // Hash new password and update
         const hashedPassword = await bcrypt.hash(newPassword, 12);
-        await User.updateOne({ email }, { password_hash: hashedPassword });
+        await User.updateOne({ email: normalizedEmail }, { password_hash: hashedPassword });
 
         return NextResponse.json({ message: "Password updated successfully. You can now log in." }, { status: 200 });
 

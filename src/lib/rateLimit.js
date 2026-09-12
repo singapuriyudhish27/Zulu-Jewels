@@ -12,6 +12,7 @@
  *   distributed database/cache such as Redis (e.g. Upstash Redis, Redis with `@upstash/ratelimit`, or `ioredis`).
  */
 
+const MAX_ENTRIES = 10_000; // Hard cap to prevent unbounded memory growth
 const rateLimitMap = new Map();
 
 /**
@@ -24,6 +25,11 @@ const rateLimitMap = new Map();
 export function rateLimit(ip, limit = 5, windowMs = 60000) {
   const now = Date.now();
   if (!rateLimitMap.has(ip)) {
+    // Enforce hard cap: prune oldest entries if we're at the limit
+    if (rateLimitMap.size >= MAX_ENTRIES) {
+      const firstKey = rateLimitMap.keys().next().value;
+      rateLimitMap.delete(firstKey);
+    }
     rateLimitMap.set(ip, []);
   }
 
@@ -43,7 +49,7 @@ export function rateLimit(ip, limit = 5, windowMs = 60000) {
 
 // Clean up expired IP entries every 5 minutes to prevent memory leaks
 if (typeof setInterval !== 'undefined') {
-  setInterval(() => {
+  const timer = setInterval(() => {
     const now = Date.now();
     for (const [ip, timestamps] of rateLimitMap.entries()) {
       const active = timestamps.filter(timestamp => now - timestamp < 600000); // 10 minutes max window
@@ -54,4 +60,7 @@ if (typeof setInterval !== 'undefined') {
       }
     }
   }, 300000);
+  if (timer && typeof timer.unref === 'function') {
+    timer.unref();
+  }
 }

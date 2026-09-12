@@ -14,6 +14,8 @@ const ProductSchema = new mongoose.Schema({
 }, { timestamps: { createdAt: 'created_at', updatedAt: 'updated_at' } });
 
 ProductSchema.index({ is_deleted: 1, category_id: 1 });
+ProductSchema.index({ is_deleted: 1, is_active: 1, category_id: 1 });
 ProductSchema.index({ is_deleted: 1, created_at: -1 });
 
 export default mongoose.models.Product || mongoose.model('Product', ProductSchema);
+

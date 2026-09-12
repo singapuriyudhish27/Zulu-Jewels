@@ -101,8 +101,26 @@ export function CurrencyProvider({ children }) {
     const [isLoading, setIsLoading] = useState(true);
 
     useEffect(() => {
+        const CACHE_KEY = 'zj_currency_cache';
+        const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
+
         const detectAndLoad = async () => {
             try {
+                // Check sessionStorage cache first
+                try {
+                    const cached = sessionStorage.getItem(CACHE_KEY);
+                    if (cached) {
+                        const parsed = JSON.parse(cached);
+                        if (parsed.timestamp && Date.now() - parsed.timestamp < CACHE_TTL_MS) {
+                            setCurrencyCode(parsed.currencyCode || 'INR');
+                            setConversionRate(parsed.conversionRate || 1);
+                            setSymbol(parsed.symbol || '₹');
+                            setIsLoading(false);
+                            return;
+                        }
+                    }
+                } catch (_) {}
+
                 // 1. Detect user country via IP geolocation
                 let countryCode = 'IN';
                 try {
@@ -117,6 +135,14 @@ export function CurrencyProvider({ children }) {
 
                 // If user is in India, no conversion needed
                 if (detectedCurrency === 'INR') {
+                    try {
+                        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                            currencyCode: 'INR',
+                            conversionRate: 1,
+                            symbol: '₹',
+                            timestamp: Date.now()
+                        }));
+                    } catch (_) {}
                     setIsLoading(false);
                     return;
                 }
@@ -127,9 +153,19 @@ export function CurrencyProvider({ children }) {
 
                 if (ratesData.success && ratesData.rates[detectedCurrency]) {
                     const rate = ratesData.rates[detectedCurrency];
+                    const curSymbol = CURRENCY_SYMBOLS[detectedCurrency] || detectedCurrency + ' ';
                     setCurrencyCode(detectedCurrency);
                     setConversionRate(rate);
-                    setSymbol(CURRENCY_SYMBOLS[detectedCurrency] || detectedCurrency + ' ');
+                    setSymbol(curSymbol);
+
+                    try {
+                        sessionStorage.setItem(CACHE_KEY, JSON.stringify({
+                            currencyCode: detectedCurrency,
+                            conversionRate: rate,
+                            symbol: curSymbol,
+                            timestamp: Date.now()
+                        }));
+                    } catch (_) {}
                 }
             } catch (error) {
                 console.error('Currency detection error:', error);

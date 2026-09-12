@@ -97,9 +97,8 @@ export async function GET(req) {
         }, {
             status: 200,
             headers: {
-                // Serve stale dashboard data for up to 60s while revalidating in the background.
-                // Eliminates repeated DB hits on every page refresh.
-                'Cache-Control': 's-maxage=60, stale-while-revalidate=120',
+                // Admin data is private and must never be stored by shared caches (CDNs, proxies)
+                'Cache-Control': 'private, no-store, no-cache, must-revalidate',
             }
         });
     } catch (error) {

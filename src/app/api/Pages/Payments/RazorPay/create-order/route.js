@@ -1,8 +1,11 @@
 import Razorpay from "razorpay";
+import crypto from "crypto";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import jwt from "jsonwebtoken";
+import { connectDB } from "@/lib/db";
 import { calculateOrderPricing } from "@/lib/pricing";
+import CheckoutSession from "@/lib/models/CheckoutSession";
 
 const ALLOWED_CURRENCIES = ['INR', 'USD', 'EUR', 'GBP', 'AED', 'SGD', 'AUD', 'CAD', 'JPY', 'CHF', 'NZD', 'MYR', 'HKD', 'ZAR', 'SAR', 'THB'];
 
@@ -25,12 +28,49 @@ export async function POST(req) {
             return NextResponse.json({ error: "Unauthorized: Please login first." }, { status: 401 });
         }
 
-        const { currency = "INR", receipt, specificItem, totalPayable, promoCode } = await req.json();
+        if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+            return NextResponse.json({ error: "RazorPay is not configured on the server." }, { status: 500 });
+        }
+
+        const { 
+            checkoutId: clientCheckoutId,
+            currency = "INR", 
+            receipt, 
+            specificItem, 
+            totalPayable, 
+            promoCode,
+            shippingAddress = ""
+        } = await req.json();
+
         const safeCurrency = ALLOWED_CURRENCIES.includes((currency || '').toUpperCase())
             ? currency.toUpperCase()
             : 'INR';
 
-        // Calculate server-authoritative order pricing
+        await connectDB();
+        const razorPay = new Razorpay({
+            key_id: process.env.RAZORPAY_KEY_ID,
+            key_secret: process.env.RAZORPAY_KEY_SECRET,
+        });
+
+        const checkout_id = clientCheckoutId || receipt || `chk_${crypto.randomUUID()}`;
+
+        // 1. Check for existing active CheckoutSession (Idempotency)
+        let session = await CheckoutSession.findOne({ checkout_id, user_id: user.userId });
+        if (session && session.status === 'OPEN' && session.provider_order_id && session.provider === 'razorpay') {
+            try {
+                const existingOrder = await razorPay.orders.fetch(session.provider_order_id);
+                if (existingOrder && existingOrder.status === 'created') {
+                    return NextResponse.json({
+                        ...existingOrder,
+                        checkoutId: checkout_id,
+                    }, { status: 200 });
+                }
+            } catch (fetchErr) {
+                console.warn("[Razorpay create-order] Could not fetch existing order:", fetchErr.message);
+            }
+        }
+
+        // 2. Calculate server-authoritative order pricing (in integer paise)
         let pricing;
         try {
             pricing = await calculateOrderPricing({
@@ -45,38 +85,57 @@ export async function POST(req) {
             );
         }
 
-        const finalAmount = pricing.total;
-
-        // If client passed totalPayable, verify it is not significantly less than authoritative amount
-        if (totalPayable !== undefined && totalPayable !== null) {
-            const payableNum = Number(totalPayable);
-            const minAcceptable = specificItem ? Math.floor(pricing.subtotal) : Math.floor(finalAmount);
-            if (isNaN(payableNum) || payableNum < minAcceptable) {
-                return NextResponse.json(
-                    { error: "Invalid payment amount" },
-                    { status: 400 }
-                );
-            }
-        }
-
-        if (finalAmount <= 0) {
+        const total_paise = pricing.total_paise;
+        if (total_paise <= 0) {
             return NextResponse.json({ error: "Invalid payment amount calculated" }, { status: 400 });
         }
 
-        if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-            return NextResponse.json({ error: "RazorPay is not configured on the server." }, { status: 500 });
+        if (totalPayable !== undefined && totalPayable !== null) {
+            const payablePaise = Math.round(Number(totalPayable) * 100);
+            const minAcceptablePaise = specificItem ? pricing.subtotal_paise : pricing.total_paise;
+            if (isNaN(payablePaise) || payablePaise < minAcceptablePaise) {
+                return NextResponse.json({ error: "Invalid payment amount" }, { status: 400 });
+            }
         }
 
-        const razorPay = new Razorpay({
-            key_id: process.env.RAZORPAY_KEY_ID,
-            key_secret: process.env.RAZORPAY_KEY_SECRET,
-        });
+        // 3. Persist Immutable CheckoutSession Snapshot
+        const expires_at = new Date(Date.now() + 60 * 60 * 1000); // 1 hour TTL
+        const checkoutItems = pricing.items.map(it => ({
+            product_id: it.product_id,
+            variant_id: it.variant_id || null,
+            quantity: it.quantity,
+            unit_price_paise: it.unit_price_paise,
+            item_total_paise: it.item_total_paise
+        }));
 
+        if (!session) {
+            session = await CheckoutSession.create({
+                checkout_id,
+                user_id: user.userId,
+                items: checkoutItems,
+                pricing: {
+                    subtotal_paise: pricing.subtotal_paise,
+                    discount_paise: pricing.discount_paise,
+                    tax_paise: pricing.tax_paise,
+                    shipping_paise: pricing.shipping_paise,
+                    total_paise: pricing.total_paise,
+                    promo_code: promoCode || null,
+                    currency: safeCurrency
+                },
+                shipping_address: shippingAddress,
+                provider: 'razorpay',
+                status: 'OPEN',
+                expires_at
+            });
+        }
+
+        // 4. Create Razorpay Order
         const options = {
-            amount: Math.round(finalAmount * 100),
+            amount: total_paise, // integer paise
             currency: safeCurrency,
-            receipt: receipt || `rcpt_${Date.now()}`,
+            receipt: checkout_id.slice(-40), // Razorpay receipt max 40 chars
             notes: {
+                checkout_id,
                 userId: user.userId,
                 specificItem: pricing.verifiedSpecificItem ? JSON.stringify(pricing.verifiedSpecificItem) : null
             }
@@ -84,7 +143,15 @@ export async function POST(req) {
 
         const order = await razorPay.orders.create(options);
 
-        return NextResponse.json(order, { status: 200 });
+        session.provider_order_id = order.id;
+        session.provider = 'razorpay';
+        await session.save();
+
+        return NextResponse.json({
+            ...order,
+            checkoutId: checkout_id,
+        }, { status: 200 });
+
     } catch (error) {
         console.error("Error Paying With RazorPay:", error);
         return NextResponse.json({ message: "Error In Backend API Route" }, { status: 500 });
