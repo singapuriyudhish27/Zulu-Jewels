@@ -172,10 +172,17 @@ export default function ProductManagementPage() {
 
     const isCustom = itemNameLower.includes("custom");
 
-    // Primary image is either a variant-specific primary or a generic primary
-    const primaryImg = item.images.find(img => img.is_primary)?.media_url 
-                    || item.images[0]?.media_url 
+    // Primary image: exclude videos, prefer is_primary flag, fallback to first image-type media
+    const isImgMedia = (url) => {
+      if (!url || typeof url !== 'string') return false;
+      if (url.includes('/video/') || /\.(mp4|webm|ogg|mov)$/i.test(url)) return false;
+      return true;
+    };
+    const imageOnlyItems = item.images.filter(img => isImgMedia(img.media_url));
+    const primaryImg = imageOnlyItems.find(img => img.is_primary)?.media_url
+                    || imageOnlyItems[0]?.media_url
                     || null;
+
 
     return {
       id: `PRD-${item.id.toString().padStart(3, '0')}`,

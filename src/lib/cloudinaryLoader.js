@@ -7,8 +7,22 @@
  * For local /public assets: returns the src as-is (standard browser behaviour).
  */
 export default function cloudinaryLoader({ src, width, quality }) {
-  // Pass through local/non-Cloudinary images unchanged
-  if (!src || !src.includes('res.cloudinary.com')) {
+  // Pass through empty, non-string, or local/non-Cloudinary images unchanged
+  if (typeof src !== 'string' || !src || !src.includes('res.cloudinary.com')) {
+    return src;
+  }
+
+  // Do not transform video URLs or non-upload paths with image parameters
+  if (
+    src.includes('/video/') ||
+    /\.(mp4|webm|ogg|mov)$/i.test(src) ||
+    !src.includes('/upload/')
+  ) {
+    return src;
+  }
+
+  // If transformations are already present after /upload/, avoid duplicate injection
+  if (/\/upload\/[a-z]_[^/]+\//.test(src)) {
     return src;
   }
 
@@ -21,3 +35,4 @@ export default function cloudinaryLoader({ src, width, quality }) {
   // Insert transformations after /upload/
   return src.replace('/upload/', `/upload/${transforms}/`);
 }
+

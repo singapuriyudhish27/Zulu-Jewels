@@ -97,15 +97,35 @@ export async function GET(request, { params }) {
                     name: p.name,
                     price: p.price,
                     image: primaryImg,
-                    images: pImgs.map(img => ({
-                        image_url: img.media_url,
-                        is_primary: Boolean(img.is_primary),
-                        is_hover: Boolean(img.is_hover)
-                    })),
+                    images: pImgs.map(img => {
+                        const isVideo = img.media_type === 'video' || /\.(mp4|webm|ogg|mov)$/i.test(img.media_url) || (img.media_url || '').includes('/video/');
+                        return {
+                            id: img._id,
+                            variant_id: img.variant_id,
+                            image_url: img.media_url,
+                            media_url: img.media_url,
+                            media_type: isVideo ? 'video' : 'image',
+                            is_primary: Boolean(img.is_primary),
+                            is_hover: Boolean(img.is_hover)
+                        };
+                    }),
                     category_id: p.category_id
                 };
             });
         }
+
+        const normalizedImages = (images || []).map(img => {
+            const isVideo = img.media_type === 'video' || /\.(mp4|webm|ogg|mov)$/i.test(img.media_url) || (img.media_url || '').includes('/video/');
+            return {
+                ...img,
+                id: img._id,
+                image_url: img.media_url,
+                media_url: img.media_url,
+                media_type: isVideo ? 'video' : 'image',
+                is_primary: Boolean(img.is_primary),
+                is_hover: Boolean(img.is_hover)
+            };
+        });
 
         const result = {
             id: product._id,
@@ -124,7 +144,7 @@ export async function GET(request, { params }) {
             is_wishlisted: isWishlisted,
             cart_variants: cartVariants,
             variants: variants,
-            images: images,
+            images: normalizedImages,
             related_products: related_products
         }
 

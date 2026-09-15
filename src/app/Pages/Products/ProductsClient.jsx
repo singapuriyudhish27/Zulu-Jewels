@@ -92,11 +92,25 @@ function ProductsContent({ initialCategories }) {
     setWishlist(prev => ({ ...prev, [id]: !prev[id] }));
   };
 
+  const isImageMedia = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    if (url.includes('/video/upload/') || url.includes('/video/')) return false;
+    return !/\.(mp4|webm|ogg|mov)$/i.test(url);
+  };
+
   const getProductImage = (product) => {
-    const images = product.images || [];
-    const primaryImage = images.find(img => img.is_primary)?.image_url || images[0]?.image_url || null;
-    const hoverImage = images.find(img => img.is_hover)?.image_url || images.find(img => !img.is_primary)?.image_url || primaryImage;
-    return hoveredProductId === product.id ? (hoverImage || primaryImage) : (primaryImage || null);
+    const rawImages = product.images || [];
+    const validImages = rawImages.filter(img => {
+      const url = img.image_url || img.media_url || img.url;
+      return isImageMedia(url);
+    });
+
+    const getUrl = (img) => img ? (img.image_url || img.media_url || img.url || null) : null;
+
+    const primaryImage = getUrl(validImages.find(img => img.is_primary)) || getUrl(validImages[0]) || '/placeholder.jpg';
+    const hoverImage = getUrl(validImages.find(img => img.is_hover)) || getUrl(validImages.find(img => !img.is_primary)) || primaryImage;
+
+    return hoveredProductId === product.id ? hoverImage : primaryImage;
   };
 
   // Filtering implementation
@@ -366,18 +380,14 @@ function ProductsContent({ initialCategories }) {
             <div key={p.id} className="pr-product-card" onMouseEnter={() => setHoveredProductId(p.id)} onMouseLeave={() => setHoveredProductId(null)}>
               <Link href={productDetailsHref(p.id)} style={{ textDecoration: 'none', color: 'inherit' }}>
                 <div className="pr-product-img-wrap">
-                  {p.images && p.images.length > 0 ? (
-                    <Image 
-                      src={getProductImage(p)} 
-                      alt={p.name} 
-                      fill
-                      sizes="(max-width: 480px) 50vw, (max-width: 1024px) 33vw, 25vw"
-                      className="pr-product-img"
-                      style={{ objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div className="pr-product-img">💍</div>
-                  )}
+                  <Image
+                    src={getProductImage(p)}
+                    alt={p.name}
+                    fill
+                    sizes="(max-width: 480px) 50vw, (max-width: 1024px) 33vw, 25vw"
+                    className="pr-product-img"
+                    style={{ objectFit: 'cover' }}
+                  />
                   <button
                     className={`pr-wishlist-btn ${wishlist[p.id] ? 'active' : ''}`}
                     onClick={e => toggleWishlist(p.id, e)}

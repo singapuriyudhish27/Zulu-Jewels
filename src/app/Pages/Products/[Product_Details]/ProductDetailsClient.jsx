@@ -142,19 +142,38 @@ export default function ProductDetailsClient() {
   // Derived Values
   const currentPrice = selectedVariant ? 1 * selectedVariant.price : 1 * product.price;
   const currentDesc = (selectedVariant && selectedVariant.description) ? selectedVariant.description : product.description;
-  const currentImages = selectedVariant 
-    ? product.images.filter(img => img.variant_id?.toString() === (selectedVariant._id?.toString() || selectedVariant.id?.toString()))
-    : product.images.filter(img => !img.variant_id);
-    
-  // If a variant has no images, show base images
-  const displayImages = currentImages.length > 0 ? currentImages : product.images.filter(img => !img.variant_id);
-  // If still no images, use a placeholder
-  const finalImages = displayImages.length > 0 ? displayImages : [{ media_url: '/placeholder.jpg' }];
+  const getImgUrl = (img) => img?.image_url || img?.media_url || img?.url || null;
 
-  const thumbs = finalImages.map(img => ({
-    url: img.media_url,
-    type: img.media_type || (img.media_url.match(/\.(mp4|webm|ogg|mov)$/i) ? 'video' : 'image')
-  }));
+  const currentVariantId = selectedVariant?._id?.toString() || selectedVariant?.id?.toString() || null;
+
+  // 1. Try to find images specific to the selected variant
+  let currentImages = currentVariantId
+    ? product.images.filter(img => img.variant_id?.toString() === currentVariantId)
+    : product.images.filter(img => !img.variant_id);
+
+  // 2. If no variant-specific images, fall back to base (no variant_id) images
+  if (currentImages.length === 0) {
+    currentImages = product.images.filter(img => !img.variant_id);
+  }
+
+  // 3. If still no base images, use ALL product images
+  const displayImages = currentImages.length > 0 ? currentImages : (product.images || []);
+
+  // 4. Only fall back to placeholder if the product truly has zero media
+  const finalImages = displayImages.length > 0
+    ? displayImages
+    : [{ media_url: '/placeholder.jpg', image_url: '/placeholder.jpg', media_type: 'image', is_primary: true, is_hover: false }];
+
+  const thumbs = finalImages
+    .map(img => {
+      const url = getImgUrl(img);
+      const isVideo =
+        img.media_type === 'video' ||
+        (url && (/\.(mp4|webm|ogg|mov)$/i.test(url) || url.includes('/video/')));
+      return { url, type: isVideo ? 'video' : 'image' };
+    })
+    .filter(t => t.url); // remove any nulls
+
 
   const hasSpecificationValue = (value) => value !== undefined && value !== null && value !== '' && value !== false;
   const formatSpecificationLabel = (key) => {

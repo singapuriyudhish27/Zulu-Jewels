@@ -120,11 +120,22 @@ export default function HomePageClient({ initialSections = [], initialCollection
     track.scrollBy({ left: dir * 360, behavior: 'smooth' });
   };
 
+  const isImageMedia = (url) => {
+    if (!url || typeof url !== 'string') return false;
+    if (url.includes('/video/upload/') || url.includes('/video/')) return false;
+    return !/\.(mp4|webm|ogg|mov)$/i.test(url);
+  };
+
   const getProductImage = (product) => {
-    const images = product.images || [];
-    const primaryImage = images.find(img => img.is_primary)?.image_url || images[0]?.image_url || null;
-    const hoverImage = images.find(img => img.is_hover)?.image_url || images.find(img => !img.is_primary)?.image_url || primaryImage;
-    return hoveredProductId === product.id ? (hoverImage || primaryImage) : (primaryImage || null);
+    const rawImages = product.images || [];
+    const validImages = rawImages.filter(img => {
+      const url = img.image_url || img.media_url || img.url;
+      return isImageMedia(url);
+    });
+    const getUrl = (img) => img ? (img.image_url || img.media_url || img.url || null) : null;
+    const primaryImage = getUrl(validImages.find(img => img.is_primary)) || getUrl(validImages[0]) || '/placeholder.jpg';
+    const hoverImage = getUrl(validImages.find(img => img.is_hover)) || getUrl(validImages.find(img => !img.is_primary)) || primaryImage;
+    return hoveredProductId === product.id ? hoverImage : primaryImage;
   };
 
   // Fetch wishlist asynchronously without blocking initial render
@@ -1709,18 +1720,14 @@ export default function HomePageClient({ initialSections = [], initialCollection
                       onMouseLeave={() => setHoveredProductId(null)}
                     >
                       <div className="zj-product-img-wrap">
-                        {p.images && p.images.length > 0 ? (
-                          <Image
-                            src={getProductImage(p)}
-                            alt={p.name}
-                            fill
-                            sizes="(max-width: 480px) 75vw, (max-width: 768px) 45vw, (max-width: 1200px) 25vw, 280px"
-                            className="zj-animate-img"
-                            style={{ objectFit: 'cover' }}
-                          />
-                        ) : (
-                          <div className="zj-product-img-placeholder">💍</div>
-                        )}
+                        <Image
+                          src={getProductImage(p)}
+                          alt={p.name}
+                          fill
+                          sizes="(max-width: 480px) 75vw, (max-width: 768px) 45vw, (max-width: 1200px) 25vw, 280px"
+                          className="zj-animate-img"
+                          style={{ objectFit: 'cover' }}
+                        />
                         <button
                           className="zj-product-wishlist"
                           onClick={(e) => {
@@ -1851,18 +1858,14 @@ export default function HomePageClient({ initialSections = [], initialCollection
                   onMouseLeave={() => setHoveredProductId(null)}
                 >
                   <div className="zj-product-img-wrap">
-                    {p.images && p.images.length > 0 ? (
-                      <Image
-                        src={getProductImage(p)}
-                        alt={p.name}
-                        fill
-                        sizes="(max-width: 480px) 75vw, (max-width: 768px) 45vw, (max-width: 1200px) 25vw, 280px"
-                        className="zj-animate-img"
-                        style={{ objectFit: 'cover' }}
-                      />
-                    ) : (
-                      <div className="zj-product-img-placeholder">💍</div>
-                    )}
+                    <Image
+                      src={getProductImage(p)}
+                      alt={p.name}
+                      fill
+                      sizes="(max-width: 480px) 75vw, (max-width: 768px) 45vw, (max-width: 1200px) 25vw, 280px"
+                      className="zj-animate-img"
+                      style={{ objectFit: 'cover' }}
+                    />
                     <button
                       className="zj-product-wishlist"
                       onClick={(e) => {
